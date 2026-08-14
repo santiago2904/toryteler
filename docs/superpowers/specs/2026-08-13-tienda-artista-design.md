@@ -58,7 +58,14 @@ Deliberadamente ausentes: Redis, colas, motor de búsqueda, CDN propio, carrito 
 
 Una transacción con tarjeta en Colombia cuesta aproximadamente 2.65% + 900 COP fijos; PSE ronda 1.700 COP fijos. Un drop digital de ~4.000 COP pierde entre 25% y 45% en comisión.
 
-Decisión: se acepta ese costo en fase 1 y no se construyen créditos prepagados ni saldos. El drop de precio simbólico es un gesto de marca, no una línea de ingreso, y un sistema de saldos es un subsistema financiero completo (recargas, caducidad, reembolsos parciales, contabilidad) que no se justifica hasta tener volumen. Mitigación disponible sin código: precio mínimo sugerido de 15.000 COP para drops digitales, o venderlos agrupados en un mismo pedido.
+Decisión: se acepta ese costo en fase 1 y no se construyen créditos prepagados ni saldos. El drop de precio simbólico es un gesto de marca, no una línea de ingreso, y un sistema de saldos es un subsistema financiero completo (recargas, caducidad, reembolsos parciales, contabilidad) que no se justifica hasta tener volumen.
+
+**El precio mínimo no se impone por sistema.** El artista puede poner el precio que quiera, incluido el drop simbólico de ~4.000 COP, porque el gesto artístico manda sobre el margen. Lo que sí hace el panel es mostrar, en el momento de fijar el precio, el cálculo real de lo que queda después de comisión:
+
+> Precio 4.000 COP → recibes ~2.194 COP (45% se va en comisión).
+> Recomendado: desde 15.000 COP (comisión ~8%).
+
+Es información en el punto de decisión, no una restricción. `price_cop > 0` sigue siendo el único límite duro.
 
 ---
 
@@ -225,7 +232,7 @@ user_agent      text
 Reserva por `UPDATE` condicional — gana uno solo, sin transacciones largas:
 ```sql
 UPDATE pieces
-SET status = 'reserved', reserved_until = now() + interval '15 minutes'
+SET status = 'reserved', reserved_until = now() + ($2 * interval '1 minute')  -- TTL según método
 WHERE id = $1 AND status = 'available';
 -- 0 filas afectadas: alguien llegó primero
 ```
@@ -257,9 +264,29 @@ WHERE id = $1 AND first_played_at IS NULL;
 
 Regla de acceso posterior: se permite si `first_played_at IS NULL` (aún no empieza) o si `now() < expires_at` (dentro de la ventana). Una caída de red no cuesta la compra; a las 24 horas la ventana se cierra sola.
 
-### Liberación de reservas
+### Reservas: TTL, liberación y pagos tardíos
+
+Al iniciar el checkout la pieza pasa a `reserved`, para que nadie más la compre mientras el usuario llena datos, lee el contrato, verifica el OTP y firma.
+
+**El TTL depende del método de pago**, porque PSE es estructuralmente lento (redirección al banco, clave, token):
+
+| Método | `reserved_until` |
+|---|---|
+| Tarjeta | 15 minutos |
+| PSE / Bancolombia | 45 minutos |
+| Nequi | 20 minutos |
 
 Cron cada minuto: las piezas `reserved` con `reserved_until < now()` vuelven a `available` y su pedido pasa a `expired`. Una compra abandonada no congela una pieza para siempre.
+
+**Pago aprobado que llega después de que la reserva venció.** Una reserva vencida no anula un pago real. Al procesar el webhook se resuelve por estado actual de la pieza:
+
+| Estado de la pieza al llegar el pago | Resolución |
+|---|---|
+| `available` (nadie la tomó) | Se respeta la compra. Pasa a `sold`. Caso normal y mayoritario |
+| `reserved` por otro usuario, sin pagar | **El pago vence a la reserva.** Se le asigna a quien pagó; al otro se le libera el checkout con aviso |
+| `sold` a otro usuario | Gana quien pagó primero. Al segundo se le reembolsa automáticamente con correo explicando |
+
+La regla general: **pago vence a reserva; primer pago vence a segundo pago.** Con el TTL diferenciado, la tercera fila es rara.
 
 ---
 
@@ -292,7 +319,7 @@ Cero filas significa "ya estaba pagada": es éxito, no error. Igual para el alta
 Se firma **antes** de pagar. Firmando después existiría un instante con dinero cobrado y sin contrato; firmando antes, el peor caso es un contrato firmado nunca pagado, que se anula solo.
 
 1. **Sesión.** Magic link al correo. Sin identidad no hay firma válida.
-2. **Reserva.** `POST /orders` con `Idempotency-Key`: el `UPDATE` condicional gana la pieza por 15 minutos y crea el pedido en `pending`.
+2. **Reserva.** `POST /orders` con `Idempotency-Key`: el `UPDATE` condicional gana la pieza (TTL según método de pago, §5) y crea el pedido en `pending`.
 3. **Datos del comprador.** Nombre completo, cédula, dirección y teléfono. La cédula identifica al firmante en el contrato.
 4. **Contrato en pantalla.** Se genera el PDF con pieza, precio, comprador y condiciones, y se muestra completo. Se registra que llegó al final del documento: evidencia de oportunidad real de lectura.
 5. **Firma.** Casilla de consentimiento con texto versionado **más código OTP** al celular o correo. El OTP ata la identidad al acto; sin él queda solo un checkbox, mucho más débil ante una disputa.
@@ -385,7 +412,7 @@ Sin analítica, sin roles, sin flujos de aprobación.
 | Caso | Comportamiento |
 |---|---|
 | Webhook duplicado o desordenado | `payment_events` + transiciones condicionales |
-| Pago aprobado sobre reserva vencida | Se respeta la compra si nadie más tomó la pieza; si ya se vendió, reembolso automático y correo explicando |
+| Pago aprobado sobre reserva vencida | Resuelto por estado de la pieza (§5): disponible → se respeta; reservada por otro → el pago gana; vendida → reembolso automático |
 | Webhook que nunca llega | Cron reconcilia contra la API de Wompi los pedidos `pending` con más de 30 minutos |
 | Falla al generar el PDF | El pedido no avanza; se reintenta. Nunca se cobra sin contrato |
 | Aforo lleno al pagar | El entitlement se emite en la transacción del webhook; si el cupo se agotó, reembolso automático |
@@ -429,7 +456,7 @@ La UI, el catálogo y el panel no llevan pruebas automatizadas en fase 1. Ese es
 
 1. **El texto del contrato requiere revisión legal** antes de publicar. El sistema queda listo para versionarlo.
 2. **Sostenibilidad del contenido**: los drops digitales dependen de que el artista produzca constantemente. Es riesgo de producto, no técnico, pero define si la fase 1 vale la pena.
-3. **Wompi en producción** requiere cuenta comercial aprobada de Bancolombia; el trámite puede tomar semanas y debe iniciarse en paralelo al desarrollo.
+3. **Wompi en producción** requiere cuenta comercial aprobada de Bancolombia. El desarrollo completo se hace contra el **entorno sandbox de Wompi** (llaves `pub_test_` / `prv_test_`), que cubre PSE, Nequi, tarjeta y webhooks firmados sin cuenta comercial. El trámite bloquea el lanzamiento, no el desarrollo: basta iniciarlo antes de la fase de pruebas con usuarios reales. La única llave de configuración que cambia entre entornos es el par de credenciales; no hay diferencia de código.
 4. **Grabación de pantalla** no se puede impedir. Asumido explícitamente.
 
 ## 16. Fases siguientes (no diseñadas aquí)
