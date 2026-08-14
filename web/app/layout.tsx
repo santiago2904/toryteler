@@ -1,17 +1,17 @@
 import type { Metadata } from 'next';
 import { Inter } from 'next/font/google';
 import Link from 'next/link';
-import { Tema } from '@/components/Tema';
-import { Zoom } from '@/components/Zoom';
-import { Carrito } from '@/components/Carrito';
-import { TransicionPagina } from '@/components/TransicionPagina';
+import { ThemeToggle } from '@/components/ThemeToggle';
+import { ZoomToggle } from '@/components/ZoomToggle';
+import { CartLink } from '@/components/CartLink';
+import { PageTransition } from '@/components/PageTransition';
 import './globals.scss';
-import estilos from './layout.module.scss';
+import styles from './layout.module.scss';
 
 const inter = Inter({
   subsets: ['latin'],
   weight: ['400', '500'],
-  variable: '--fuente-inter',
+  variable: '--font-inter',
   display: 'swap',
 });
 
@@ -21,15 +21,15 @@ export const metadata: Metadata = {
 };
 
 /**
- * Corre antes del primer pintado: sin esto, quien eligió un tema o una
- * densidad distintos a los de por defecto ve un fogonazo del estado equivocado.
+ * Runs before the first paint: without this, anyone whose theme or density
+ * differs from the default sees a flash of the wrong state on every load.
  */
-const PREFERENCIAS_SIN_PARPADEO = `
+const PREFERENCES_BEFORE_PAINT = `
 try {
-  var t = localStorage.getItem('tema');
-  if (t === 'claro' || t === 'oscuro') document.documentElement.dataset.tema = t;
+  var t = localStorage.getItem('theme');
+  if (t === 'light' || t === 'dark') document.documentElement.dataset.theme = t;
   var z = localStorage.getItem('zoom');
-  if (z === 'cerca' || z === 'lejos') document.documentElement.dataset.zoom = z;
+  if (z === 'in' || z === 'out') document.documentElement.dataset.zoom = z;
 } catch (e) {}
 `;
 
@@ -37,29 +37,29 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="es" className={inter.variable} suppressHydrationWarning>
       <head>
-        <script dangerouslySetInnerHTML={{ __html: PREFERENCIAS_SIN_PARPADEO }} />
+        <script dangerouslySetInnerHTML={{ __html: PREFERENCES_BEFORE_PAINT }} />
       </head>
       <body>
-        <header className={estilos.cabecera}>
-          <div className={estilos.izquierda}>
-            <Zoom />
+        <header className={styles.header}>
+          <div className={styles.left}>
+            <ZoomToggle />
           </div>
 
-          <nav className={`${estilos.centro} mayusculas`}>
+          <nav className={`${styles.center} label`}>
             <Link href="/">La casa de Tory</Link>
           </nav>
 
-          <div className={`${estilos.derecha} mayusculas`}>
+          <div className={`${styles.right} label`}>
             <Link href="/artista">Toryteler</Link>
             <Link href="/cuenta">Cuenta</Link>
-            <Tema />
-            <Carrito />
+            <ThemeToggle />
+            <CartLink />
           </div>
         </header>
 
-        <TransicionPagina>{children}</TransicionPagina>
+        <PageTransition>{children}</PageTransition>
 
-        <footer className={`${estilos.pie} tenue mayusculas`}>Medellín, Colombia</footer>
+        <footer className={`${styles.footer} muted label`}>Medellín, Colombia</footer>
       </body>
     </html>
   );

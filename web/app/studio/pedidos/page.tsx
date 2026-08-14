@@ -1,13 +1,13 @@
 import type { Metadata } from 'next';
 import { apiGet } from '@/lib/api';
-import { OrderSummary } from '@/lib/tipos';
-import { Imagen } from '@/components/Imagen';
-import { formatearFecha, formatearPrecio } from '@/lib/formato';
-import estilos from '../studio.module.scss';
+import { OrderSummary } from '@/lib/types';
+import { ProductImage } from '@/components/ProductImage';
+import { formatDate, formatPrice } from '@/lib/format';
+import styles from '../studio.module.scss';
 
 export const metadata: Metadata = { title: 'Pedidos — Studio' };
 
-const ESTADO: Record<OrderSummary['status'], string> = {
+const ORDER_STATUS: Record<OrderSummary['status'], string> = {
   pending: 'Confirmando pago',
   paid: 'Pagado',
   failed: 'Pago fallido',
@@ -15,54 +15,54 @@ const ESTADO: Record<OrderSummary['status'], string> = {
   refunded: 'Reembolsado',
 };
 
-export default async function Pedidos() {
-  // lazy: mientras no hay API, se listan los mismos pedidos simulados de la
-  // cuenta. El endpoint real de administración trae además dirección y correo.
-  const pedidos = await apiGet<OrderSummary[]>('/me/orders', true);
+export default async function OrdersPage() {
+  // lazy: with no API yet, this lists the same mock orders as the account
+  // page. The real admin endpoint also carries address and email.
+  const orders = await apiGet<OrderSummary[]>('/me/orders', true);
 
-  const porDespachar = pedidos.filter((p) => p.status === 'paid' && !p.tracking);
+  const toShip = orders.filter((p) => p.status === 'paid' && !p.tracking);
 
   return (
-    <div className={estilos.pedidos}>
-      <h1 className="mayusculas tenue">
-        Pedidos · {porDespachar.length} por despachar
+    <div className={styles.orders}>
+      <h1 className="label muted">
+        OrdersPage · {toShip.length} por despachar
       </h1>
 
-      <ul className={estilos.listaPedidos}>
-        {pedidos.map((pedido) => (
-          <li key={pedido.id} className={estilos.pedido}>
-            <ul className={estilos.miniaturas}>
-              {pedido.items.map((item) => (
-                <li key={`${item.kind}-${item.slug}`} className={estilos.miniatura}>
-                  {item.image && <Imagen publicId={item.image} alt={item.title} />}
+      <ul className={styles.orderList}>
+        {orders.map((order) => (
+          <li key={order.id} className={styles.order}>
+            <ul className={styles.thumbs}>
+              {order.items.map((item) => (
+                <li key={`${item.kind}-${item.slug}`} className={styles.thumb}>
+                  {item.image && <ProductImage publicId={item.image} alt={item.title} />}
                 </li>
               ))}
             </ul>
 
-            <div className={estilos.datos}>
-              <span className="mayusculas">{pedido.reference}</span>
-              <span className="tenue">{pedido.items.map((i) => i.title).join(' · ')}</span>
-              <span>{formatearPrecio(pedido.totalCop)}</span>
-              <span className="mayusculas tenue">
-                {ESTADO[pedido.status]} · {formatearFecha(pedido.createdAt)}
+            <div className={styles.meta}>
+              <span className="label">{order.reference}</span>
+              <span className="muted">{order.items.map((i) => i.title).join(' · ')}</span>
+              <span>{formatPrice(order.totalCop)}</span>
+              <span className="label muted">
+                {ORDER_STATUS[order.status]} · {formatDate(order.createdAt)}
               </span>
 
-              {pedido.tracking ? (
-                <span className="mayusculas tenue">
-                  Enviado · {pedido.tracking.carrier} {pedido.tracking.number}
+              {order.tracking ? (
+                <span className="label muted">
+                  Enviado · {order.tracking.carrier} {order.tracking.number}
                 </span>
-              ) : pedido.status === 'paid' ? (
-                <form className={estilos.envio}>
-                  <label htmlFor={`transportadora-${pedido.id}`}>Transportadora</label>
-                  <select id={`transportadora-${pedido.id}`} defaultValue="Servientrega">
+              ) : order.status === 'paid' ? (
+                <form className={styles.shipping}>
+                  <label htmlFor={`transportadora-${order.id}`}>Transportadora</label>
+                  <select id={`transportadora-${order.id}`} defaultValue="Servientrega">
                     <option>Servientrega</option>
                     <option>Coordinadora</option>
                     <option>Interrapidísimo</option>
                     <option>TCC</option>
                   </select>
 
-                  <label htmlFor={`guia-${pedido.id}`}>Número de guía</label>
-                  <input id={`guia-${pedido.id}`} inputMode="numeric" />
+                  <label htmlFor={`guia-${order.id}`}>Número de guía</label>
+                  <input id={`guia-${order.id}`} inputMode="numeric" />
 
                   <button type="submit" disabled>Marcar enviado</button>
                 </form>

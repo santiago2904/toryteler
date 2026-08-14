@@ -2,66 +2,66 @@
 
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
-import { Imagen } from '@/components/Imagen';
-import { formatearPrecio } from '@/lib/formato';
-import { EVENTO_CARRITO, LineaCarrito, leerCarrito, quitar, totalCop } from '@/lib/carrito';
-import estilos from './page.module.scss';
+import { ProductImage } from '@/components/ProductImage';
+import { formatPrice } from '@/lib/format';
+import { CART_CHANGED, CartLine, readCart, removeFromCart, cartTotalCop } from '@/lib/cart';
+import styles from './page.module.scss';
 
-export default function CarritoPagina() {
-  const [lineas, setLineas] = useState<LineaCarrito[] | null>(null);
+export default function CartPage() {
+  const [lines, setLineas] = useState<CartLine[] | null>(null);
 
   useEffect(() => {
-    const actualizar = () => setLineas(leerCarrito());
-    actualizar();
-    window.addEventListener(EVENTO_CARRITO, actualizar);
-    return () => window.removeEventListener(EVENTO_CARRITO, actualizar);
+    const refresh = () => setLineas(readCart());
+    refresh();
+    window.addEventListener(CART_CHANGED, refresh);
+    return () => window.removeEventListener(CART_CHANGED, refresh);
   }, []);
 
-  // null mientras no se ha leído el navegador: mostrar «vacío» antes de saberlo
-  // haría parpadear el mensaje en cada visita con carrito lleno.
-  if (lineas === null) return <div className={estilos.carrito} />;
+  // null until the browser has been read: showing "empty" before knowing would
+  // flash that message on every visit with a full cart.
+  if (lines === null) return <div className={styles.cart} />;
 
-  if (lineas.length === 0) {
+  if (lines.length === 0) {
     return (
-      <div className={estilos.carrito}>
-        <h1 className="mayusculas tenue">Carrito</h1>
+      <div className={styles.cart}>
+        <h1 className="label muted">Carrito</h1>
         <p>No tienes nada en el carrito.</p>
-        <Link href="/" className="mayusculas">Ver la casa de Tory</Link>
+        <Link href="/" className="label">Ver la casa de Tory</Link>
       </div>
     );
   }
 
-  const hayPieza = lineas.some((l) => l.kind === 'piece');
+  const hasPiece = lines.some((l) => l.kind === 'piece');
 
   return (
-    <div className={estilos.carrito}>
-      <h1 className="mayusculas tenue">Carrito</h1>
+    <div className={styles.cart}>
+      <h1 className="label muted">Carrito</h1>
 
-      <ul className={estilos.lista}>
-        {lineas.map((linea) => (
-          <li key={`${linea.kind}-${linea.slug}`} className={estilos.linea}>
-            <div className={estilos.miniatura}>
-              {linea.image && <Imagen publicId={linea.image} alt={linea.title} />}
+      <ul className={styles.list}>
+        {lines.map((line) => (
+          <li key={`${line.kind}-${line.slug}`} className={styles.line}>
+            <div className={styles.thumb}>
+              {line.image && <ProductImage publicId={line.image} alt={line.title} />}
             </div>
 
-            <div className={estilos.datos}>
+            <div className={styles.meta}>
               <Link
-                href={`/${linea.kind === 'piece' ? 'piezas' : 'drops'}/${linea.slug}`}
-                className="mayusculas"
+                href={`/${line.kind === 'piece' ? 'piezas' : 'drops'}/${line.slug}`}
+                className="label"
               >
-                {linea.title}
+                {line.title}
               </Link>
-              <span className="tenue mayusculas">
-                {linea.kind === 'piece' ? 'Pieza' : 'Video'}
+              <span className="muted label">
+                {line.kind === 'piece' ? 'Pieza' : 'Video'}
               </span>
-              <span>{formatearPrecio(linea.priceCop)}</span>
+              <span>{formatPrice(line.priceCop)}</span>
             </div>
 
             <button
               type="button"
-              className="enlace"
-              onClick={() => quitar(linea.kind, linea.slug)}
-              aria-label={`Quitar ${linea.title} del carrito`}
+              className="link-button"
+              onClick={() => removeFromCart(line.kind, line.slug)}
+              aria-label={`Quitar ${line.title} del carrito`}
             >
               Quitar
             </button>
@@ -69,13 +69,13 @@ export default function CarritoPagina() {
         ))}
       </ul>
 
-      <div className={estilos.total}>
-        <span className="mayusculas">Total</span>
-        <span className="mayusculas">{formatearPrecio(totalCop(lineas))}</span>
+      <div className={styles.total}>
+        <span className="label">Total</span>
+        <span className="label">{formatPrice(cartTotalCop(lines))}</span>
       </div>
 
-      {hayPieza && (
-        <p className="tenue">
+      {hasPiece && (
+        <p className="muted">
           Al pagar firmarás el contrato de compraventa de las piezas físicas. Necesitarás tu
           cédula a mano.
         </p>
@@ -83,7 +83,7 @@ export default function CarritoPagina() {
 
       {/* lazy: el checkout necesita la API para reservar las piezas y cobrar. */}
       <button type="button" disabled>Pagar</button>
-      <p className="tenue">El pago estará disponible cuando conectemos la tienda.</p>
+      <p className="muted">El pago estará disponible cuando conectemos la tienda.</p>
     </div>
   );
 }

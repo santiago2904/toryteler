@@ -1,51 +1,51 @@
 @use '../../styles/breakpoints' as bp;
 
-.artista {
+.artist {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
-  gap: var(--respiro);
-  padding: var(--margen);
+  gap: var(--section-gap);
+  padding: var(--gutter);
   max-width: 72rem;
   margin-inline: auto;
   align-items: start;
 
-  @include bp.desde(bp.$tableta) {
+  @include bp.from(bp.$tablet) {
     grid-template-columns: minmax(0, 26rem) minmax(0, 1fr);
-    gap: calc(var(--u) * 8);
+    gap: calc(var(--unit) * 8);
   }
 }
 
-.retrato {
+.portrait {
   min-width: 0;
   max-width: 26rem;
 
-  @include bp.desde(bp.$tableta) {
+  @include bp.from(bp.$tablet) {
     position: sticky;
-    top: var(--margen);
+    top: var(--gutter);
   }
 }
 
-.texto {
+.text {
   display: flex;
   flex-direction: column;
-  gap: calc(var(--u) * 2);
+  gap: calc(var(--unit) * 2);
   min-width: 0;
 }
 
-.parrafo { max-width: 56ch; }
+.paragraph { max-width: 56ch; }
 
-.bloque {
-  border-top: 1px solid var(--linea);
-  padding-top: var(--margen);
-  margin-top: var(--u);
+.block {
+  border-top: 1px solid var(--line);
+  padding-top: var(--gutter);
+  margin-top: var(--unit);
   display: flex;
   flex-direction: column;
-  gap: var(--u);
+  gap: var(--unit);
 }
 
-.redes {
+.socials {
   list-style: none;
   display: flex;
   flex-direction: column;
-  gap: calc(var(--u) * 0.5);
+  gap: calc(var(--unit) * 0.5);
 }

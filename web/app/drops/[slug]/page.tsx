@@ -1,14 +1,14 @@
 import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
-import { BotonCarrito } from '@/components/BotonCarrito';
+import { AddToCart } from '@/components/AddToCart';
 import { apiGet } from '@/lib/api';
-import { DropDetail } from '@/lib/tipos';
-import { Imagen } from '@/components/Imagen';
-import { Precio } from '@/components/Precio';
-import { EstadoDrop } from '@/components/EstadoDrop';
-import estilos from './page.module.scss';
+import { DropDetail } from '@/lib/types';
+import { ProductImage } from '@/components/ProductImage';
+import { Price } from '@/components/Price';
+import { DropStatus } from '@/components/DropStatus';
+import styles from './page.module.scss';
 
-async function cargar(slug: string): Promise<DropDetail | null> {
+async function load(slug: string): Promise<DropDetail | null> {
   try {
     return await apiGet<DropDetail>(`/drops/${slug}`);
   } catch {
@@ -20,7 +20,7 @@ export async function generateMetadata(
   { params }: { params: Promise<{ slug: string }> },
 ): Promise<Metadata> {
   const { slug } = await params;
-  const drop = await cargar(slug);
+  const drop = await load(slug);
   if (!drop) return { title: 'No encontrado' };
   return {
     title: `${drop.title} — Toryteler`,
@@ -28,42 +28,42 @@ export async function generateMetadata(
   };
 }
 
-export default async function Drop({ params }: { params: Promise<{ slug: string }> }) {
+export default async function DropPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
-  const drop = await cargar(slug);
+  const drop = await load(slug);
   if (!drop) notFound();
 
-  const horas = drop.viewWindowHours;
+  const hours = drop.viewWindowHours;
 
   return (
-    <article className={estilos.drop}>
+    <article className={styles.drop}>
       {drop.posterImage && (
-        <div className={estilos.poster}>
-          <Imagen publicId={drop.posterImage} alt={drop.title} priority encuadre="completa" />
+        <div className={styles.poster}>
+          <ProductImage publicId={drop.posterImage} alt={drop.title} priority fit="contain" />
         </div>
       )}
 
-      <div className={estilos.ficha}>
-        <p className="mayusculas tenue">Video</p>
-        <h1 className="titulo">{drop.title}</h1>
+      <div className={styles.details}>
+        <p className="label muted">Video</p>
+        <h1 className="title">{drop.title}</h1>
 
-        <div className={estilos.datos}>
-          <Precio cop={drop.priceCop} />
-          <EstadoDrop remaining={drop.remaining} soldOut={drop.soldOut} />
+        <div className={styles.meta}>
+          <Price cop={drop.priceCop} />
+          <DropStatus remaining={drop.remaining} soldOut={drop.soldOut} />
         </div>
 
-        {drop.description && <p className={estilos.parrafo}>{drop.description}</p>}
+        {drop.description && <p className={styles.paragraph}>{drop.description}</p>}
 
         {/* Las condiciones son la mitad del producto: no pueden estar en letra
             pequeña ni después del pago. */}
-        <section className={estilos.condiciones}>
-          <h2 className="mayusculas tenue">Cómo funciona</h2>
-          <ul className={estilos.lista}>
+        <section className={styles.terms}>
+          <h2 className="label muted">Cómo funciona</h2>
+          <ul className={styles.list}>
             {drop.capacity !== null && (
               <li>Solo {drop.capacity} personas pueden comprarlo. Cuando se acabe, se acabó.</li>
             )}
             <li>
-              Se ve una sola vez. Al darle play se abre una ventana de {horas} horas y dentro de
+              Se ve una sola vez. Al darle play se abre una ventana de {hours} horas y dentro de
               ella puedes salir y volver las veces que quieras.
             </li>
             <li>Cuando la ventana se cierra, el video no vuelve a abrirse para ti.</li>
@@ -72,11 +72,11 @@ export default async function Drop({ params }: { params: Promise<{ slug: string 
         </section>
 
         {drop.soldOut ? (
-          <p className="mayusculas tenue">Ya no quedan cupos.</p>
+          <p className="label muted">Ya no quedan seats.</p>
         ) : (
-          <div className={estilos.accion}>
-            <BotonCarrito
-              linea={{
+          <div className={styles.action}>
+            <AddToCart
+              line={{
                 kind: 'drop',
                 slug: drop.slug,
                 title: drop.title,

@@ -1,58 +1,58 @@
 import type { Metadata } from 'next';
-import { Imagen } from '@/components/Imagen';
-import { ARTISTA } from '@/lib/artista';
-import estilos from './page.module.scss';
+import { ProductImage } from '@/components/ProductImage';
+import { ARTIST } from '@/lib/artist';
+import styles from './page.module.scss';
 
 export const metadata: Metadata = {
   title: 'Toryteler — quién es',
   description: 'Quién es el artista detrás de las piezas.',
 };
 
-export default function Artista() {
+export default function ArtistPage() {
   return (
-    <article className={estilos.artista}>
-      <div className={estilos.retrato}>
-        <Imagen
-          publicId={ARTISTA.retrato}
-          alt={`Retrato de ${ARTISTA.nombre}`}
+    <article className={styles.artist}>
+      <div className={styles.portrait}>
+        <ProductImage
+          publicId={ARTIST.portrait}
+          alt={`Retrato de ${ARTIST.name}`}
           priority
-          encuadre="completa"
+          fit="contain"
         />
       </div>
 
-      <div className={estilos.texto}>
-        <h1 className="titulo">{ARTISTA.nombre}</h1>
-        <p className="mayusculas tenue">{ARTISTA.oficio}</p>
+      <div className={styles.text}>
+        <h1 className="title">{ARTIST.name}</h1>
+        <p className="label muted">{ARTIST.role}</p>
 
-        {ARTISTA.bio.map((parrafo) => (
-          <p key={parrafo.slice(0, 24)} className={estilos.parrafo}>{parrafo}</p>
+        {ARTIST.bio.map((paragraph) => (
+          <p key={paragraph.slice(0, 24)} className={styles.paragraph}>{paragraph}</p>
         ))}
 
-        <section className={estilos.bloque}>
-          <h2 className="mayusculas tenue">Dónde encontrarlo</h2>
-          <ul className={estilos.redes}>
-            {ARTISTA.redes.map((red) => (
-              <li key={red.nombre}>
+        <section className={styles.block}>
+          <h2 className="label muted">Dónde encontrarlo</h2>
+          <ul className={styles.socials}>
+            {ARTIST.socials.map((social) => (
+              <li key={social.name}>
                 <a
-                  href={red.url}
+                  href={social.url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="mayusculas"
+                  className="label"
                 >
-                  {red.nombre}
+                  {social.name}
                 </a>{' '}
-                <span className="tenue">{red.usuario}</span>
+                <span className="muted">{social.handle}</span>
               </li>
             ))}
           </ul>
         </section>
 
-        <section className={estilos.bloque}>
-          <h2 className="mayusculas tenue">Contacto</h2>
+        <section className={styles.block}>
+          <h2 className="label muted">Contacto</h2>
           <p>
-            <a href={`mailto:${ARTISTA.correo}`}>{ARTISTA.correo}</a>
+            <a href={`mailto:${ARTIST.email}`}>{ARTIST.email}</a>
           </p>
-          <p className="tenue">{ARTISTA.ubicacion}</p>
+          <p className="muted">{ARTIST.location}</p>
         </section>
       </div>
     </article>

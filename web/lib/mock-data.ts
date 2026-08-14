@@ -1,14 +1,14 @@
-import { DropDetail, EntitlementSummary, OrderSummary, PieceDetail } from './tipos';
+import { DropDetail, EntitlementSummary, OrderSummary, PieceDetail } from './types';
 
 /**
- * Datos de mentira para desarrollar el front antes de que exista la API.
- * Vive detrás de lib/api.ts y desaparece en cuanto API_URL apunte a algo real:
- * ninguna página importa este archivo.
+ * Fake data so the frontend can be built before the API exists.
+ * It lives behind lib/api.ts and disappears the moment API_URL points at
+ * something real: no page imports this file.
  *
- * lazy: borrar este módulo completo cuando la API esté en pie.
+ * lazy: delete this whole module once the API is up.
  */
 
-export const PIEZAS: PieceDetail[] = [
+export const PIECES: PieceDetail[] = [
   {
     id: '11111111-1111-1111-1111-111111111111',
     slug: 'boceto-portada-primer-disco',
@@ -153,7 +153,7 @@ export const DROPS: DropDetail[] = [
     slug: 'ojitos-verdes-maqueta',
     title: 'Ojitos verdes — máster de maqueta',
     description:
-      'La maqueta original, sin mezclar. Se oye el conteo, se oye la silla, y en el segundo verso me equivoco y sigo. Es la primera vez que la canción existió completa.',
+      'La maqueta original, sin mezclar. Se oye el conteo, se oye la silla, y en el segundo verso me equivoco y sigo. Es la primera vez que la canción existió contain.',
     priceCop: 25000,
     posterImage: 'v1786679539/800w-KKOAYz5esa4.jpg',
     capacity: 50,
@@ -166,7 +166,7 @@ export const DROPS: DropDetail[] = [
     slug: 'casa-42-maqueta',
     title: 'Casa 42 — máster de maqueta',
     description:
-      'Grabada en la casa que le da el nombre, con un micrófono prestado y la ventana abierta. Al final se oye pasar una moto y por eso nunca la usamos.',
+      'Grabada en la casa que le da el nombre, con un micrófono prestado y la windowHours abierta. Al final se oye pasar una moto y por eso nunca la usamos.',
     priceCop: 25000,
     posterImage: 'v1786682103/63a008f631ae7492a75a001bd0791e8f.jpg',
     capacity: 30,
@@ -189,7 +189,7 @@ export const DROPS: DropDetail[] = [
   },
 ];
 
-export const PEDIDOS: OrderSummary[] = [
+export const ORDERS: OrderSummary[] = [
   {
     id: 'cccccccc-0000-0000-0000-00000000000c',
     reference: 'ord_a1b2c3d4e5f6',
@@ -211,7 +211,7 @@ export const PEDIDOS: OrderSummary[] = [
     },
   },
   {
-    // Pedido con varias cosas y sin envío todavía: pieza física más video.
+    // Order with several items and no shipment yet: physical piece plus video.
     id: 'cccccccc-0000-0000-0000-00000000000e',
     reference: 'ord_9f8e7d6c5b4a',
     status: 'paid',
@@ -235,12 +235,12 @@ export const PEDIDOS: OrderSummary[] = [
   },
 ];
 
-// Los tres estados posibles de un acceso, para poder verlos todos en /cuenta.
-// Las fechas se calculan al vuelo: una fecha fija haría que el acceso «abierto»
-// apareciera vencido a las pocas horas de escribir esto.
-const HORA = 3_600_000;
+// The three possible states of an entitlement, so all of them can be seen in
+// /cuenta. Dates are computed on the fly: a fixed date would make the "open"
+// entitlement look expired a few hours after writing this.
+const HOUR = 3_600_000;
 
-export const ACCESOS: EntitlementSummary[] = [
+export const ENTITLEMENTS: EntitlementSummary[] = [
   {
     id: 'dddddddd-0000-0000-0000-00000000000d',
     dropSlug: 'ojitos-verdes-maqueta',
@@ -253,16 +253,16 @@ export const ACCESOS: EntitlementSummary[] = [
     id: 'dddddddd-0000-0000-0000-00000000000e',
     dropSlug: 'casa-42-maqueta',
     dropTitle: 'Casa 42 — máster de maqueta',
-    firstPlayedAt: new Date(Date.now() - 20.7 * HORA).toISOString(),
-    expiresAt: new Date(Date.now() + 3.3 * HORA).toISOString(),
+    firstPlayedAt: new Date(Date.now() - 20.7 * HOUR).toISOString(),
+    expiresAt: new Date(Date.now() + 3.3 * HOUR).toISOString(),
     state: 'open',
   },
   {
     id: 'dddddddd-0000-0000-0000-00000000000f',
     dropSlug: 'como-conoci-a-gabi',
     dropTitle: 'Cómo conocí a Gabi',
-    firstPlayedAt: new Date(Date.now() - 9 * 24 * HORA).toISOString(),
-    expiresAt: new Date(Date.now() - 7 * 24 * HORA).toISOString(),
+    firstPlayedAt: new Date(Date.now() - 9 * 24 * HOUR).toISOString(),
+    expiresAt: new Date(Date.now() - 7 * 24 * HOUR).toISOString(),
     state: 'consumed',
   },
 ];

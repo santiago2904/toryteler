@@ -3,16 +3,16 @@
 .drop {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
-  gap: var(--respiro);
-  padding: var(--margen);
+  gap: var(--section-gap);
+  padding: var(--gutter);
   max-width: 78rem;
   margin-inline: auto;
   align-items: start;
 
-  @include bp.desde(bp.$tableta) {
+  @include bp.from(bp.$tablet) {
     grid-template-columns: minmax(0, 34rem) 22rem;
     justify-content: center;
-    gap: calc(var(--u) * 8);
+    gap: calc(var(--unit) * 8);
   }
 }
 
@@ -21,46 +21,46 @@
   max-width: 34rem;
 }
 
-.ficha {
+.details {
   display: flex;
   flex-direction: column;
-  gap: calc(var(--u) * 2);
+  gap: calc(var(--unit) * 2);
   min-width: 0;
 
-  @include bp.desde(bp.$tableta) {
+  @include bp.from(bp.$tablet) {
     position: sticky;
-    top: var(--margen);
+    top: var(--gutter);
   }
 }
 
-.datos {
+.meta {
   display: flex;
   flex-direction: column;
-  gap: calc(var(--u) * 0.5);
+  gap: calc(var(--unit) * 0.5);
 }
 
-.parrafo {
+.paragraph {
   max-width: 34ch;
 }
 
-.condiciones {
-  border-top: 1px solid var(--linea);
-  padding-top: var(--margen);
+.terms {
+  border-top: 1px solid var(--line);
+  padding-top: var(--gutter);
   display: flex;
   flex-direction: column;
-  gap: var(--u);
+  gap: var(--unit);
 }
 
-.lista {
+.list {
   list-style: none;
   display: flex;
   flex-direction: column;
-  gap: var(--u);
+  gap: var(--unit);
   max-width: 34ch;
 }
 
-.accion {
-  margin-top: var(--u);
+.action {
+  margin-top: var(--unit);
 
   &:hover {
     text-decoration: none;

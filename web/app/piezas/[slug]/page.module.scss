@@ -1,65 +1,65 @@
 @use '../../../styles/breakpoints' as bp;
 
-.pieza {
+.piece {
   display: grid;
-  grid-template-columns: minmax(0, 1fr);   // móvil primero: ficha bajo las imágenes
-  gap: var(--respiro);
-  padding: var(--margen);
+  grid-template-columns: minmax(0, 1fr);   // mobile first: details below the photos
+  gap: var(--section-gap);
+  padding: var(--gutter);
   align-items: start;
   max-width: 78rem;
   margin-inline: auto;
 
-  @include bp.desde(bp.$tableta) {
-    // minmax(0, ...) y no 1fr: una columna 1fr nunca baja de su contenido
-    // mínimo, y ahí es donde nace el scroll horizontal.
+  @include bp.from(bp.$tablet) {
+    // minmax(0, ...) and not 1fr: a 1fr column never shrinks below its
+    // minimum content, and that is where horizontal scroll comes from.
     grid-template-columns: minmax(0, 34rem) 22rem;
     justify-content: center;
-    gap: calc(var(--u) * 8);
+    gap: calc(var(--unit) * 8);
   }
 }
 
-.imagenes {
+.images {
   display: flex;
   flex-direction: column;
-  gap: var(--margen);
+  gap: var(--gutter);
   min-width: 0;
-  // 34rem ≈ 544 px. Una foto de celular se ve nítida a ese tamaño; más grande
-  // solo delata el grano y obliga a hacer scroll para verla entera.
+  // 34rem ≈ 544px. A phone photo looks sharp at that size; any larger only
+  // exposes the grain and forces scrolling to see it whole.
   max-width: 34rem;
 }
 
-.ficha {
+.details {
   display: flex;
   flex-direction: column;
-  gap: calc(var(--u) * 2);
+  gap: calc(var(--unit) * 2);
   min-width: 0;
 
-  @include bp.desde(bp.$tableta) {
+  @include bp.from(bp.$tablet) {
     position: sticky;
-    top: var(--margen);
+    top: var(--gutter);
   }
 }
 
-.datos {
+.meta {
   display: flex;
   flex-direction: column;
-  gap: calc(var(--u) * 0.5);
+  gap: calc(var(--unit) * 0.5);
 }
 
-.parrafo {
+.paragraph {
   max-width: 34ch;
 }
 
-.procedencia {
-  border-top: 1px solid var(--linea);
-  padding-top: var(--margen);
+.provenance {
+  border-top: 1px solid var(--line);
+  padding-top: var(--gutter);
   display: flex;
   flex-direction: column;
-  gap: var(--u);
+  gap: var(--unit);
 }
 
-.accion {
-  margin-top: var(--u);
+.action {
+  margin-top: var(--unit);
 
   &:hover {
     text-decoration: none;

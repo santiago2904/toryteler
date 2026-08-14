@@ -1,0 +1,5 @@
+.hint {
+  // The text appears as the price is typed; reserving the height keeps the
+  // form from jumping the moment it shows up.
+  min-height: 3rem;
+}

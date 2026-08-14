@@ -1,154 +1,154 @@
 @use '../../styles/breakpoints' as bp;
 
-.marco {
-  padding: var(--margen);
+.frame {
+  padding: var(--gutter);
   max-width: 72rem;
   margin-inline: auto;
   display: flex;
   flex-direction: column;
-  gap: var(--margen);
+  gap: var(--gutter);
 }
 
-/* Mientras nada se guarda, decirlo evita que alguien escriba media ficha
-   creyendo que la está publicando. */
-.aviso {
-  border: 1px solid var(--linea);
-  padding: var(--u) calc(var(--u) * 1.5);
+/* While nothing is saved, saying so keeps anyone from writing half a listing
+   believing they are publishing it. */
+.notice {
+  border: 1px solid var(--line);
+  padding: var(--unit) calc(var(--unit) * 1.5);
 }
 
 .nav {
   display: flex;
-  gap: var(--margen);
-  padding-bottom: var(--margen);
-  border-bottom: 1px solid var(--linea);
+  gap: var(--gutter);
+  padding-bottom: var(--gutter);
+  border-bottom: 1px solid var(--line);
 
   > * { min-height: 44px; display: inline-flex; align-items: center; }
 }
 
 
-.formulario {
+.form {
   display: grid;
-  gap: calc(var(--u) * 0.75);
+  gap: calc(var(--unit) * 0.75);
   align-content: start;
   max-width: 32rem;
-  padding-top: var(--margen);
+  padding-top: var(--gutter);
 
-  h1 { margin-bottom: var(--u); }
+  h1 { margin-bottom: var(--unit); }
 }
 
 
-.grupo {
-  border: 1px solid var(--linea);
-  padding: var(--margen);
+.group {
+  border: 1px solid var(--line);
+  padding: var(--gutter);
   display: grid;
-  gap: var(--u);
+  gap: var(--unit);
 
-  legend { font-size: var(--etiqueta); color: var(--tenue); padding: 0 var(--u); }
+  legend { font-size: var(--text-label); color: var(--muted); padding: 0 var(--unit); }
 }
 
-.casilla {
+.checkbox {
   display: flex;
   align-items: center;
-  gap: var(--u);
+  gap: var(--unit);
 
   input { width: auto; min-height: 0; }
 }
 
-/* Pedidos */
+/* OrdersPage */
 
-.pedidos {
+.orders {
   display: flex;
   flex-direction: column;
-  gap: var(--margen);
-  padding-top: var(--margen);
+  gap: var(--gutter);
+  padding-top: var(--gutter);
 }
 
-.listaPedidos { list-style: none; }
+.orderList { list-style: none; }
 
-.pedido {
+.order {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr);
-  gap: var(--margen);
+  gap: var(--gutter);
   align-items: start;
-  padding: var(--margen) 0;
-  border-bottom: 1px solid var(--linea);
+  padding: var(--gutter) 0;
+  border-bottom: 1px solid var(--line);
 }
 
-.miniaturas {
+.thumbs {
   list-style: none;
   display: flex;
-  gap: calc(var(--u) * 0.5);
+  gap: calc(var(--unit) * 0.5);
 }
 
-.miniatura {
+.thumb {
   width: 4.5rem;
   flex-shrink: 0;
 }
 
-.datos {
+.meta {
   display: flex;
   flex-direction: column;
-  gap: calc(var(--u) * 0.5);
+  gap: calc(var(--unit) * 0.5);
   min-width: 0;
 }
 
-.envio {
+.shipping {
   display: grid;
-  gap: calc(var(--u) * 0.5);
-  padding-top: var(--u);
+  gap: calc(var(--unit) * 0.5);
+  padding-top: var(--unit);
   max-width: 20rem;
 }
 
 /* Listado de lo publicado */
 
-.publicado {
+.published {
   display: flex;
   flex-direction: column;
-  gap: var(--respiro);
-  padding-top: var(--margen);
+  gap: var(--section-gap);
+  padding-top: var(--gutter);
 }
 
-.acciones {
+.actions {
   display: flex;
   flex-wrap: wrap;
   justify-content: space-between;
   align-items: center;
-  gap: var(--margen);
+  gap: var(--gutter);
 }
 
-.botones {
+.buttons {
   display: flex;
-  gap: var(--u);
+  gap: var(--unit);
 
   a:hover { text-decoration: none; }
 }
 
-.grupoLista {
+.listGroup {
   display: flex;
   flex-direction: column;
-  gap: var(--u);
+  gap: var(--unit);
 }
 
-.articulo {
+.item {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr) auto;
-  gap: var(--margen);
+  gap: var(--gutter);
   align-items: center;
-  padding: var(--margen) 0;
-  border-bottom: 1px solid var(--linea);
+  padding: var(--gutter) 0;
+  border-bottom: 1px solid var(--line);
 }
 
-.gestion {
+.manage {
   display: flex;
-  gap: var(--margen);
+  gap: var(--gutter);
   align-items: center;
 }
 
-.guardar {
+.save {
   display: flex;
   flex-direction: column;
-  gap: var(--u);
+  gap: var(--unit);
   align-items: flex-start;
-  padding-top: var(--margen);
+  padding-top: var(--gutter);
 }
 

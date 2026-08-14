@@ -1,77 +1,77 @@
 @use '../../styles/breakpoints' as bp;
 
-.cuenta {
-  padding: var(--margen);
+.account {
+  padding: var(--gutter);
   display: grid;
-  gap: var(--respiro);
+  gap: var(--section-gap);
   max-width: 56rem;
   margin-inline: auto;
 }
 
-.seccion {
+.section {
   display: flex;
   flex-direction: column;
-  gap: var(--margen);
+  gap: var(--gutter);
 }
 
-/* Un pedido se reconoce por la foto antes que por su referencia. */
-.pedido {
+/* An order is recognised by its photo before its reference number. */
+.order {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr);
-  gap: var(--margen);
+  gap: var(--gutter);
   align-items: start;
-  padding: var(--margen) 0;
-  border-bottom: 1px solid var(--linea);
+  padding: var(--gutter) 0;
+  border-bottom: 1px solid var(--line);
 }
 
-.miniaturas {
+.thumbs {
   list-style: none;
   display: flex;
-  gap: calc(var(--u) * 0.5);
+  gap: calc(var(--unit) * 0.5);
 }
 
-.miniatura {
+.thumb {
   width: 4.5rem;
   flex-shrink: 0;
 
   a:hover { text-decoration: none; }
 }
 
-.datos {
+.meta {
   display: flex;
   flex-direction: column;
-  gap: calc(var(--u) * 0.5);
+  gap: calc(var(--unit) * 0.5);
   min-width: 0;
 }
 
-.encabezado {
+.heading {
   display: flex;
   flex-direction: column;
-  gap: var(--u);
+  gap: var(--unit);
 }
 
-.nota {
+.note {
   max-width: 56ch;
 }
 
-.lista {
+.list {
   list-style: none;
 }
 
-/* En móvil cada dato en su línea; en pantallas anchas, en una sola fila.
-   Un pedido tiene cinco datos y apretarlos en una línea de teléfono los
-   vuelve ilegibles. */
-.fila {
+/* One field per line on mobile; a single row on wider screens. An order has
+   five fields and cramming them into a phone-width line makes them
+   unreadable. */
+.row {
   display: flex;
   flex-direction: column;
-  gap: calc(var(--u) * 0.5);
-  padding: var(--margen) 0;
-  border-bottom: 1px solid var(--linea);
+  gap: calc(var(--unit) * 0.5);
+  padding: var(--gutter) 0;
+  border-bottom: 1px solid var(--line);
 
-  @include bp.desde(bp.$movil-grande) {
+  @include bp.from(bp.$phone-large) {
     flex-direction: row;
     flex-wrap: wrap;
     align-items: baseline;
-    gap: var(--margen);
+    gap: var(--gutter);
   }
 }

@@ -1,10 +1,10 @@
-.dentro {
+.inCart {
   display: flex;
   flex-direction: column;
-  gap: var(--u);
+  gap: var(--unit);
   align-items: flex-start;
 }
 
-.enlace:hover {
+.link:hover {
   text-decoration: none;
 }

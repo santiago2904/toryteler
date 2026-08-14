@@ -1,11 +1,11 @@
-// Puntos de quiebre en un solo lugar. Móvil primero: estos son "a partir de".
-$movil-grande: 640px;
-$tableta: 900px;
+// Breakpoints in one place. Mobile first: these are "from this width up".
+$phone-large: 640px;
+$tablet: 900px;
 
-@mixin desde($ancho) {
-  @media (min-width: $ancho) { @content; }
+@mixin from($width) {
+  @media (min-width: $width) { @content; }
 }
 
-@mixin hasta($ancho) {
-  @media (max-width: $ancho - 1px) { @content; }
+@mixin until($width) {
+  @media (max-width: $width - 1px) { @content; }
 }

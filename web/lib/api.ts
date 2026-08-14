@@ -1,22 +1,22 @@
 import { cookies } from 'next/headers';
 
 /**
- * Única frontera con el backend. Ninguna página llama a fetch por su cuenta.
+ * The single boundary with the backend. No page calls fetch on its own.
  *
- * Sin API_URL definida, responde con datos simulados para poder construir el
- * front antes que la API. En cuanto API_URL apunte a algo real, este archivo es
- * lo único que cambia de comportamiento: las páginas no se enteran.
+ * With no API_URL defined, it answers with mock data so the frontend can be
+ * built before the API exists. Once API_URL points at something real, this file
+ * is the only one that changes behaviour: pages never notice.
  */
 
 const BASE = process.env.API_URL;
 
-export async function apiGet<T>(path: string, autenticado = false): Promise<T> {
-  if (!BASE) return simular<T>(path);
+export async function apiGet<T>(path: string, authenticated = false): Promise<T> {
+  if (!BASE) return mock<T>(path);
 
   const headers: Record<string, string> = {};
-  if (autenticado) {
-    const sesion = (await cookies()).get('session')?.value;
-    if (sesion) headers.Authorization = `Bearer ${sesion}`;
+  if (authenticated) {
+    const session = (await cookies()).get('session')?.value;
+    if (session) headers.Authorization = `Bearer ${session}`;
   }
 
   const res = await fetch(`${BASE}${path}`, { headers, cache: 'no-store' });
@@ -30,11 +30,11 @@ export async function apiSend<T>(
   body: unknown,
   opts: { idempotencyKey?: string } = {},
 ): Promise<T> {
-  if (!BASE) throw new Error('API_NO_CONFIGURADA');
+  if (!BASE) throw new Error('API_NOT_CONFIGURED');
 
-  const sesion = (await cookies()).get('session')?.value;
+  const session = (await cookies()).get('session')?.value;
   const headers: Record<string, string> = { 'Content-Type': 'application/json' };
-  if (sesion) headers.Authorization = `Bearer ${sesion}`;
+  if (session) headers.Authorization = `Bearer ${session}`;
   if (opts.idempotencyKey) headers['Idempotency-Key'] = opts.idempotencyKey;
 
   const res = await fetch(`${BASE}${path}`, { method, headers, body: JSON.stringify(body) });
@@ -42,20 +42,20 @@ export async function apiSend<T>(
   return res.json() as Promise<T>;
 }
 
-/** lazy: andamio de desarrollo. Se borra junto con lib/simulacion.ts. */
-async function simular<T>(path: string): Promise<T> {
-  const { PIEZAS, DROPS, PEDIDOS, ACCESOS } = await import('./simulacion');
+/** lazy: development scaffolding. Deleted together with lib/mock-data.ts. */
+async function mock<T>(path: string): Promise<T> {
+  const { PIECES, DROPS, ORDERS, ENTITLEMENTS } = await import('./mock-data');
 
   if (path === '/pieces') {
-    return PIEZAS.map(({ slug, title, priceCop, images, stock, available }) => ({
+    return PIECES.map(({ slug, title, priceCop, images, stock, available }) => ({
       slug, title, priceCop, images, stock, available,
     })) as T;
   }
 
   if (path.startsWith('/pieces/')) {
-    const pieza = PIEZAS.find((p) => p.slug === decodeURIComponent(path.slice('/pieces/'.length)));
-    if (!pieza) throw new Error('API_404');
-    return pieza as T;
+    const piece = PIECES.find((p) => p.slug === decodeURIComponent(path.slice('/pieces/'.length)));
+    if (!piece) throw new Error('API_404');
+    return piece as T;
   }
 
   if (path === '/drops') return DROPS as T;
@@ -66,8 +66,8 @@ async function simular<T>(path: string): Promise<T> {
     return drop as T;
   }
 
-  if (path === '/me/orders') return PEDIDOS as T;
-  if (path === '/me/entitlements') return ACCESOS as T;
+  if (path === '/me/orders') return ORDERS as T;
+  if (path === '/me/entitlements') return ENTITLEMENTS as T;
 
-  throw new Error(`SIMULACION_SIN_RUTA:${path}`);
+  throw new Error(`MOCK_ROUTE_MISSING:${path}`);
 }

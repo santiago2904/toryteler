@@ -1,0 +1,17 @@
+.cart {
+  display: inline-flex;
+  align-items: center;
+  gap: calc(var(--unit) * 0.75);
+  min-height: 44px;
+
+  &:hover { text-decoration: none; }
+  &:hover .count { text-decoration: underline; text-underline-offset: 0.3em; }
+}
+
+.count {
+  font-size: var(--text-label);
+  font-weight: 500;
+  letter-spacing: var(--tracking-label);
+  // Tabular figures: the icon does not shift when going from 9 to 10.
+  font-variant-numeric: tabular-nums;
+}

@@ -1,39 +1,39 @@
 @use '../../styles/breakpoints' as bp;
 
-.carrito {
-  padding: var(--margen);
+.cart {
+  padding: var(--gutter);
   max-width: 44rem;
   margin-inline: auto;
   min-height: 60vh;
   display: flex;
   flex-direction: column;
-  gap: var(--margen);
+  gap: var(--gutter);
   align-items: flex-start;
 }
 
-.lista {
+.list {
   list-style: none;
   width: 100%;
 }
 
-.linea {
+.line {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr) auto;
-  gap: var(--margen);
+  gap: var(--gutter);
   align-items: start;
-  padding: var(--margen) 0;
-  border-bottom: 1px solid var(--linea);
+  padding: var(--gutter) 0;
+  border-bottom: 1px solid var(--line);
 }
 
-.miniatura {
+.thumb {
   width: 5rem;
   flex-shrink: 0;
 }
 
-.datos {
+.meta {
   display: flex;
   flex-direction: column;
-  gap: calc(var(--u) * 0.5);
+  gap: calc(var(--unit) * 0.5);
   min-width: 0;
 }
 
@@ -41,5 +41,5 @@
   display: flex;
   justify-content: space-between;
   width: 100%;
-  padding-top: var(--u);
+  padding-top: var(--unit);
 }

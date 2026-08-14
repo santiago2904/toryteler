@@ -1,6 +1,6 @@
 /**
- * Espejo exacto de lo que devuelve la API (plan 1, tareas 11 y 12).
- * Si esto y la API divergen, la API manda.
+ * Mirror of what the API returns (plan 1, tasks 11 and 12).
+ * If these and the API diverge, the API wins.
  */
 
 export interface PieceSummary {
@@ -8,7 +8,7 @@ export interface PieceSummary {
   title: string;
   priceCop: number;
   images: string[];
-  /** Unidades disponibles. 1 es una pieza irrepetible; más de 1, una edición. */
+  /** Units on sale. 1 means an irreplaceable piece; more than 1, an edition. */
   stock: number;
   available: boolean;
 }
@@ -41,9 +41,9 @@ export interface OrderItem {
 }
 
 /**
- * La URL de rastreo la arma el backend a partir de la transportadora: mantener
- * ese mapa en el front obligaría a desplegar la web cada vez que una cambia su
- * sitio. Si viene en null, se muestra el número sin enlace.
+ * The backend builds the tracking URL from the carrier: keeping that map in the
+ * frontend would mean redeploying the site every time a carrier changes its
+ * website. When null, the number is shown without a link.
  */
 export interface OrderTracking {
   number: string;

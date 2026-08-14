@@ -1,44 +1,45 @@
 import Link from 'next/link';
 import { apiGet } from '@/lib/api';
-import { DropDetail, PieceSummary } from '@/lib/tipos';
-import { Imagen } from '@/components/Imagen';
-import { Precio } from '@/components/Precio';
-import { EstadoPieza } from '@/components/EstadoPieza';
-import { EstadoDrop } from '@/components/EstadoDrop';
-import estilos from './page.module.scss';
+import { DropDetail, PieceSummary } from '@/lib/types';
+import { ProductImage } from '@/components/ProductImage';
+import { Price } from '@/components/Price';
+import { PieceStatus } from '@/components/PieceStatus';
+import { DropStatus } from '@/components/DropStatus';
+import styles from './page.module.scss';
 
 export const revalidate = 30;
 
-export default async function Catalogo() {
-  const [piezas, drops] = await Promise.all([
+export default async function Catalog() {
+  const [pieces, drops] = await Promise.all([
     apiGet<PieceSummary[]>('/pieces'),
     apiGet<DropDetail[]>('/drops'),
   ]);
 
-  if (piezas.length === 0 && drops.length === 0) {
-    return <p className={estilos.vacio}>Aún no hay nada publicado.</p>;
+  if (pieces.length === 0 && drops.length === 0) {
+    return <p className={styles.empty}>Aún no hay nada publicado.</p>;
   }
 
   return (
     <>
-      {/* Los videos van arriba y en su propia franja: son pocos, se compran de
-          otra manera y se agotan. Mezclarlos en la rejilla los escondería. */}
+      {/* Videos go on top, in their own strip: there are few of them, they are
+          bought differently and they run out. Mixed into the grid they would
+          simply disappear. */}
       {drops.length > 0 && (
-        <section className={estilos.franja}>
-          <h2 className="mayusculas tenue">Videos</h2>
-          <ul className={estilos.drops}>
+        <section className={styles.strip}>
+          <h2 className="label muted">Videos</h2>
+          <ul className={styles.drops}>
             {drops.map((drop) => (
               <li key={drop.slug}>
-                <Link href={`/drops/${drop.slug}`} className={estilos.drop}>
+                <Link href={`/drops/${drop.slug}`} className={styles.drop}>
                   {drop.posterImage && (
-                    <div className={estilos.miniatura}>
-                      <Imagen publicId={drop.posterImage} alt={drop.title} />
+                    <div className={styles.thumb}>
+                      <ProductImage publicId={drop.posterImage} alt={drop.title} />
                     </div>
                   )}
-                  <div className={estilos.pieDrop}>
-                    <span className="mayusculas">{drop.title}</span>
-                    <Precio cop={drop.priceCop} />
-                    <EstadoDrop remaining={drop.remaining} soldOut={drop.soldOut} />
+                  <div className={styles.dropMeta}>
+                    <span className="label">{drop.title}</span>
+                    <Price cop={drop.priceCop} />
+                    <DropStatus remaining={drop.remaining} soldOut={drop.soldOut} />
                   </div>
                 </Link>
               </li>
@@ -47,22 +48,22 @@ export default async function Catalogo() {
         </section>
       )}
 
-      <ul className={estilos.rejilla}>
-        {piezas.map((pieza, i) => (
-          <li key={pieza.slug}>
-            <Link href={`/piezas/${pieza.slug}`}>
-              {pieza.images[0] && (
-                // El nombre va solo en la foto, no en la tarjeta: si envolviera
-                // también el título y el precio, el navegador escalaría ese texto
-                // como si fuera una imagen y se vería estirado y borroso.
-                <div style={{ viewTransitionName: `pieza-${pieza.slug}` }}>
-                  <Imagen publicId={pieza.images[0]} alt={pieza.title} priority={i < 2} />
+      <ul className={styles.grid}>
+        {pieces.map((piece, i) => (
+          <li key={piece.slug}>
+            <Link href={`/piezas/${piece.slug}`}>
+              {piece.images[0] && (
+                // The name goes on the photo alone, not the card: wrapping the
+                // title and price too would make the browser scale that text as
+                // if it were an image, leaving it stretched and blurry.
+                <div style={{ viewTransitionName: `pieza-${piece.slug}` }}>
+                  <ProductImage publicId={piece.images[0]} alt={piece.title} priority={i < 2} />
                 </div>
               )}
-              <div className={estilos.pie}>
-                <span className="mayusculas">{pieza.title}</span>
-                <Precio cop={pieza.priceCop} />
-                {pieza.stock !== 1 && <EstadoPieza stock={pieza.stock} soldAt={null} />}
+              <div className={styles.footer}>
+                <span className="label">{piece.title}</span>
+                <Price cop={piece.priceCop} />
+                {piece.stock !== 1 && <PieceStatus stock={piece.stock} soldAt={null} />}
               </div>
             </Link>
           </li>

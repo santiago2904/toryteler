@@ -2,19 +2,19 @@
 
 import Link from 'next/link';
 import { useState } from 'react';
-import { GuiaDePrecio } from '@/components/GuiaDePrecio';
-import estilos from '../../studio.module.scss';
+import { PayoutHint } from '@/components/PayoutHint';
+import styles from '../../studio.module.scss';
 
-export default function NuevoVideo() {
-  const [precio, setPrecio] = useState(0);
-  const [sinLimite, setSinLimite] = useState(false);
-  const [cupos, setCupos] = useState(50);
-  const [ventana, setVentana] = useState(24);
+export default function NewVideoPage() {
+  const [price, setPrecio] = useState(0);
+  const [unlimited, setSinLimite] = useState(false);
+  const [seats, setCupos] = useState(50);
+  const [windowHours, setVentana] = useState(24);
 
   return (
-    <form onSubmit={(e) => e.preventDefault()} className={estilos.formulario}>
-      <Link href="/studio" className="mayusculas tenue">← Publicado</Link>
-      <h1 className="mayusculas tenue">Nuevo video</h1>
+    <form onSubmit={(e) => e.preventDefault()} className={styles.form}>
+      <Link href="/studio" className="label muted">← Publicado</Link>
+      <h1 className="label muted">Nuevo video</h1>
 
       <label htmlFor="titulo">Título</label>
       <input id="titulo" name="titulo" autoComplete="off" />
@@ -28,44 +28,44 @@ export default function NuevoVideo() {
       <label htmlFor="precio">Precio en pesos</label>
       <input
         id="precio" name="precio" type="number" min={1} inputMode="numeric"
-        value={precio || ''} onChange={(e) => setPrecio(Number(e.target.value))}
+        value={price || ''} onChange={(e) => setPrecio(Number(e.target.value))}
       />
-      <GuiaDePrecio precio={precio} />
+      <PayoutHint price={price} />
 
-      <fieldset className={estilos.grupo}>
+      <fieldset className={styles.group}>
         <legend>Cuántas personas pueden comprarlo</legend>
-        <label className={estilos.casilla}>
+        <label className={styles.checkbox}>
           <input
-            type="checkbox" checked={sinLimite}
+            type="checkbox" checked={unlimited}
             onChange={(e) => setSinLimite(e.target.checked)}
           />
           Sin límite
         </label>
         <input
           type="number" min={1} inputMode="numeric"
-          value={cupos} onChange={(e) => setCupos(Number(e.target.value))}
-          disabled={sinLimite} aria-label="Número de cupos"
+          value={seats} onChange={(e) => setCupos(Number(e.target.value))}
+          disabled={unlimited} aria-label="Número de cupos"
         />
-        <p className="tenue">
-          {sinLimite
+        <p className="muted">
+          {unlimited
             ? 'Cualquiera puede comprarlo, sin tope.'
-            : `Cuando lo compren ${cupos} personas, deja de venderse.`}
+            : `Cuando lo compren ${seats} personas, deja de venderse.`}
         </p>
       </fieldset>
 
       <label htmlFor="ventana">Horas de la ventana</label>
       <input
         id="ventana" name="ventana" type="number" min={1} inputMode="numeric"
-        value={ventana} onChange={(e) => setVentana(Number(e.target.value))}
+        value={windowHours} onChange={(e) => setVentana(Number(e.target.value))}
       />
-      <p className="tenue">
-        Desde que le dan play tienen {ventana} h para verlo. Dentro de ese tiempo pueden entrar
+      <p className="muted">
+        Desde que le dan play tienen {windowHours} h para verlo. Dentro de ese tiempo pueden entrar
         y salir; cuando se cierra, no vuelve a abrirse.
       </p>
 
-      <div className={estilos.guardar}>
+      <div className={styles.save}>
         <button type="submit" disabled>Guardar como borrador</button>
-        <span className="tenue">Guardar estará disponible cuando conectemos la tienda.</span>
+        <span className="muted">Guardar estará disponible cuando conectemos la tienda.</span>
       </div>
     </form>
   );

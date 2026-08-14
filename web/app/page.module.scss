@@ -1,65 +1,65 @@
 @use '../styles/breakpoints' as bp;
 
-// La rejilla ocupa todo el ancho: la pieza manda, no un contenedor centrado.
-.rejilla {
+// The grid takes the full width: the piece leads, not a centred container.
+.grid {
   list-style: none;
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: calc(var(--u) * 6) var(--margen);
-  padding: var(--margen);
-  // Animar grid-template-columns es lo que da la sensación de acercarse:
-  // las columnas se ensanchan en vez de saltar de golpe.
+  gap: calc(var(--unit) * 6) var(--gutter);
+  padding: var(--gutter);
+  // Animating grid-template-columns is what creates the sense of moving
+  // closer: columns widen instead of jumping.
   transition: grid-template-columns 500ms cubic-bezier(0.22, 1, 0.36, 1);
 
-  @include bp.desde(bp.$movil-grande) {
+  @include bp.from(bp.$phone-large) {
     grid-template-columns: repeat(4, minmax(0, 1fr));
   }
 
-  @include bp.desde(bp.$tableta) {
+  @include bp.from(bp.$tablet) {
     grid-template-columns: repeat(6, minmax(0, 1fr));
   }
 
   > li { min-width: 0; }
 
-  // Zoom: tres por fila para mirar la pieza de verdad.
-  :global(html[data-zoom='cerca']) & {
+  // Zoomed in: three per row, to actually look at the piece.
+  :global(html[data-zoom='in']) & {
     grid-template-columns: repeat(2, minmax(0, 1fr));
 
-    @include bp.desde(bp.$tableta) {
+    @include bp.from(bp.$tablet) {
       grid-template-columns: repeat(3, minmax(0, 1fr));
-      gap: var(--respiro) calc(var(--u) * 6);
+      gap: var(--section-gap) calc(var(--unit) * 6);
     }
   }
 }
 
-.pie {
+.footer {
   display: flex;
   flex-direction: column;
-  gap: calc(var(--u) * 0.5);
-  padding-top: calc(var(--u) * 2);
+  gap: calc(var(--unit) * 0.5);
+  padding-top: calc(var(--unit) * 2);
   text-align: center;
 }
 
-.vacio { padding: var(--respiro) var(--margen); }
+.empty { padding: var(--section-gap) var(--gutter); }
 
-/* Franja de videos: pocos elementos, más grandes que las piezas, con una línea
-   que la separa de la rejilla para que se lean como dos cosas distintas. */
-.franja {
-  padding: var(--margen) var(--margen) 0;
+/* Video strip: few items, larger than the pieces, with a rule separating it
+   from the grid so the two read as different things. */
+.strip {
+  padding: var(--gutter) var(--gutter) 0;
   display: flex;
   flex-direction: column;
-  gap: var(--margen);
+  gap: var(--gutter);
 }
 
 .drops {
   list-style: none;
   display: grid;
   grid-template-columns: minmax(0, 1fr);
-  gap: calc(var(--u) * 4);
-  padding-bottom: calc(var(--u) * 6);
-  border-bottom: 1px solid var(--linea);
+  gap: calc(var(--unit) * 4);
+  padding-bottom: calc(var(--unit) * 6);
+  border-bottom: 1px solid var(--line);
 
-  @include bp.desde(bp.$movil-grande) {
+  @include bp.from(bp.$phone-large) {
     grid-template-columns: repeat(auto-fill, minmax(min(20rem, 100%), 1fr));
   }
 }
@@ -67,21 +67,21 @@
 .drop {
   display: grid;
   grid-template-columns: 7rem minmax(0, 1fr);
-  gap: var(--margen);
+  gap: var(--gutter);
   align-items: center;
 
   &:hover { text-decoration: none; }
 }
 
-.miniatura { min-width: 0; }
+.thumb { min-width: 0; }
 
-.pieDrop {
+.dropMeta {
   display: flex;
   flex-direction: column;
-  gap: calc(var(--u) * 0.5);
+  gap: calc(var(--unit) * 0.5);
   min-width: 0;
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .rejilla { transition: none; }
+  .grid { transition: none; }
 }

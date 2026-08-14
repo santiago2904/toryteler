@@ -1,86 +1,86 @@
 @use '../styles/breakpoints' as bp;
 
-/* Móvil: todo centrado y apilado. Cuatro destinos no caben en una fila de
-   360 px sin apretarse, y repartirlos en zonas izquierda/derecha deja el
-   centro descolgado. Escritorio: tres zonas, con el zoom a la izquierda. */
-.cabecera {
-  // Fija al desplazar: con la rejilla a ancho completo, el carrito y el zoom
-  // quedarían a diez pantallas de distancia. El fondo debe ser opaco o las
-  // piezas se leerían por debajo.
+/* Mobile: everything centred and stacked. Four destinations do not fit in a
+   360px row without cramping, and splitting them into left/right zones leaves
+   the centre hanging. Desktop: three zones, with the zoom on the left. */
+.header {
+  // Sticky on scroll: with a full-width grid, cart and zoom would end up ten
+  // screens away. The background must be opaque or the pieces would show
+  // through.
   position: sticky;
   top: 0;
   z-index: 10;
-  background: var(--fondo);
+  background: var(--bg);
 
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: var(--u);
-  padding: var(--margen) var(--margen) calc(var(--u) * 4);
+  gap: var(--unit);
+  padding: var(--gutter) var(--gutter) calc(var(--unit) * 4);
   text-align: center;
 
-  @include bp.desde(bp.$movil-grande) {
+  @include bp.from(bp.$phone-large) {
     display: grid;
     grid-template-columns: auto 1fr auto;
     align-items: start;
-    gap: var(--margen);
-    padding: var(--margen);
+    gap: var(--gutter);
+    padding: var(--gutter);
     text-align: left;
   }
 }
 
 
-.izquierda {
-  // Por debajo de 640 px la rejilla ya está en dos columnas y el zoom la
-  // dejaría igual: el control no cambiaría nada, así que no existe. display:
-  // none también lo saca del árbol de accesibilidad, que es lo correcto para
-  // algo sin efecto.
+.left {
+  // Below 640px the grid is already two columns and zooming would leave it
+  // unchanged: the control would do nothing, so it does not exist. display:
+  // none also removes it from the accessibility tree, which is right for
+  // something with no effect.
   display: none;
 
-  @include bp.desde(bp.$movil-grande) {
+  @include bp.from(bp.$phone-large) {
     display: flex;
     align-items: center;
-    // El botón mide 44 px por accesibilidad; el margen negativo lo devuelve al
-    // borde óptico para que no parezca desalineado con el resto de la cabecera.
-    margin: calc(var(--u) * -1.5) 0 0 calc(var(--u) * -1.5);
+    // The button is 44px for accessibility; the negative margin pulls it back
+    // to the optical edge so it does not look misaligned with the header.
+    margin: calc(var(--unit) * -1.5) 0 0 calc(var(--unit) * -1.5);
   }
 }
 
-.centro {
+.center {
   display: flex;
   justify-content: center;
-  gap: var(--margen);
+  gap: var(--gutter);
 }
 
-.derecha {
+.right {
   display: flex;
   align-items: center;
   justify-content: center;
-  // Holgura suficiente para que dos objetivos táctiles contiguos no se
-  // confundan al tocarlos.
-  gap: calc(var(--u) * 2.5);
+  // Enough spacing that two adjacent touch targets are not mistaken for one
+  // another.
+  gap: calc(var(--unit) * 2.5);
 
-  @include bp.desde(bp.$movil-grande) {
+  @include bp.from(bp.$phone-large) {
     justify-content: flex-end;
-    gap: var(--margen);
+    gap: var(--gutter);
   }
 }
 
-/* El texto de la navegación mide 12 px: sin altura añadida, el objetivo
-   táctil es más pequeño que un dedo. El relleno vertical lo lleva a 44 px
-   sin cambiar nada de lo que se ve. */
-.centro > *,
-.derecha > * {
+/* Navigation text is 12px: with no added height the touch target is smaller
+   than a finger. Vertical padding brings it to 44px without changing anything
+   that is visible. */
+.center > *,
+.right > * {
   display: inline-flex;
   align-items: center;
   min-height: 44px;
 }
 
-.pie {
-  padding: var(--respiro) var(--margen) var(--margen);
+.footer {
+  padding: var(--section-gap) var(--gutter) var(--gutter);
   text-align: center;
 
-  @include bp.desde(bp.$movil-grande) {
+  @include bp.from(bp.$phone-large) {
     text-align: left;
   }
 }

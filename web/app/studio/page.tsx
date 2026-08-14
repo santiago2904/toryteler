@@ -1,87 +1,87 @@
 import Link from 'next/link';
 import type { Metadata } from 'next';
 import { apiGet } from '@/lib/api';
-import { DropDetail, PieceSummary } from '@/lib/tipos';
-import { Imagen } from '@/components/Imagen';
-import { formatearPrecio } from '@/lib/formato';
-import estilos from './studio.module.scss';
+import { DropDetail, PieceSummary } from '@/lib/types';
+import { ProductImage } from '@/components/ProductImage';
+import { formatPrice } from '@/lib/format';
+import styles from './studio.module.scss';
 
 export const metadata: Metadata = { title: 'Publicado — Studio' };
 
-export default async function Publicado() {
-  const [piezas, videos] = await Promise.all([
+export default async function PublishedPage() {
+  const [pieces, videos] = await Promise.all([
     apiGet<PieceSummary[]>('/pieces'),
     apiGet<DropDetail[]>('/drops'),
   ]);
 
   return (
-    <div className={estilos.publicado}>
-      <div className={estilos.acciones}>
-        <h1 className="mayusculas tenue">
-          {piezas.length} piezas · {videos.length} videos
+    <div className={styles.published}>
+      <div className={styles.actions}>
+        <h1 className="label muted">
+          {pieces.length} pieces · {videos.length} videos
         </h1>
-        <div className={estilos.botones}>
+        <div className={styles.buttons}>
           <Link href="/studio/nuevo/pieza"><button type="button">Nueva pieza</button></Link>
           <Link href="/studio/nuevo/video"><button type="button">Nuevo video</button></Link>
         </div>
       </div>
 
-      <section className={estilos.grupoLista}>
-        <h2 className="mayusculas tenue">Piezas</h2>
-        <ul className={estilos.listaPedidos}>
-          {piezas.map((pieza) => (
-            <li key={pieza.slug} className={estilos.articulo}>
-              <div className={estilos.miniatura}>
-                {pieza.images[0] && <Imagen publicId={pieza.images[0]} alt={pieza.title} />}
+      <section className={styles.listGroup}>
+        <h2 className="label muted">Piezas</h2>
+        <ul className={styles.orderList}>
+          {pieces.map((piece) => (
+            <li key={piece.slug} className={styles.item}>
+              <div className={styles.thumb}>
+                {piece.images[0] && <ProductImage publicId={piece.images[0]} alt={piece.title} />}
               </div>
 
-              <div className={estilos.datos}>
-                <Link href={`/piezas/${pieza.slug}`} className="mayusculas">{pieza.title}</Link>
-                <span>{formatearPrecio(pieza.priceCop)}</span>
-                <span className="mayusculas tenue">
-                  {pieza.stock === 0
+              <div className={styles.meta}>
+                <Link href={`/piezas/${piece.slug}`} className="label">{piece.title}</Link>
+                <span>{formatPrice(piece.priceCop)}</span>
+                <span className="label muted">
+                  {piece.stock === 0
                     ? 'Agotada'
-                    : pieza.stock === 1
+                    : piece.stock === 1
                       ? 'Última unidad'
-                      : `${pieza.stock} unidades`}
+                      : `${piece.stock} unidades`}
                 </span>
               </div>
 
-              <div className={estilos.gestion}>
-                <button type="button" className="enlace" disabled>Editar</button>
-                <button type="button" className="enlace" disabled>Despublicar</button>
+              <div className={styles.manage}>
+                <button type="button" className="link-button" disabled>Editar</button>
+                <button type="button" className="link-button" disabled>Despublicar</button>
               </div>
             </li>
           ))}
         </ul>
       </section>
 
-      <section className={estilos.grupoLista}>
-        <h2 className="mayusculas tenue">Videos</h2>
-        <ul className={estilos.listaPedidos}>
+      <section className={styles.listGroup}>
+        <h2 className="label muted">Videos</h2>
+        <ul className={styles.orderList}>
           {videos.map((video) => (
-            <li key={video.slug} className={estilos.articulo}>
-              <div className={estilos.miniatura}>
-                {video.posterImage && <Imagen publicId={video.posterImage} alt={video.title} />}
+            <li key={video.slug} className={styles.item}>
+              <div className={styles.thumb}>
+                {video.posterImage && <ProductImage publicId={video.posterImage} alt={video.title} />}
               </div>
 
-              <div className={estilos.datos}>
-                <Link href={`/drops/${video.slug}`} className="mayusculas">{video.title}</Link>
-                <span>{formatearPrecio(video.priceCop)}</span>
-                <span className="mayusculas tenue">
+              <div className={styles.meta}>
+                <Link href={`/drops/${video.slug}`} className="label">{video.title}</Link>
+                <span>{formatPrice(video.priceCop)}</span>
+                <span className="label muted">
                   {video.soldOut
                     ? 'Agotado'
                     : video.capacity === null
                       ? 'Sin límite de cupos'
                       : `${video.remaining} de ${video.capacity} cupos`}
                   {' · '}
-                  ventana de {video.viewWindowHours} h
+                  windowHours de {video.viewWindowHours} h
                 </span>
               </div>
 
-              <div className={estilos.gestion}>
-                <button type="button" className="enlace" disabled>Editar</button>
-                <button type="button" className="enlace" disabled>Despublicar</button>
+              <div className={styles.manage}>
+                <button type="button" className="link-button" disabled>Editar</button>
+                <button type="button" className="link-button" disabled>Despublicar</button>
               </div>
             </li>
           ))}
