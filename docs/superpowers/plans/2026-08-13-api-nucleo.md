@@ -88,6 +88,75 @@ Cada módulo agrupa lo que cambia junto: entidad, servicio y controlador de un m
 
 ---
 
+---
+
+## Ajustes tras construir el front
+
+El front está hecho y consume estos contratos. Donde el plan y el front difieran, **manda el front**: ya está escrito, desplegado y probado contra estas formas.
+
+### Identificadores: slugs, no UUID
+
+`POST /orders` recibe `pieceSlugs` y `dropSlugs`, no ids. El carrito del navegador guarda slugs porque son lo que ya viaja en las URLs; obligarle a manejar UUID significaría una consulta extra solo para traducir. Los precios se releen de la base en cualquier caso, así que el identificador no es un asunto de confianza.
+
+```ts
+interface CreateOrderDto {
+  pieceSlugs: string[];
+  dropSlugs: string[];
+  paymentMethod: 'CARD' | 'PSE' | 'NEQUI';
+  shippingAddress?: { line1: string; city: string; phone: string };
+}
+```
+
+### Respuestas que cambiaron
+
+`GET /pieces` y `GET /pieces/:slug` incluyen **`stock`**. La tienda distingue `ÚNICA` de `QUEDAN 12` con ese número, y el panel muestra el inventario.
+
+`GET /drops` — **endpoint nuevo**. La portada lista los videos en su propia franja; sin él no habría forma de llegar a un video.
+
+`GET /me/orders` devuelve **qué se compró y cómo se envió**:
+
+```ts
+interface OrderSummary {
+  id: string; reference: string;
+  status: 'pending' | 'paid' | 'failed' | 'expired' | 'refunded';
+  totalCop: number; createdAt: string;
+  items: { kind: 'piece' | 'drop'; slug: string; title: string; image: string | null }[];
+  tracking: { number: string; carrier: string; url: string | null } | null;
+}
+```
+
+Un pedido se reconoce por su foto antes que por su referencia, de ahí `items`. Y **la URL de rastreo la arma el backend** a partir de la transportadora: mantener ese mapa en el front obligaría a desplegar la web cada vez que una transportadora cambia su sitio.
+
+`GET /me/entitlements/:id` — **endpoint nuevo**. La pantalla de visionado necesita un acceso concreto, no la lista entera.
+
+`POST /entitlements/:id/play` devuelve además **`viewerEmail`**, que es lo que se estampa como marca de agua sobre el video.
+
+### Una regla de seguridad que el front ya respeta
+
+**La URL del video no puede viajar en la página de quien no ha abierto su ventana.** Aunque el reproductor no se dibuje, cualquier dato pasado a la página acaba en su código fuente. Por eso la URL se entrega **solo** como respuesta de `POST /entitlements/:id/play`, nunca como parte de `GET /drops/:slug`. Ese endpoint debe además comprobar que el acceso pertenece a la sesión y que la ventana sigue abierta.
+
+### Administración
+
+El panel hace más de lo que preveía la tarea 12:
+
+```
+PATCH  /admin/pieces/:id            editar (título, textos, precio, stock, fotos)
+PATCH  /admin/pieces/:id/publish
+PATCH  /admin/pieces/:id/unpublish
+PATCH  /admin/drops/:id             editar (título, textos, precio, cupos, ventana)
+PATCH  /admin/drops/:id/publish
+PATCH  /admin/drops/:id/unpublish
+POST   /admin/orders/:id/ship       { carrier, trackingNumber }
+```
+
+**Despublicar retira de la tienda y nada más.** Quien ya compró conserva su pedido y su acceso al video: revocarlos sería quitar algo pagado. En la base es un cambio de `status`, nunca un borrado, y no toca `entitlements`.
+
+**Marcar enviado recibe transportadora y guía**, y el backend compone la URL de rastreo. Transportadoras contempladas: Servientrega, Coordinadora, Interrapidísimo, TCC.
+
+**La capacidad de un video sube libremente pero nunca baja de lo ya vendido** — ya estaba en la tarea 12 y el front lo respeta mostrando el motivo en el propio formulario.
+
+---
+
 ## Tarea 1: Esqueleto, base de datos de prueba y primera migración
 
 **Archivos:**
@@ -389,30 +458,28 @@ git commit -m "feat(api): esqueleto NestJS, Postgres de pruebas y esquema base"
 
 ---
 
-> **Esta tarea cambió el 14 de agosto de 2026 y el texto de abajo está desactualizado.** Las piezas dejaron de ser necesariamente irrepetibles: llevan `stock`, la reserva es un decremento condicional y el índice único parcial sobre `order_items(piece_id)` desaparece. La regla vigente está en el spec §5.1; las pruebas de concurrencia siguen siendo las mismas, pero comprobando que de `stock = N` salen exactamente N ventas.
+## Tarea 2: Inventario — no se vende más de lo que hay
 
-## Tarea 2: Reserva de pieza — invariante de unicidad
+**Reescrita el 14 de agosto de 2026.** La versión anterior daba por hecho que toda pieza era irrepetible y protegía esa unicidad con un índice único parcial sobre `order_items(piece_id)`. El artista publica ediciones, así que ese índice impedía justo lo que debe permitirse. Ver spec §5.1.
 
 **Archivos:**
 - Crear: `src/pieces/pieces.service.ts`
-- Prueba: `test/integration/piece-reservation.spec.ts`
-- Modificar: `src/database/migrations/` — nueva migración `1755200000000-order-tables.ts`
+- Prueba: `test/integration/piece-stock.spec.ts`
+- Crear: `src/database/migrations/1755200000000-order-tables.ts`
 - Crear: `src/orders/order.entity.ts`, `src/orders/order-item.entity.ts`
 
 **Interfaces:**
-- Consume: `Piece`, `User`, `testDb()`, `truncateAll()` de la Tarea 1.
-- Produce: `PiecesService.reserve(pieceId: string, method: PaymentMethod): Promise<boolean>` — `true` si la ganó. `type PaymentMethod = 'CARD' | 'PSE' | 'NEQUI'`. Tablas `orders` y `order_items` con el índice único parcial sobre `piece_id`.
+- Consume: `Piece`, `User`, `testDb()`, `truncateAll()` de la tarea 1.
+- Produce: `PiecesService.take(pieceId: string): Promise<boolean>` — descuenta una unidad, `true` si quedaba. `PiecesService.release(pieceId: string): Promise<void>` — devuelve una unidad. Tablas `orders` y `order_items`.
 
 - [ ] **Paso 1: Escribir la prueba que falla**
-
-`api/test/integration/piece-reservation.spec.ts`:
 
 ```ts
 import { DataSource } from 'typeorm';
 import { testDb, truncateAll } from '../setup/db';
 import { PiecesService } from '../../src/pieces/pieces.service';
 
-describe('reserva de pieza', () => {
+describe('inventario de piezas', () => {
   let ds: DataSource;
   let svc: PiecesService;
 
@@ -420,118 +487,126 @@ describe('reserva de pieza', () => {
   beforeEach(async () => { await truncateAll(ds); });
   afterAll(async () => { await ds.destroy(); });
 
-  async function newPiece(status = 'available'): Promise<string> {
+  async function newPiece(stock: number): Promise<string> {
     const [row] = await ds.query(
-      `INSERT INTO pieces (slug, title, price_cop, status) VALUES ($1,'P',500000,$2) RETURNING id`,
-      [`p-${Math.random().toString(36).slice(2)}`, status],
+      \`INSERT INTO pieces (slug, title, price_cop, stock, status, published_at)
+       VALUES ($1,'P',500000,$2,'available',now()) RETURNING id\`,
+      [\`p-\${Math.random().toString(36).slice(2)}\`, stock],
     );
     return row.id;
   }
 
-  it('una sola de diez compras concurrentes gana la pieza', async () => {
-    const id = await newPiece();
-    const results = await Promise.all(
-      Array.from({ length: 10 }, () => svc.reserve(id, 'CARD')),
-    );
+  it('de una edición de 5 salen exactamente 5, con 20 compras a la vez', async () => {
+    const id = await newPiece(5);
+    const results = await Promise.all(Array.from({ length: 20 }, () => svc.take(id)));
+    expect(results.filter(Boolean)).toHaveLength(5);
+    const [p] = await ds.query(\`SELECT stock FROM pieces WHERE id=$1\`, [id]);
+    expect(p.stock).toBe(0);
+  });
+
+  it('una pieza irrepetible la gana una sola compra', async () => {
+    const id = await newPiece(1);
+    const results = await Promise.all(Array.from({ length: 10 }, () => svc.take(id)));
     expect(results.filter(Boolean)).toHaveLength(1);
-    const [piece] = await ds.query(`SELECT status FROM pieces WHERE id=$1`, [id]);
-    expect(piece.status).toBe('reserved');
   });
 
-  it('aplica TTL de 45 minutos para PSE y 15 para tarjeta', async () => {
-    const pse = await newPiece();
-    await svc.reserve(pse, 'PSE');
-    const [a] = await ds.query(
-      `SELECT EXTRACT(EPOCH FROM (reserved_until - now()))/60 AS mins FROM pieces WHERE id=$1`, [pse]);
-    expect(Number(a.mins)).toBeGreaterThan(44);
-
-    const card = await newPiece();
-    await svc.reserve(card, 'CARD');
-    const [b] = await ds.query(
-      `SELECT EXTRACT(EPOCH FROM (reserved_until - now()))/60 AS mins FROM pieces WHERE id=$1`, [card]);
-    expect(Number(b.mins)).toBeLessThan(16);
+  it('sin unidades, nadie se la lleva', async () => {
+    const id = await newPiece(0);
+    await expect(svc.take(id)).resolves.toBe(false);
   });
 
-  it('una reserva vencida se considera disponible, sin proceso de fondo', async () => {
-    const id = await newPiece();
-    await ds.query(
-      `UPDATE pieces SET status='reserved', reserved_until = now() - interval '1 minute' WHERE id=$1`, [id]);
-    await expect(svc.reserve(id, 'CARD')).resolves.toBe(true);
+  it('el stock nunca queda negativo', async () => {
+    const id = await newPiece(2);
+    await Promise.all(Array.from({ length: 50 }, () => svc.take(id)));
+    const [p] = await ds.query(\`SELECT stock FROM pieces WHERE id=$1\`, [id]);
+    expect(p.stock).toBe(0);
   });
 
-  it('no reserva una pieza ya vendida', async () => {
-    const id = await newPiece('sold');
-    await expect(svc.reserve(id, 'CARD')).resolves.toBe(false);
+  it('devolver una unidad la deja comprable otra vez', async () => {
+    const id = await newPiece(1);
+    await svc.take(id);
+    await expect(svc.take(id)).resolves.toBe(false);
+    await svc.release(id);
+    await expect(svc.take(id)).resolves.toBe(true);
   });
 
-  it('no reserva una pieza en borrador', async () => {
-    const id = await newPiece('draft');
-    await expect(svc.reserve(id, 'CARD')).resolves.toBe(false);
+  it('una pieza en borrador no se puede tomar', async () => {
+    const [row] = await ds.query(
+      \`INSERT INTO pieces (slug,title,price_cop,stock,status) VALUES ('d','D',1000,5,'draft') RETURNING id\`);
+    await expect(svc.take(row.id)).resolves.toBe(false);
+  });
+
+  it('la base rechaza un stock negativo', async () => {
+    await expect(ds.query(
+      \`INSERT INTO pieces (slug,title,price_cop,stock) VALUES ('n','N',1000,-1)\`,
+    )).rejects.toThrow();
   });
 });
 ```
 
 - [ ] **Paso 2: Ejecutar la prueba y verificar que falla**
 
-Ejecutar: `npx jest test/integration/piece-reservation.spec.ts`
+Ejecutar: `npx jest test/integration/piece-stock.spec.ts`
 Esperado: FALLA — `PiecesService` no existe.
 
 - [ ] **Paso 3: Implementar el servicio**
 
-`api/src/pieces/pieces.service.ts`:
+`src/pieces/pieces.service.ts`:
 
 ```ts
 import { Injectable } from '@nestjs/common';
 import { InjectDataSource } from '@nestjs/typeorm';
 import { DataSource } from 'typeorm';
 
-export type PaymentMethod = 'CARD' | 'PSE' | 'NEQUI';
-
-export const RESERVATION_TTL_MINUTES: Record<PaymentMethod, number> = {
-  CARD: 15,
-  PSE: 45,
-  NEQUI: 20,
-};
-
 @Injectable()
 export class PiecesService {
   constructor(@InjectDataSource() private readonly ds: DataSource) {}
 
   /**
-   * Gana la pieza para el checkout en curso. Una reserva vencida se trata como
-   * disponible en la misma consulta: la expiración es perezosa, no hay job.
+   * Descuenta una unidad. Postgres serializa las escrituras sobre una misma
+   * fila, así que dos compras simultáneas nunca leen el mismo saldo y el
+   * CHECK de la columna hace imposible bajar de cero.
    */
-  async reserve(pieceId: string, method: PaymentMethod): Promise<boolean> {
-    const result = await this.ds.query(
-      `UPDATE pieces
-          SET status = 'reserved',
-              reserved_until = now() + make_interval(mins => $2)
-        WHERE id = $1
-          AND (status = 'available'
-               OR (status = 'reserved' AND reserved_until < now()))
-        RETURNING id`,
-      [pieceId, RESERVATION_TTL_MINUTES[method]],
+  async take(pieceId: string): Promise<boolean> {
+    const rows = await this.ds.query(
+      \`UPDATE pieces SET stock = stock - 1
+        WHERE id = $1 AND stock > 0 AND status = 'available'
+        RETURNING stock\`,
+      [pieceId],
     );
-    return result.length === 1;
+    return rows.length === 1;
+  }
+
+  /** Devuelve la unidad cuando el pago falla o el pedido expira. */
+  async release(pieceId: string): Promise<void> {
+    await this.ds.query(\`UPDATE pieces SET stock = stock + 1 WHERE id = $1\`, [pieceId]);
   }
 }
 ```
 
 - [ ] **Paso 4: Ejecutar la prueba y verificar que pasa**
 
-Ejecutar: `npx jest test/integration/piece-reservation.spec.ts`
-Esperado: PASA — 5 pruebas.
+Ejecutar: `npx jest test/integration/piece-stock.spec.ts`
+Esperado: PASA — 7 pruebas.
 
-- [ ] **Paso 5: Migración de pedidos con el índice único parcial**
+- [ ] **Paso 5: Migración de piezas y pedidos**
 
-`api/src/database/migrations/1755200000000-order-tables.ts`:
+Añadir a la migración inicial de la tarea 1, en la tabla `pieces`:
+
+```sql
+stock integer NOT NULL DEFAULT 1 CHECK (stock >= 0)
+```
+
+Y quitar de esa tabla `reserved_until` y el estado `'reserved'`: el plazo del checkout ya no vive en la pieza, sino en la antigüedad del pedido.
+
+`src/database/migrations/1755200000000-order-tables.ts`:
 
 ```ts
 import { MigrationInterface, QueryRunner } from 'typeorm';
 
 export class OrderTables1755200000000 implements MigrationInterface {
   public async up(q: QueryRunner): Promise<void> {
-    await q.query(`
+    await q.query(\`
       CREATE TABLE orders (
         id                   uuid PRIMARY KEY DEFAULT gen_random_uuid(),
         user_id              uuid NOT NULL REFERENCES users(id),
@@ -542,11 +617,14 @@ export class OrderTables1755200000000 implements MigrationInterface {
         shipping_address     jsonb,
         wompi_transaction_id text UNIQUE,
         reference            text NOT NULL UNIQUE,
+        tracking_carrier     text,
+        tracking_number      text,
+        shipped_at           timestamptz,
         created_at           timestamptz NOT NULL DEFAULT now(),
         paid_at              timestamptz
-      )`);
+      )\`);
 
-    await q.query(`
+    await q.query(\`
       CREATE TABLE order_items (
         id             uuid PRIMARY KEY DEFAULT gen_random_uuid(),
         order_id       uuid NOT NULL REFERENCES orders(id),
@@ -554,93 +632,28 @@ export class OrderTables1755200000000 implements MigrationInterface {
         drop_id        uuid,
         unit_price_cop integer NOT NULL CHECK (unit_price_cop > 0),
         CHECK (num_nonnulls(piece_id, drop_id) = 1)
-      )`);
+      )\`);
 
-    // Hace imposible la doble venta, no solo improbable.
-    await q.query(`
-      CREATE UNIQUE INDEX uniq_order_item_piece
-        ON order_items (piece_id) WHERE piece_id IS NOT NULL`);
-
-    await q.query(`CREATE INDEX idx_orders_status_created ON orders (status, created_at)`);
+    // Sin índice único sobre piece_id: una edición se vende varias veces.
+    // Lo que impide vender de más es el descuento condicional sobre stock.
+    await q.query(\`CREATE INDEX idx_order_items_piece ON order_items (piece_id)\`);
+    await q.query(\`CREATE INDEX idx_orders_status_created ON orders (status, created_at)\`);
   }
 
   public async down(q: QueryRunner): Promise<void> {
-    await q.query(`DROP TABLE order_items`);
-    await q.query(`DROP TABLE orders`);
+    await q.query(\`DROP TABLE order_items\`);
+    await q.query(\`DROP TABLE orders\`);
   }
 }
 ```
 
-`api/src/orders/order.entity.ts`:
+Las entidades `Order` y `OrderItem` son las de la versión anterior de esta tarea, más `trackingCarrier`, `trackingNumber` y `shippedAt`.
 
-```ts
-import { Column, CreateDateColumn, Entity, PrimaryGeneratedColumn } from 'typeorm';
-import { PaymentMethod } from '../pieces/pieces.service';
-
-export type OrderStatus = 'pending' | 'paid' | 'failed' | 'expired' | 'refunded';
-
-@Entity('orders')
-export class Order {
-  @PrimaryGeneratedColumn('uuid') id!: string;
-  @Column({ type: 'uuid', name: 'user_id' }) userId!: string;
-  @Column({ type: 'text', default: 'pending' }) status!: OrderStatus;
-  @Column({ type: 'int', name: 'total_cop' }) totalCop!: number;
-  @Column({ type: 'text', name: 'payment_method' }) paymentMethod!: PaymentMethod;
-  @Column({ type: 'jsonb', name: 'shipping_address', nullable: true }) shippingAddress!: Record<string, string> | null;
-  @Column({ type: 'text', name: 'wompi_transaction_id', nullable: true }) wompiTransactionId!: string | null;
-  @Column({ type: 'text' }) reference!: string;
-  @CreateDateColumn({ type: 'timestamptz', name: 'created_at' }) createdAt!: Date;
-  @Column({ type: 'timestamptz', name: 'paid_at', nullable: true }) paidAt!: Date | null;
-}
-```
-
-`api/src/orders/order-item.entity.ts`:
-
-```ts
-import { Column, Entity, PrimaryGeneratedColumn } from 'typeorm';
-
-@Entity('order_items')
-export class OrderItem {
-  @PrimaryGeneratedColumn('uuid') id!: string;
-  @Column({ type: 'uuid', name: 'order_id' }) orderId!: string;
-  @Column({ type: 'uuid', name: 'piece_id', nullable: true }) pieceId!: string | null;
-  @Column({ type: 'uuid', name: 'drop_id', nullable: true }) dropId!: string | null;
-  @Column({ type: 'int', name: 'unit_price_cop' }) unitPriceCop!: number;
-}
-```
-
-- [ ] **Paso 6: Probar que el índice único parcial bloquea la doble venta**
-
-Añadir a `api/test/integration/piece-reservation.spec.ts`:
-
-```ts
-  it('la base rechaza dos order_items sobre la misma pieza', async () => {
-    const pieceId = await newPiece();
-    const [u] = await ds.query(`INSERT INTO users (email) VALUES ('c@d.co') RETURNING id`);
-    const mk = async () => {
-      const [o] = await ds.query(
-        `INSERT INTO orders (user_id, total_cop, payment_method, reference)
-         VALUES ($1, 500000, 'CARD', $2) RETURNING id`,
-        [u.id, `ref-${Math.random().toString(36).slice(2)}`],
-      );
-      return ds.query(
-        `INSERT INTO order_items (order_id, piece_id, unit_price_cop) VALUES ($1,$2,500000)`,
-        [o.id, pieceId],
-      );
-    };
-    await mk();
-    await expect(mk()).rejects.toThrow();
-  });
-```
-
-Ejecutar: `npx jest test/integration/piece-reservation.spec.ts`
-Esperado: PASA — 6 pruebas.
-
-- [ ] **Paso 7: Commit**
+- [ ] **Paso 6: Commit**
 
 ```bash
 git add api
-git commit -m "feat(api): reserva de pieza con TTL por método y expiración perezosa"
+git commit -m "feat(api): inventario de piezas con descuento condicional"
 ```
 
 ---

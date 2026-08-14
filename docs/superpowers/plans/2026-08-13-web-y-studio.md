@@ -32,7 +32,9 @@ Se decidió construir el front antes que la API. `lib/api.ts` es la única front
 | Formato de precios y fechas, con pruebas | `lib/formato.ts` |
 | Diez piezas simuladas sobre Cloudinary | `lib/simulacion.ts` |
 
-**Pendiente:** tareas 4 a 10 de este plan — checkout, contrato y firma, pago, cuenta, visionado efímero y studio. Todas necesitan la API viva, así que el siguiente paso natural es el plan 1.
+**Pendiente:** las cinco pantallas del flujo de compra —`/entrar`, `/checkout`, `/checkout/contrato`, `/checkout/pagar`, `/checkout/resultado`—. Todas crean un pedido, descuentan inventario, firman o cobran: maquetarlas sería escribir código para tirarlo. El siguiente paso es el plan 1.
+
+**Hecho además de lo planeado:** carrito completo con contador en la cabecera, pantalla de visionado con sus tres estados y reproductor real, panel con listado, edición y despublicación, campo de precio formateado como moneda, y los dos temas con transiciones direccionales.
 
 **Despliegue:** Vercel conectado al repo, con *Root Directory* en `web`. Cada push a `main` actualiza producción. No se define `API_URL` en Vercel: sin ella el sitio corre con los datos simulados, que es justo lo que se quiere para enseñarlo.
 

@@ -9,7 +9,7 @@ Estado: aprobado en brainstorming, pendiente de plan de implementación
 
 Una tienda de un solo artista donde se venden dos cosas, en el mismo carrito y el mismo checkout:
 
-- **Piezas físicas únicas** (one-of-one): objetos del artista, cosas que usó, piezas irrepetibles. Cada compra incluye una nota personal escrita por el artista y un contrato de compraventa firmado electrónicamente.
+- **Piezas físicas**: objetos del artista, cosas que usó, bocetos y pruebas. La mayoría son irrepetibles —una sola unidad— pero el artista puede publicar una edición de varias. Cada compra incluye una nota personal escrita por el artista y un contrato de compraventa firmado electrónicamente.
 - **Piezas digitales efímeras**: contenido en video con aforo limitado y acceso de una sola vez por comprador, dentro de una ventana de tiempo.
 
 La propuesta no es el producto: es la cercanía. El sistema existe para que la relación entre el artista y quien compra quede registrada — quién tiene qué pieza, qué le escribió el artista, quién vio ese video y cuándo.
@@ -19,7 +19,7 @@ Estéticamente el referente es `yeezy.com`: minimalismo extremo, casi sin interf
 ### Alcance de la fase 1
 
 Dentro:
-- Catálogo de piezas físicas únicas —**La casa de Tory**—, con página de procedencia pública por pieza
+- Catálogo de piezas físicas —**La casa de Tory**—, con página de procedencia pública por pieza
 - Ficha del artista: biografía, redes y contacto
 - Nota personal por pieza, escrita por el artista
 - Drops digitales con aforo configurable y visionado de una vez por comprador
@@ -88,7 +88,7 @@ Es información en el punto de decisión, no una restricción. `price_cop > 0` s
                                        Cloudinary (img) · Resend (correo)
 ```
 
-**Principio rector:** todo estado peligroso —"esta pieza es única", "quedan N cupos", "esta vista ya se gastó"— vive **solo en Postgres, protegido por constraints**. Nunca en memoria de la aplicación, nunca duplicado. La API corre en varias instancias; cualquier secuencia de "leer, verificar, escribir" en TypeScript vende la misma pieza dos veces tarde o temprano.
+**Principio rector:** todo estado peligroso —"quedan N unidades", "quedan N cupos", "esta vista ya se gastó"— vive **solo en Postgres, protegido por constraints**. Nunca en memoria de la aplicación, nunca duplicado. La API corre en varias instancias; cualquier secuencia de "leer, verificar, escribir" en TypeScript vende la misma pieza dos veces tarde o temprano.
 
 Corolario: los invariantes se implementan en migraciones SQL escritas a mano. Las validaciones de entidad de TypeORM no protegen contra concurrencia y no se usan para esto.
 
@@ -98,7 +98,7 @@ Corolario: los invariantes se implementan en migraciones SQL escritas a mano. La
 
 ## 4. Modelo de datos
 
-Dos tipos de cosa vendible, **no unificados** bajo un "producto" genérico. Una pieza física única y un drop digital con aforo se comportan de forma tan distinta (envío vs. acceso, stock 1 vs. N, contrato vs. entitlement) que fusionarlos produce columnas nulas y condicionales por todas partes.
+Dos tipos de cosa vendible, **no unificados** bajo un "producto" genérico. Una pieza física y un drop digital se comportan de forma tan distinta (envío frente a acceso, inventario frente a aforo, contrato frente a entitlement) que fusionarlos produce columnas nulas y condicionales por todas partes.
 
 ### users
 ```sql
@@ -110,7 +110,7 @@ phone           text
 created_at      timestamptz not null default now()
 ```
 
-### pieces — pieza física única
+### pieces — pieza física
 ```sql
 id              uuid primary key
 slug            text not null unique
@@ -120,12 +120,14 @@ story           text            -- procedencia: qué es, cuándo la usó el arti
 personal_note   text            -- nota del artista para el comprador
 price_cop       integer not null check (price_cop > 0)
 images          jsonb not null default '[]'   -- public_ids de Cloudinary
+stock           integer not null default 1 check (stock >= 0)
 status          text not null default 'draft'
-                check (status in ('draft','available','reserved','sold','archived'))
-reserved_until  timestamptz
+                check (status in ('draft','available','archived'))
 published_at    timestamptz
-sold_at         timestamptz
+sold_at         timestamptz     -- cuándo se agotó
 ```
+
+`stock = 1` es una pieza irrepetible; más de uno, una edición. No existe un estado `reserved`: el plazo del checkout vive en la antigüedad del pedido, no en la pieza. Tampoco `sold`, que `stock = 0` ya expresa.
 
 ### drops — pieza digital efímera
 ```sql
@@ -282,43 +284,33 @@ WHERE id = $1 AND first_played_at IS NULL;
 
 Regla de acceso posterior: se permite si `first_played_at IS NULL` (aún no empieza) o si `now() < expires_at` (dentro de la ventana). Una caída de red no cuesta la compra; a las 24 horas la ventana se cierra sola.
 
-### Reservas: TTL, liberación y pagos tardíos
+### Plazo del checkout y pagos tardíos
 
-Al iniciar el checkout la pieza pasa a `reserved`, para que nadie más la compre mientras el usuario llena datos, lee el contrato, verifica el OTP y firma.
+Al crear el pedido la unidad **ya está descontada**, así que nadie más puede comprarla mientras quien la tomó llena datos, lee el contrato, verifica el OTP y paga. No hay estado intermedio ni llave que caducar.
 
-**El TTL depende del método de pago**, porque PSE es estructuralmente lento (redirección al banco, clave, token):
+**El plazo depende del método de pago**, porque PSE es estructuralmente lento (redirección al banco, clave, token):
 
-| Método | `reserved_until` |
+| Método | Plazo del pedido |
 |---|---|
 | Tarjeta | 15 minutos |
 | PSE / Bancolombia | 45 minutos |
 | Nequi | 20 minutos |
 
-**La reserva expira de forma perezosa, sin job de fondo.** No existe evento externo que anuncie "pasaron 15 minutos", y no hace falta uno: una reserva vencida se ignora en el momento en que alguien la consulta. La condición de disponibilidad es parte de la propia consulta de compra:
+**La devolución del inventario no puede ser perezosa.** Una reserva marcada en la propia fila podía ignorarse al leerla; un contador no se recupera solo. Un pedido `pending` que supera su plazo se marca `expired` y devuelve sus unidades, y eso ocurre en la reconciliación de pagos que ya existe (§12) — sin añadir ningún proceso nuevo al sistema.
 
-```sql
-UPDATE pieces
-SET status = 'reserved', reserved_until = now() + ($2 * interval '1 minute')
-WHERE id = $1
-  AND (status = 'available'
-       OR (status = 'reserved' AND reserved_until < now()));  -- vencida = disponible
-```
+La ventana de visionado sí sigue siendo perezosa: `now() < expires_at` se evalúa en cada acceso.
 
-Es el mismo principio de un lock con TTL: la llave no se borra, se ignora al leerla. La pieza se recicla sin latencia y sin proceso periódico, y el catálogo aplica la misma condición para mostrar el estado correcto.
+**El sistema tiene un solo proceso periódico:** la reconciliación de pagos `pending` contra la API de Wompi, que es a la vez la red de seguridad ante un webhook perdido y quien devuelve el inventario abandonado.
 
-El pedido abandonado se marca `expired` de forma perezosa también, en la reconciliación de pagos. Igual la ventana de visionado: `now() < expires_at` se evalúa en cada acceso, así que tampoco necesita job.
+**Pago aprobado que llega tarde.** Un plazo vencido no anula un pago real, y el inventario ya devuelto puede haberse agotado mientras tanto:
 
-**El sistema tiene un solo proceso periódico:** la reconciliación de pagos `pending` contra la API de Wompi (§12), que es la red de seguridad ante un webhook perdido.
-
-**Pago aprobado que llega después de que la reserva venció.** Una reserva vencida no anula un pago real. Al procesar el webhook se resuelve por estado actual de la pieza:
-
-| Estado de la pieza al llegar el pago | Resolución |
+| Situación al llegar el pago | Resolución |
 |---|---|
-| `available` (nadie la tomó) | Se respeta la compra. Pasa a `sold`. Caso normal y mayoritario |
-| `reserved` por otro usuario, sin pagar | **El pago vence a la reserva.** Se le asigna a quien pagó; al otro se le libera el checkout con aviso |
-| `sold` a otro usuario | Gana quien pagó primero. Al segundo se le reembolsa automáticamente con correo explicando |
+| El pedido sigue `pending` | Se confirma sin más. Caso normal y mayoritario |
+| Expiró y **queda inventario** | Se vuelve a descontar una unidad y se confirma |
+| Expiró y **está agotado** | Reembolso automático con correo explicando |
 
-La regla general: **pago vence a reserva; primer pago vence a segundo pago.** Con el TTL diferenciado, la tercera fila es rara.
+La regla general: **un pago real nunca se descarta si hay con qué cumplirlo.** Con los plazos diferenciados, la tercera fila es rara.
 
 ---
 
@@ -399,27 +391,41 @@ Antes de publicar hay que hacer revisar el texto del contrato por un abogado. El
 ```
 POST   /auth/magic-link            enviar enlace
 GET    /auth/verify                canjear enlace por sesión
-GET    /pieces                     catálogo publicado
+
+GET    /pieces                     catálogo publicado, con stock
 GET    /pieces/:slug               detalle + procedencia
+GET    /drops                      videos publicados
 GET    /drops/:slug                detalle + cupos restantes
-POST   /orders                     crear pedido y reservar   [Idempotency-Key]
+
+POST   /orders                     crear pedido y descontar   [Idempotency-Key]
 POST   /orders/:id/contract        generar borrador de contrato
-POST   /orders/:id/sign            verificar OTP y firmar    [Idempotency-Key]
+POST   /orders/:id/sign            verificar OTP y firmar     [Idempotency-Key]
 POST   /orders/:id/pay             iniciar transacción Wompi
 POST   /webhooks/wompi             webhook firmado
-GET    /me/orders                  historial
+
+GET    /me/orders                  historial, con items y envío
 GET    /me/entitlements            accesos digitales
-POST   /entitlements/:id/play      abrir ventana y emitir token de video
-GET    /admin/*                    panel del artista (rol admin)
+GET    /me/entitlements/:id        un acceso concreto
+POST   /entitlements/:id/play      abrir ventana y emitir URL firmada de video
+
+PATCH  /admin/pieces/:id           editar
+PATCH  /admin/pieces/:id/publish
+PATCH  /admin/pieces/:id/unpublish
+PATCH  /admin/drops/:id            editar
+PATCH  /admin/drops/:id/publish
+PATCH  /admin/drops/:id/unpublish
+GET    /admin/orders               pedidos con dirección y correo
+POST   /admin/orders/:id/ship      { carrier, trackingNumber }
+GET    /admin/contracts            contratos firmados
 ```
 
 ## 10. Panel del artista
 
 Mínimo deliberado, una sola persona lo usa:
 - Crear/editar pieza: fotos (Cloudinary), título, historia de procedencia, precio, nota personal
-- Publicar / despublicar
+- Publicar y despublicar. **Despublicar retira de la tienda y nada más:** quien ya compró conserva su pedido y su acceso al video. Revocarlos sería quitar algo pagado.
 - Crear drop: video, precio, aforo, ventana de visionado
-- Ver pedidos: marcar enviado, número de guía
+- Ver pedidos: marcar enviado con transportadora y guía; la URL de rastreo la compone el backend
 - Ver contratos firmados y descargarlos
 - Emitir reembolso
 
