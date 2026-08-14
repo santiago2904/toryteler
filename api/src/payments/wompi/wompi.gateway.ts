@@ -47,10 +47,28 @@ export class WompiGateway extends PaymentGateway {
       // Signed with cents, the same figure sent as amount-in-cents. Signing the
       // pesos figure produces a checkout Wompi rejects without explaining why.
       'signature:integrity': this.integrity(request.reference, cents),
-      'redirect-url': request.redirectUrl,
       'customer-data:email': request.customerEmail,
     });
+
+    // A redirect back to localhost is refused before the page even loads: the
+    // checkout answers 403 through CloudFront, which reads like a blocked
+    // account rather than like an address Wompi will not accept. Left out in
+    // development, the payment still settles — that happens over the webhook —
+    // and the buyer simply stays on Wompi's own result page.
+    if (this.isPublicUrl(request.redirectUrl)) {
+      params.set('redirect-url', request.redirectUrl);
+    }
+
     return `${this.get('WOMPI_CHECKOUT_URL')}?${params.toString()}`;
+  }
+
+  private isPublicUrl(url: string): boolean {
+    try {
+      const { protocol, hostname } = new URL(url);
+      return protocol === 'https:' && hostname !== 'localhost' && !hostname.startsWith('127.');
+    } catch {
+      return false;
+    }
   }
 
   verifyWebhook(body: unknown): boolean {

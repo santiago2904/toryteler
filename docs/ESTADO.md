@@ -181,6 +181,13 @@ montado**, así que ese camino no funciona todavía.
   en un `INSERT ... ON CONFLICT` sin `RETURNING`**. Todo pasa por
   `api/src/database/rows.ts`. Las pruebas negativas pasan igual, así que el
   fallo es silencioso.
+- **Wompi rechaza un `redirect-url` a localhost** con un 403 de CloudFront, que
+  parece una cuenta bloqueada y es solo una dirección que no acepta. En
+  desarrollo se omite: el pago liquida igual por el webhook y quien compra se
+  queda en la página de resultado de Wompi.
+- **El checkout tiene que ser del mismo entorno que las llaves.** Con
+  `pub_stagtest_` va `https://checkout.co.uat.wompi.dev/p/`; el de producción no
+  conoce esas llaves.
 - **Wompi:** checksum del webhook en MAYÚSCULAS, firma de integridad sobre
   centavos, y evento identificado por transacción **y** estado. Detalles en
   `docs/wompi/README.md`.

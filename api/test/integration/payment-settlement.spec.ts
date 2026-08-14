@@ -220,12 +220,26 @@ describe('payment settlement', () => {
     it('signs the integrity with the amount in cents', () => {
       const url = gateway.buildCheckoutUrl({
         reference: 'ord_abc', amountCop: 25000,
-        customerEmail: 'a@b.co', redirectUrl: 'https://web/ok',
+        customerEmail: 'a@b.co', redirectUrl: 'https://toryteler.co/ok',
       });
       const expected = createHash('sha256')
         .update(`ord_abc2500000COP${INTEGRITY_SECRET}`).digest('hex');
       expect(url).toContain(`signature%3Aintegrity=${expected}`);
       expect(url).toContain('amount-in-cents=2500000');
+      // A public address travels; see the next test for why that matters.
+      expect(url).toContain('redirect-url=');
+    });
+
+    it('leaves out a redirect back to localhost, which the checkout refuses', () => {
+      // Wompi answers 403 through CloudFront when redirect-url points at
+      // localhost, and that error looks like a blocked account rather than
+      // like an address it will not take. Without it the checkout loads, and
+      // the payment still settles over the webhook.
+      const url = gateway.buildCheckoutUrl({
+        reference: 'ord_local', amountCop: 25000,
+        customerEmail: 'a@b.co', redirectUrl: 'http://localhost:3001/checkout/resultado',
+      });
+      expect(url).not.toContain('redirect-url');
     });
   });
 });
