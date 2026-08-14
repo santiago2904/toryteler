@@ -213,7 +213,9 @@ montado**, así que ese camino no funciona todavía.
 docker compose -f docker-compose.test.yml up -d
 
 # API — http://localhost:3000
-cd api && npm install && npm run start:dev
+cd api && npm install
+npm run seed:fresh                                  # vacía y siembra la tienda
+npm run start:dev
 npx jest                                            # 144 pruebas
 npm run build                                       # comprobación de tipos
 
@@ -234,6 +236,14 @@ front corre con datos simulados.
 Los correos se registran en la consola de la API con su cuerpo entero mientras
 `RESEND_API_KEY` sea el de ejemplo. Ahí salen el enlace de acceso y el código
 para firmar, que es la única forma de recorrer el flujo a mano.
+
+`npm run seed` deja la tienda con las 10 piezas y los 3 videos que se
+maquetaron, dos cuentas —`tory@toryteler.co` es el artista y abre `/studio`,
+`comprador@toryteler.co` tiene pedidos y los tres estados de un video— y el
+público inventado que hace que los cupos vendidos sean un número real y no un
+texto. Correrlo dos veces no duplica nada; `seed:fresh` vacía antes, que es lo
+que hace falta después de trastear a mano. Se niega a correr con
+`NODE_ENV=production`.
 
 `api/.env` se copia de `api/.env.example`; con las credenciales de ejemplo, el
 correo y la subida de PDF se simulan en consola en vez de fallar.

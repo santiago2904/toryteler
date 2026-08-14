@@ -16,7 +16,9 @@
     "test": "jest",
     "test:watch": "jest --watch",
     "migration:run": "typeorm-ts-node-commonjs migration:run -d src/database/data-source.ts",
-    "migration:revert": "typeorm-ts-node-commonjs migration:revert -d src/database/data-source.ts"
+    "migration:revert": "typeorm-ts-node-commonjs migration:revert -d src/database/data-source.ts",
+    "seed": "ts-node -r tsconfig-paths/register src/database/seed.ts",
+    "seed:fresh": "ts-node -r tsconfig-paths/register src/database/seed.ts --fresh"
   },
   "dependencies": {
     "@nestjs/common": "^11.0.1",
