@@ -18,12 +18,15 @@ export default async function Catalogo() {
   return (
     <ul className={estilos.rejilla}>
       {piezas.map((pieza, i) => (
-        // El nombre único es lo que permite al navegador seguir cada pieza
-        // entre las dos retículas y animar su tamaño en vez de fundirlas.
-        <li key={pieza.slug} style={{ viewTransitionName: `pieza-${pieza.slug}` }}>
+        <li key={pieza.slug}>
           <Link href={`/piezas/${pieza.slug}`}>
             {pieza.images[0] && (
-              <Imagen publicId={pieza.images[0]} alt={pieza.title} priority={i < 2} />
+              // El nombre va solo en la foto, no en la tarjeta: si envolviera
+              // también el título y el precio, el navegador escalaría ese texto
+              // como si fuera una imagen y se vería estirado y borroso.
+              <div style={{ viewTransitionName: `pieza-${pieza.slug}` }}>
+                <Imagen publicId={pieza.images[0]} alt={pieza.title} priority={i < 2} />
+              </div>
             )}
             <div className={estilos.pie}>
               <span className="mayusculas">{pieza.title}</span>
