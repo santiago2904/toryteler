@@ -3,6 +3,42 @@ import { InjectDataSource } from '@nestjs/typeorm';
 import { DataSource, EntityManager } from 'typeorm';
 import { firstRow, returnedRows } from '../database/rows';
 
+/**
+ * A video as the shop shows it. Mirrored in web/lib/types.ts.
+ *
+ * There is no video_asset_id here, and that is the point: the asset is the
+ * video. It is handed out only by POST /entitlements/:id/play, to someone whose
+ * window is open.
+ */
+export interface DropDetail {
+  id: string;
+  slug: string;
+  title: string;
+  description: string | null;
+  priceCop: number;
+  posterImage: string | null;
+  capacity: number | null;
+  remaining: number | null;
+  soldOut: boolean;
+  viewWindowHours: number;
+}
+
+interface DropRow {
+  id: string;
+  slug: string;
+  title: string;
+  description: string | null;
+  price_cop: number;
+  poster_image: string | null;
+  capacity: number | null;
+  view_window_hours: number;
+  granted: number;
+}
+
+const PUBLIC_COLUMNS = `d.id, d.slug, d.title, d.description, d.price_cop, d.poster_image,
+                        d.capacity, d.view_window_hours,
+                        (SELECT count(*)::int FROM entitlements e WHERE e.drop_id = d.id) AS granted`;
+
 @Injectable()
 export class DropsService {
   constructor(@InjectDataSource() private readonly ds: DataSource) {}
@@ -60,5 +96,47 @@ export class DropsService {
     );
     if (!row || row.capacity === null) return null;
     return Math.max(0, row.capacity - row.granted);
+  }
+
+  /** The videos on sale, newest first. */
+  async listPublished(): Promise<DropDetail[]> {
+    const rows = returnedRows<DropRow>(
+      await this.ds.query(
+        `SELECT ${PUBLIC_COLUMNS}
+           FROM drops d
+          WHERE d.status = 'available' AND d.published_at IS NOT NULL
+          ORDER BY d.published_at DESC`,
+      ),
+    );
+    return rows.map((r) => this.toDetail(r));
+  }
+
+  async findBySlug(slug: string): Promise<DropDetail | null> {
+    const row = firstRow<DropRow>(
+      await this.ds.query(
+        `SELECT ${PUBLIC_COLUMNS}
+           FROM drops d
+          WHERE d.slug = $1 AND d.status = 'available' AND d.published_at IS NOT NULL`,
+        [slug],
+      ),
+    );
+    return row ? this.toDetail(row) : null;
+  }
+
+  private toDetail(row: DropRow): DropDetail {
+    // No capacity means no limit, which is not the same as no seats left.
+    const remaining = row.capacity === null ? null : Math.max(0, row.capacity - row.granted);
+    return {
+      id: row.id,
+      slug: row.slug,
+      title: row.title,
+      description: row.description,
+      priceCop: row.price_cop,
+      posterImage: row.poster_image,
+      capacity: row.capacity,
+      remaining,
+      soldOut: remaining === 0,
+      viewWindowHours: row.view_window_hours,
+    };
   }
 }
