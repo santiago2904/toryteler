@@ -2,13 +2,17 @@
 
 .pieza {
   display: grid;
-  grid-template-columns: 1fr;           // móvil primero: ficha bajo las imágenes
+  grid-template-columns: minmax(0, 1fr);   // móvil primero: ficha bajo las imágenes
   gap: var(--respiro);
   padding: var(--margen);
   align-items: start;
+  max-width: 78rem;
+  margin-inline: auto;
 
   @include bp.desde(bp.$tableta) {
-    grid-template-columns: 1fr 22rem;
+    // minmax(0, ...) y no 1fr: una columna 1fr nunca baja de su contenido
+    // mínimo, y ahí es donde nace el scroll horizontal.
+    grid-template-columns: minmax(0, 1fr) 22rem;
     gap: calc(var(--u) * 6);
   }
 }
@@ -17,12 +21,15 @@
   display: flex;
   flex-direction: column;
   gap: var(--margen);
+  min-width: 0;
+  max-width: 42rem;    // sin techo, un cover cuadrado ocupa toda la altura del monitor
 }
 
 .ficha {
   display: flex;
   flex-direction: column;
   gap: calc(var(--u) * 2);
+  min-width: 0;
 
   @include bp.desde(bp.$tableta) {
     position: sticky;

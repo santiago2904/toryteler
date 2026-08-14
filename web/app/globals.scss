@@ -12,7 +12,8 @@
 
   --etiqueta: 0.75rem;
   --cuerpo: 1rem;
-  --titulo: clamp(2.5rem, 9vw, 7rem);
+  /* Tope 3.5rem: el título vive en una columna de 22rem y a más tamaño desborda. */
+  --titulo: clamp(1.875rem, 5vw, 3.5rem);
 
   --tracking-etiqueta: 0.16em;
   --tracking-titulo: -0.03em;
@@ -81,7 +82,12 @@ input:focus, textarea:focus { border-color: var(--tinta); }
 
 label { font-size: var(--etiqueta); color: var(--tenue); }
 
-h1, h2 { font-weight: 400; letter-spacing: var(--tracking-titulo); line-height: 1.05; }
+h1, h2 {
+  font-weight: 400;
+  letter-spacing: var(--tracking-titulo);
+  line-height: 1.05;
+  overflow-wrap: break-word;   /* red de seguridad: un título largo se parte, no desborda */
+}
 
 ::selection { background: var(--tinta); color: var(--fondo); }
 

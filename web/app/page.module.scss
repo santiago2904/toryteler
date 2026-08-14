@@ -3,14 +3,18 @@
 .rejilla {
   list-style: none;
   display: grid;
-  grid-template-columns: 1fr;          // móvil primero: una columna
+  grid-template-columns: minmax(0, 1fr);   // móvil primero: una columna
   gap: calc(var(--u) * 8);
   padding: var(--margen);
+  max-width: 78rem;
+  margin-inline: auto;
 
   @include bp.desde(bp.$movil-grande) {
-    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(min(320px, 100%), 1fr));
     gap: var(--respiro) var(--margen);
   }
+
+  > li { min-width: 0; }
 }
 
 .pie {
