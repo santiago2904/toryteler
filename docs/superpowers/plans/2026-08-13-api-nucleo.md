@@ -18,6 +18,7 @@
 - Toda consulta que decida disponibilidad, aforo o acceso corre dentro de una transacción y usa `UPDATE` condicional o `SELECT … FOR UPDATE`. Nunca "leer, verificar en JS, escribir".
 - Moneda: enteros en pesos colombianos (`price_cop`), nunca decimales ni flotantes. Wompi recibe centavos (`amount_in_cents = price_cop * 100`).
 - Todas las marcas de tiempo son `timestamptz` y se generan con `now()` de Postgres, nunca con `new Date()` de Node.
+- **Prueba primero solo en el núcleo.** Las tareas 2, 3, 4, 7, 8 y 10 —invariantes, idempotencia, firma, pagos y ventana de visionado— siguen el ciclo completo: prueba que falla, implementación mínima, prueba que pasa. Las tareas 1, 5, 6, 9, 11 y 12 se implementan directo y se verifican al final; sus pruebas existen pero se escriben después, sin bloquear el avance. La razón es económica: un fallo en el núcleo cuesta dinero y credibilidad; uno en un endpoint de lectura cuesta un despliegue.
 - Las pruebas de integración corren contra un Postgres real levantado por Docker. No se permiten mocks de la base de datos.
 - Pagos siempre contra el sandbox de Wompi (`pub_test_` / `prv_test_`). Ninguna llave real entra al repo.
 - Ningún efecto externo (correo, PDF) se dispara fuera de la transacción que lo autoriza.

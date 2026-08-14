@@ -19,7 +19,8 @@ Estéticamente el referente es `yeezy.com`: minimalismo extremo, casi sin interf
 ### Alcance de la fase 1
 
 Dentro:
-- Catálogo de piezas físicas únicas, con página de procedencia pública por pieza
+- Catálogo de piezas físicas únicas —**La casa de Tory**—, con página de procedencia pública por pieza
+- Ficha del artista: biografía, redes y contacto
 - Nota personal por pieza, escrita por el artista
 - Drops digitales con aforo configurable y visionado de una vez por comprador
 - Checkout único (pieza física y/o drop digital en el mismo pedido)
@@ -411,13 +412,62 @@ Sin analítica, sin roles, sin flujos de aprobación.
 
 ## 11. Principios de interfaz
 
-- Fondo blanco o negro plano. Sin sombras, sin bordes redondeados, sin gradientes.
-- Una tipografía, dos pesos. Mayúsculas para navegación.
-- La foto de la pieza ocupa la pantalla; el texto es mínimo y va abajo.
-- Navegación de tres entradas como máximo.
-- Sin banners, sin popups, sin chat, sin "productos relacionados".
-- El estado se comunica con palabras, no con iconos de colores: `AGOTADO`, `VISTO 13 AGO 2026`, `QUEDAN 12`.
-- La accesibilidad no se sacrifica al minimalismo: contraste AA, foco visible, navegación por teclado, `alt` en cada imagen.
+Estilo: **monocromo minimalista**. La referencia es la sobriedad de yeezy.com, no el lujo decorativo: sin serifas de revista, sin vidrio esmerilado, sin color de acento.
+
+### Paleta — dos temas, cuatro valores cada uno
+
+| Rol | Claro | Oscuro |
+|---|---|---|
+| Fondo | `#FAFAFA` | `#0A0A0A` |
+| Tinta | `#101010` — 18.2:1 | `#EDEDED` — 16.9:1 |
+| Tenue | `#5F5F5F` — 6.1:1 | `#8A8A8A` — 5.4:1 |
+| Línea | `#E2E2E2` | `#242424` |
+
+El tema claro es el de partida; el oscuro se aplica si el sistema lo pide, y la elección manual gana sobre ambas y se recuerda. Se aplica antes del primer pintado para que no haya fogonazo del tema equivocado.
+
+**No se usa blanco puro sobre negro puro.** Da 21:1, pero produce halación —el texto vibra y cansa, sobre todo en OLED—. `#EDEDED` sobre `#0A0A0A` está muy por encima de AAA sin esa fatiga.
+
+Los colores son **custom properties nativas**, nunca variables de preprocesador: viven en runtime, se inspeccionan y permiten cambiar de tema sin recompilar.
+
+### Tipografía — Inter Variable, dos pesos
+
+| Rol | Tamaño | Peso | Tracking |
+|---|---|---|---|
+| Etiqueta, navegación, estado | 12 px | 500 | `0.16em` |
+| Cuerpo | 16 px | 400 | normal |
+| Título | `clamp(1.875rem, 5vw, 3.5rem)` | 400 | `-0.03em` |
+
+La jerarquía se construye con tamaño y espaciado entre letras, no con familias distintas ni negritas. No hay tamaños intermedios: si algo no es etiqueta, cuerpo ni título, no debería existir. El tope de 3.5 rem no es estético — por encima, un título desborda la columna de la ficha.
+
+Cuerpo nunca por debajo de 16 px en móvil: menos provoca zoom automático en iOS al enfocar un campo.
+
+### Forma y ritmo
+
+- **Radio de borde 0 en todo el proyecto. Sin sombras, sin gradientes, sin translucidez.** La profundidad se construye con líneas de 1 px y con inversión de color.
+- Los botones son el negativo de la página: fondo tinta, texto fondo, y se invierten al pasar por encima.
+- Ritmo espacial en múltiplos de 8 px, con saltos grandes. El vacío es el material principal.
+
+### Movimiento
+
+Tres movimientos en todo el sitio, con una sola cadencia: `cubic-bezier(0.22, 1, 0.36, 1)`.
+
+1. **Entrada de contenido:** desvanecido de 400 ms.
+2. **Transición entre páginas:** avanzar entra desde la derecha, retroceder desde la izquierda, 420 ms. La dirección se detecta escuchando `popstate` —el único evento que distingue un «atrás» real de un clic—, nunca comparando rutas.
+3. **Zoom de la rejilla:** el control `+` alterna entre seis piezas por fila y tres. El cambio ocurre dentro de una transición de vista para que el navegador interpole posición y tamaño de cada foto; animar solo las columnas se siente a cambio de retícula, no a acercamiento.
+
+Nada rebota, nada escala por decoración. Bajo `prefers-reduced-motion` los tres desaparecen.
+
+### Estructura y contenido
+
+- La tienda se llama **La casa de Tory** y ocupa el ancho completo: la pieza manda, no un contenedor centrado.
+- **Toryteler** lleva a la ficha del artista: retrato, biografía, redes y contacto.
+- La foto de la pieza no se recorta ni se amplía en el detalle; en la rejilla sí se recorta, porque ahí es una miniatura. Nunca se sirve una imagen más ancha de 1400 px ni se amplía una pequeña.
+- Sin banners, sin popups, sin chat, sin «productos relacionados».
+- El estado se comunica con palabras, no con iconos de colores: `AGOTADO`, `VISTO 13 AGO 2026`, `QUEDAN 12`. El tono acompaña; quien no distinga los grises lee lo mismo.
+
+### Accesibilidad — no se sacrifica al minimalismo
+
+Contraste AA como mínimo en ambos temas, foco visible, navegación completa por teclado, `alt` en cada imagen, objetivos táctiles de 44 px, y ninguna información transmitida solo por color.
 
 ---
 
@@ -436,6 +486,17 @@ Sin analítica, sin roles, sin flujos de aprobación.
 ---
 
 ## 13. Pruebas
+
+**Se prueba el núcleo, no todo.** Un ciclo de prueba-primero en cada endpoint y cada pantalla frena el trabajo sin comprar seguridad donde no hace falta. La línea se traza donde un error cuesta dinero o credibilidad:
+
+| Lleva pruebas | No lleva |
+|---|---|
+| Los tres invariantes (unicidad, aforo, ventana) | Endpoints de lectura y CRUD |
+| Idempotencia y liquidación de pagos | Panel de administración |
+| Firma del contrato y acta de evidencias | Toda la interfaz |
+| Formato de precios y fechas | Estilos y páginas |
+
+Lo que no lleva pruebas automatizadas se verifica a mano con pasos concretos, escritos en el plan correspondiente.
 
 Pruebas de integración contra un Postgres real, sin mocks, sobre los tres invariantes:
 

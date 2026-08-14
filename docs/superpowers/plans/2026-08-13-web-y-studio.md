@@ -6,10 +6,43 @@
 
 **Arquitectura:** Una sola app Next.js (App Router). Las páginas de catálogo y procedencia se renderizan en el servidor para que carguen instantáneas y compartan bien en redes. La sesión es una cookie `httpOnly` first-party: el navegador nunca habla directo con la API, sino con Route Handlers de Next que reenvían la petición añadiendo la cookie. Eso evita CORS con credenciales, `SameSite=None` y toda la fragilidad de cookies entre dominios.
 
-**Tech Stack:** Next.js 15 (App Router), React 19, TypeScript, SCSS Modules, Cloudinary (`next/image`), Cloudflare Stream Player.
+**Tech Stack:** Next.js 16 (App Router), React 19, TypeScript, SCSS Modules, Cloudinary (`next/image`), Cloudflare Stream Player.
 
 **Spec:** `docs/superpowers/specs/2026-08-13-tienda-artista-design.md`
 **Plan previo:** `docs/superpowers/plans/2026-08-13-api-nucleo.md` — este plan consume sus endpoints y tipos.
+
+---
+
+## Estado del avance
+
+Se decidió construir el front antes que la API. `lib/api.ts` es la única frontera con el backend: detrás responde con datos simulados mientras `API_URL` no esté definida, y las páginas no se enteran del cambio. El día que la API exista, se define esa variable y se borra `lib/simulacion.ts`.
+
+**Hecho y desplegado:**
+
+| Pieza | Dónde vive |
+|---|---|
+| Esqueleto Next 16, SCSS Modules, tipos y cliente de API | `app/`, `lib/`, `styles/` |
+| Lenguaje visual con los dos temas | `app/globals.scss` |
+| Catálogo a ancho completo — La casa de Tory | `app/page.tsx` |
+| Zoom de la rejilla con transición de vista | `components/Zoom.tsx` |
+| Transiciones direccionales entre páginas | `components/TransicionPagina.tsx` |
+| Selector de tema claro / oscuro | `components/Tema.tsx` |
+| Página de pieza con procedencia | `app/piezas/[slug]/` |
+| Ficha del artista | `app/artista/`, `lib/artista.ts` |
+| Formato de precios y fechas, con pruebas | `lib/formato.ts` |
+| Diez piezas simuladas sobre Cloudinary | `lib/simulacion.ts` |
+
+**Pendiente:** tareas 4 a 10 de este plan — checkout, contrato y firma, pago, cuenta, visionado efímero y studio. Todas necesitan la API viva, así que el siguiente paso natural es el plan 1.
+
+**Despliegue:** Vercel conectado al repo, con *Root Directory* en `web`. Cada push a `main` actualiza producción. No se define `API_URL` en Vercel: sin ella el sitio corre con los datos simulados, que es justo lo que se quiere para enseñarlo.
+
+### Decisiones tomadas al construir que difieren de lo planeado
+
+1. **`next/font` en lugar de `@import` a Google Fonts.** Inter se descarga en el build y se sirve desde el propio dominio: una petición externa menos y sin parpadeo de fuente.
+2. **El nombre de la cuenta de Cloudinary va como valor por defecto en el código.** Viaja en cada URL de imagen, así que es público por diseño; como variable de entorno solo añadía una forma de que un despliegue nuevo saliera sin fotos.
+3. **Dos encuadres de imagen, no uno.** En la rejilla se recorta a cuadrado, que ahí es una miniatura; en el detalle la foto entra completa, sin recorte ni ampliación, con techo de 78 vh. Llega material de cámara de celular y Osmo con proporciones dispares, y forzar un recorte cuadrado las mutilaba.
+4. **`c_limit` en las URLs de Cloudinary.** Reduce si la foto es grande y nunca amplía: una foto de celular no viaja con sus 4000 px y una pequeña se muestra pequeña en vez de estirada.
+5. **El movimiento dejó de ser una sola animación.** El plan original decía «nada se mueve». Se añadieron transiciones direccionales de página y el zoom de la rejilla, a petición explícita. La regla que sobrevive es que hay **una sola cadencia** en todo el sitio y que bajo `prefers-reduced-motion` todo desaparece.
 
 ## Restricciones globales
 
@@ -32,15 +65,20 @@
 
 ## Estructura de archivos
 
+Lo marcado con ✓ ya existe.
+
 ```
 web/
   app/
-    layout.tsx                       marco: tipografía, navegación, pie
-    globals.scss                      variables de color y tipografía — única fuente
-    page.tsx                         catálogo
-    page.module.scss
-    piezas/[slug]/page.tsx           detalle y procedencia de la pieza
-    piezas/[slug]/page.module.scss
+    layout.tsx                   ✓ marco: cabecera, transición, pie
+    layout.module.scss           ✓
+    globals.scss                 ✓ los dos temas, tipografía y movimiento — única fuente
+    page.tsx                     ✓ catálogo — La casa de Tory
+    page.module.scss             ✓
+    artista/page.tsx             ✓ quién es el artista
+    artista/page.module.scss     ✓
+    piezas/[slug]/page.tsx       ✓ detalle y procedencia de la pieza
+    piezas/[slug]/page.module.scss ✓
     drops/[slug]/page.tsx            detalle del drop
     checkout/page.tsx                datos del comprador
     checkout/contrato/page.tsx       lectura, consentimiento y firma OTP
@@ -54,17 +92,22 @@ web/
     studio/page.tsx                  piezas y drops
     studio/pedidos/page.tsx          pedidos y contratos
   components/
-    Precio.tsx                       formato COP en un solo lugar
-    EstadoPieza.tsx                  AGOTADO / DISPONIBLE / RESERVADA
-    Imagen.tsx                       envoltorio de next/image con Cloudinary
-    ReproductorEfimero.tsx           player + marca de agua + cuenta regresiva
+    Precio.tsx                   ✓ formato COP en un solo lugar
+    EstadoPieza.tsx              ✓ DISPONIBLE / VENDIDA · fecha
+    Imagen.tsx                   ✓ next/image sobre Cloudinary, dos encuadres
+    Tema.tsx                     ✓ alterna claro / oscuro
+    Zoom.tsx                     ✓ densidad de la rejilla con transición de vista
+    TransicionPagina.tsx         ✓ entrada direccional según popstate
+    ReproductorEfimero.tsx         player + marca de agua + cuenta regresiva
   styles/
-    _breakpoints.scss                mixins de punto de quiebre — único partial
+    _breakpoints.scss            ✓ mixins de punto de quiebre — único partial
   lib/
-    api.ts                           cliente tipado del servidor
-    tipos.ts                         tipos compartidos con la API
-    formato.ts                       precio, fecha, tiempo restante
-    formato.test.ts
+    api.ts                       ✓ única frontera con el backend
+    simulacion.ts                ✓ datos falsos mientras no hay API — se borra entero
+    artista.ts                   ✓ ficha del artista
+    tipos.ts                     ✓ espejo de los tipos de la API
+    formato.ts                   ✓ precio, fecha, tiempo restante
+    formato.test.ts              ✓
   next.config.ts
   .env.local.example
 ```
@@ -75,46 +118,15 @@ Cada página vive con su `.module.scss` al lado: lo que cambia junto, junto. Los
 
 ## Lenguaje visual
 
-Estilo base: **monocromo minimalista**, en su variante oscura. La referencia es la sobriedad de yeezy.com, no el lujo decorativo: nada de serifas de revista, nada de vidrio esmerilado, ningún color de acento.
+**Vive en el spec, §11.** Paleta de los dos temas con sus contrastes, escala tipográfica, ritmo espacial, movimiento y vocabulario de estados están ahí y no se repiten aquí: dos copias del mismo criterio terminan divergiendo.
 
-**La paleta es la ausencia de paleta.** Dos tonos y dos grises, sin excepciones.
+Lo que este plan añade son las decisiones de implementación:
 
-| Rol | Valor | Uso |
-|---|---|---|
-| Fondo | `#0A0A0A` | Todo el sitio |
-| Tinta | `#EDEDED` | Texto principal |
-| Tenue | `#8A8A8A` | Texto secundario y estados pasados — 5.4:1 sobre el fondo |
-| Línea | `#242424` | Divisiones de una sola unidad de grosor |
-
-**Por qué no es negro puro sobre blanco puro.** `#FFFFFF` sobre `#000000` da 21:1, pero produce halación: el texto parece vibrar y cansa en pantallas OLED, que es donde va a mirarse esto. `#EDEDED` sobre `#0A0A0A` da **16.9:1** —muy por encima de AAA— sin la fatiga. Es la diferencia entre austero y agresivo.
-
-**Tipografía: Inter Variable, y nada más.** Una sola familia con dos pesos (400 y 500). La jerarquía no se construye con familias distintas ni con negritas: se construye con **tamaño y con espaciado entre letras**.
-
-| Rol | Tamaño | Peso | Tracking |
-|---|---|---|---|
-| Etiqueta / navegación / estado | `0.75rem` (12 px) | 500 | `0.16em` |
-| Cuerpo | `1rem` (16 px) | 400 | normal |
-| Título de pieza | `clamp(2.5rem, 9vw, 7rem)` | 400 | `-0.03em` |
-
-Esa tensión —lo diminuto y muy espaciado contra lo enorme y muy junto— es de donde sale el aire de misterio. No hay tamaños intermedios: si algo no es una etiqueta ni un cuerpo ni un título, no debería existir.
-
-**Ritmo espacial:** múltiplos de 8 px, con saltos deliberadamente grandes. El vacío es el material principal; una sección respira con 6 rem, no con 2.
-
-**Movimiento:** una sola transición en todo el sitio, `opacity 400ms ease-out`, para que el contenido aparezca en vez de aterrizar. Nada se mueve, nada rebota, nada escala. Bajo `prefers-reduced-motion` desaparece por completo.
-
-**Estados, siempre en palabras y en mayúsculas espaciadas:**
-
-| Situación | Texto | Tono |
-|---|---|---|
-| Pieza disponible | `DISPONIBLE` | Tinta |
-| Pieza vendida | `VENDIDA · 13 AGO 2026` | Tenue |
-| Drop con cupo | `QUEDAN 12` | Tinta |
-| Drop sin cupo | `AGOTADO` | Tenue |
-| Acceso sin abrir | `SIN ABRIR` | Tinta |
-| Acceso en curso | `QUEDAN 3 H 20 MIN` | Tinta |
-| Acceso consumido | `VISTO 13 AGO 2026` | Tenue |
-
-El contraste entre tinta y tenue **acompaña** al texto; nunca lo sustituye. Alguien que no distinga los dos grises lee exactamente la misma información.
+- Los colores son **custom properties nativas** en `app/globals.scss`. SCSS aporta mixins de breakpoints, partials y anidamiento; **nunca** variables de color, que se evaporan al compilar y harían imposible el cambio de tema.
+- El tema y la densidad de la rejilla viven como atributos en `<html>` (`data-tema`, `data-zoom`), no en estado de React: así el control puede estar en la cabecera y el elemento afectado en otra página, sin contexto ni props.
+- Un script en `<head>` los aplica **antes del primer pintado**. Sin él, cada carga muestra un fogonazo del estado equivocado.
+- El movimiento comparte una sola curva, `cubic-bezier(0.22, 1, 0.36, 1)`.
+- En el zoom, el `view-transition-name` va **solo en la foto**, nunca en la tarjeta: si envuelve también el título y el precio, el navegador escala ese texto como si fuera una imagen y se ve estirado. Y las capturas vieja y nueva no se funden —son la misma foto en otro tamaño—, porque cualquier fundido cruzado deja un instante con ambas a media opacidad y eso se percibe como parpadeo.
 
 ---
 
