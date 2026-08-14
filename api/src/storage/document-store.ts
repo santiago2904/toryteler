@@ -51,31 +51,56 @@ export class CloudinaryDocumentStore extends DocumentStore {
       const upload = cloudinary.uploader.upload_stream(
         {
           // `raw` and `authenticated`: a contract carries a name and an ID
-          // number, so its URL must not be guessable.
+          // number, so it must not be reachable by guessing.
           resource_type: 'raw',
           // The extension belongs in the id for a raw upload. Without it the
-          // file is served as application/octet-stream and a browser opens a
+          // file comes back as application/octet-stream and a browser opens a
           // blank tab instead of the document.
           public_id: `contracts/${name}.pdf`,
           type: 'authenticated',
         },
-        (err, res) => (err || !res ? reject(err ?? new Error('UPLOAD_FAILED')) : resolve(res.secure_url)),
+        // The id, not the URL. What upload returns as `secure_url` carries a
+        // signature that does not authorise an authenticated raw file — it
+        // answers 401 — and a link that did work would be one that never
+        // expires, for a document with somebody's ID number in it.
+        (err, res) => (err || !res ? reject(err ?? new Error('UPLOAD_FAILED')) : resolve(res.public_id)),
       );
       upload.end(buffer);
     });
   }
 
   /**
-   * Reads a stored contract back.
+   * Reads a stored contract back, signing a short-lived link at that moment.
    *
-   * The buyer is served the document through the API rather than sent to the
-   * storage URL: that link is signed but never expires, and it opens a file
-   * with somebody's name and ID number in it. Here the session decides.
+   * The document is then served by the API, which checks who is asking. The
+   * link minted here lives for minutes and never reaches a browser.
    */
-  async readPdf(url: string): Promise<Buffer> {
+  async readPdf(reference: string): Promise<Buffer> {
+    if (!isCloudinaryConfigured(this.config.get<string>('CLOUDINARY_URL') ?? '')) {
+      throw new Error('CLOUDINARY_NOT_CONFIGURED');
+    }
+
+    const url = cloudinary.utils.private_download_url(this.publicId(reference), '', {
+      resource_type: 'raw',
+      type: 'authenticated',
+      expires_at: Math.floor(Date.now() / 1000) + 300,
+    });
+
     const res = await fetch(url);
     if (!res.ok) throw new Error(`DOCUMENT_FETCH_FAILED_${res.status}`);
     return Buffer.from(await res.arrayBuffer());
+  }
+
+  /**
+   * Contracts stored before this changed hold a full URL rather than an id.
+   * The id is everything after the version segment, and reading it out is what
+   * keeps those documents openable.
+   */
+  private publicId(reference: string): string {
+    if (!reference.startsWith('http')) return reference;
+    const match = reference.match(/\/v\d+\/(.+)$/);
+    if (!match) throw new Error('DOCUMENT_REFERENCE_UNREADABLE');
+    return match[1];
   }
 
   async saveImage(buffer: Buffer, folder: string): Promise<string> {

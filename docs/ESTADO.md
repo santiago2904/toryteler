@@ -194,6 +194,10 @@ montado**, así que ese camino no funciona todavía.
   huella, así que dos renders de la misma venta deben dar el mismo archivo: por
   eso las fechas del PDF se fijan en cero en vez de dejar que pdf-lib estampe
   la hora actual. Hay una prueba que lo sostiene.
+- **`contracts.pdf_url` guarda el identificador del documento, no una URL.** La
+  URL que devuelve Cloudinary al subir un recurso `authenticated` de tipo raw
+  lleva una firma que no autoriza nada: responde 401. La buena se firma al
+  leer, con `private_download_url`, y dura minutos.
 - **El contrato se sirve por la API, no por su URL de almacenamiento.** Esa URL
   va firmada pero no caduca nunca, y abre un documento con nombre y cédula. Y
   al subirse como `raw` sin extensión, Cloudinary lo servía como

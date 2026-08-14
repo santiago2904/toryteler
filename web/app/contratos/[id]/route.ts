@@ -11,7 +11,7 @@ import { apiBytes } from '@/lib/api';
  * what made the tab come up blank.
  */
 export async function GET(
-  _request: Request,
+  request: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
   const { id } = await params;
@@ -26,7 +26,21 @@ export async function GET(
         'Cache-Control': 'private, no-store',
       },
     });
-  } catch {
-    return new NextResponse('No encontramos ese contrato.', { status: 404 });
+  } catch (error) {
+    // Distinguished on purpose: answering 404 to everything turned an expired
+    // session and a storage failure into the same dead end, with the same
+    // sentence and nothing to act on.
+    const raw = error instanceof Error ? error.message : String(error);
+
+    if (raw.includes('API_401')) {
+      return NextResponse.redirect(new URL('/entrar', request.url));
+    }
+    if (raw.includes('API_404')) {
+      return new NextResponse('No encontramos ese contrato en tu cuenta.', { status: 404 });
+    }
+    return new NextResponse(
+      'No pudimos abrir el contrato. Vuelve a intentarlo en un momento.',
+      { status: 502 },
+    );
   }
 }
