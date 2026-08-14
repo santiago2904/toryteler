@@ -1,0 +1,51 @@
+.notice {
+  padding: var(--section-gap) var(--gutter);
+  max-width: 44ch;
+  margin-inline: auto;
+  display: grid;
+  gap: var(--gutter);
+  justify-items: start;
+  min-height: 60vh;
+  align-content: center;
+}
+
+.player {
+  padding: var(--gutter);
+  max-width: 60rem;
+  margin-inline: auto;
+  display: grid;
+  gap: var(--gutter);
+}
+
+.frame {
+  position: relative;
+  // The poster is dimmed so the placeholder reads on top without hiding what
+  // the video is about.
+  isolation: isolate;
+}
+
+.placeholder {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  background: rgb(0 0 0 / 0.55);
+  color: #ededed;
+}
+
+.watermark {
+  position: absolute;
+  right: var(--gutter);
+  bottom: var(--gutter);
+  color: rgb(255 255 255 / 0.55);
+  font-size: var(--text-label);
+  letter-spacing: var(--tracking-label);
+  pointer-events: none;
+}
+
+.meta {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: var(--unit);
+}
