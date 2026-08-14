@@ -30,6 +30,11 @@ class FakeStore extends DocumentStore {
     this.saved.push(buffer);
     return `https://fake.test/${name}.pdf`;
   }
+
+  /** Serves back the last thing saved, the way storage would. */
+  async readPdf(_url: string): Promise<Buffer> {
+    return this.saved[this.saved.length - 1];
+  }
 }
 
 describe('contract signing', () => {
@@ -101,6 +106,21 @@ describe('contract signing', () => {
       const [u] = await ds.query(`SELECT full_name, document_id FROM users WHERE id = $1`, [userId]);
       expect(u.full_name).toBe('Ana Ruiz');
       expect(u.document_id).toBe('1017234567');
+    });
+
+    it('serves the document to its buyer and to nobody else', async () => {
+      const { orderId, userId } = await orderWithPiece();
+      const prepared = await contracts.prepare(orderId, signer);
+
+      const mine = await contracts.document(prepared.contractId, userId);
+      expect(mine.subarray(0, 5).toString()).toBe('%PDF-');
+
+      const [stranger] = await ds.query(
+        `INSERT INTO users (email) VALUES ('otro@x.co') RETURNING id`,
+      );
+      await expect(
+        contracts.document(prepared.contractId, stranger.id),
+      ).rejects.toThrow(/CONTRACT_NOT_FOUND/);
     });
 
     it('asking twice returns the same contract and does not change the hash', async () => {

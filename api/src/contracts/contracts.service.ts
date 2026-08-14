@@ -122,6 +122,27 @@ export class ContractsService {
    * Spending an OTP attempt on someone who has not read the contract would
    * punish them for our own check.
    */
+  /**
+   * The stored PDF, only for the buyer it belongs to.
+   *
+   * Scoped by user rather than trusted to an unguessable URL: the file names a
+   * person and carries their ID number, and a link that never expires is a
+   * link that eventually gets forwarded.
+   */
+  async document(contractId: string, userId: string): Promise<Buffer> {
+    const row = firstRow<{ pdf_url: string }>(
+      await this.ds.query(
+        `SELECT c.pdf_url
+           FROM contracts c
+           JOIN orders o ON o.id = c.order_id
+          WHERE c.id = $1 AND o.user_id = $2`,
+        [contractId, userId],
+      ),
+    );
+    if (!row) throw new NotFoundException('CONTRACT_NOT_FOUND');
+    return this.store.readPdf(row.pdf_url);
+  }
+
   async sign(contractId: string, input: SignInput): Promise<void> {
     if (!input.scrolledToEnd) throw new BadRequestException('DOCUMENT_NOT_READ');
 

@@ -10,6 +10,9 @@ import { isCloudinaryConfigured, parseCloudinaryUrl } from './cloudinary-url';
 export abstract class DocumentStore {
   abstract savePdf(buffer: Buffer, name: string): Promise<string>;
 
+  /** Reads a stored document back, to serve it behind our own access check. */
+  abstract readPdf(url: string): Promise<Buffer>;
+
   /**
    * Stores an image the shop will show, and returns the id it stores —
    * `v<version>/<public_id>.<format>`, the same shape the browser uploads
@@ -46,13 +49,33 @@ export class CloudinaryDocumentStore extends DocumentStore {
 
     return new Promise((resolve, reject) => {
       const upload = cloudinary.uploader.upload_stream(
-        // `raw` and `authenticated`: a contract carries a name and an ID
-        // number, so its URL must not be guessable.
-        { resource_type: 'raw', public_id: `contracts/${name}`, type: 'authenticated' },
+        {
+          // `raw` and `authenticated`: a contract carries a name and an ID
+          // number, so its URL must not be guessable.
+          resource_type: 'raw',
+          // The extension belongs in the id for a raw upload. Without it the
+          // file is served as application/octet-stream and a browser opens a
+          // blank tab instead of the document.
+          public_id: `contracts/${name}.pdf`,
+          type: 'authenticated',
+        },
         (err, res) => (err || !res ? reject(err ?? new Error('UPLOAD_FAILED')) : resolve(res.secure_url)),
       );
       upload.end(buffer);
     });
+  }
+
+  /**
+   * Reads a stored contract back.
+   *
+   * The buyer is served the document through the API rather than sent to the
+   * storage URL: that link is signed but never expires, and it opens a file
+   * with somebody's name and ID number in it. Here the session decides.
+   */
+  async readPdf(url: string): Promise<Buffer> {
+    const res = await fetch(url);
+    if (!res.ok) throw new Error(`DOCUMENT_FETCH_FAILED_${res.status}`);
+    return Buffer.from(await res.arrayBuffer());
   }
 
   async saveImage(buffer: Buffer, folder: string): Promise<string> {

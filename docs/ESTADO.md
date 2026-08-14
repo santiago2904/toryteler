@@ -194,6 +194,12 @@ montado**, así que ese camino no funciona todavía.
   huella, así que dos renders de la misma venta deben dar el mismo archivo: por
   eso las fechas del PDF se fijan en cero en vez de dejar que pdf-lib estampe
   la hora actual. Hay una prueba que lo sostiene.
+- **El contrato se sirve por la API, no por su URL de almacenamiento.** Esa URL
+  va firmada pero no caduca nunca, y abre un documento con nombre y cédula. Y
+  al subirse como `raw` sin extensión, Cloudinary lo servía como
+  `application/octet-stream`: el navegador abría una pestaña en blanco.
+- **Un contrato ya preparado no se regenera.** Conserva su diseño y su versión
+  de texto, porque volver a generarlo cambiaría la huella que se va a firmar.
 - **La constancia de firma no renumera las páginas anteriores.** Cambiarlas
   cambiaría sus bytes, y con ellos la huella que el comprador firmó.
 - **Las dos vías de liquidación tienen que producir la misma clave.** Wompi

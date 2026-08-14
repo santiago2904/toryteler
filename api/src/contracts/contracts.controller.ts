@@ -1,6 +1,8 @@
-import { Body, Controller, Param, ParseUUIDPipe, Post, Req, UseGuards } from '@nestjs/common';
+import {
+  Body, Controller, Get, Param, ParseUUIDPipe, Post, Req, Res, UseGuards,
+} from '@nestjs/common';
 import { IsBoolean, IsString, Length, Matches } from 'class-validator';
-import type { Request } from 'express';
+import type { Request, Response } from 'express';
 import { SessionGuard } from '../auth/session.guard';
 import { ContractsService } from './contracts.service';
 
@@ -31,6 +33,28 @@ export class ContractsController {
   @Post('orders/:id/contract')
   prepare(@Param('id', ParseUUIDPipe) id: string, @Body() body: PrepareDto) {
     return this.contracts.prepare(id, body);
+  }
+
+  /**
+   * The document itself, served to the person it names and nobody else.
+   *
+   * Not a link to storage: that URL is signed but never expires, and it opens
+   * a file carrying a full name and an ID number. Here the session decides,
+   * and it decides on every request.
+   */
+  @Get('contracts/:id/document')
+  async document(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Req() req: Authenticated,
+    @Res() res: Response,
+  ) {
+    const pdf = await this.contracts.document(id, req.user.id);
+
+    res.setHeader('Content-Type', 'application/pdf');
+    // Inline: the buyer is about to sign it, so it has to open, not download.
+    res.setHeader('Content-Disposition', 'inline; filename="contrato.pdf"');
+    res.setHeader('Cache-Control', 'private, no-store');
+    res.send(pdf);
   }
 
   /**

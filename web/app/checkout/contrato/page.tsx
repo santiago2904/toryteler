@@ -124,9 +124,11 @@ function Contract() {
         ese código.
       </p>
 
+      {/* Served through this site, not from storage: the stored link never
+          expires and opens a document with your ID number in it. */}
       <a
         className={styles.document}
-        href={contract.pdfUrl}
+        href={`/contratos/${contract.contractId}`}
         target="_blank"
         rel="noopener noreferrer"
         onClick={() => setOpened(true)}
