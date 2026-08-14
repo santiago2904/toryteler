@@ -46,6 +46,16 @@ describe('cloudinary upload signature', () => {
     expect(JSON.stringify(ticket)).not.toContain(SECRET);
   });
 
+  it('refuses to sign with the example credentials', () => {
+    // Otherwise the signature is handed out happily and Cloudinary answers
+    // "Invalid api_key" at the end of the upload, which reads like a bug in
+    // the shop rather than like a setting nobody filled in.
+    const unconfigured = new UploadSignatureService({
+      get: () => 'cloudinary://key:secret@dtiuqixet',
+    } as unknown as ConfigService);
+    expect(() => unconfigured.sign('pieces')).toThrow(/CLOUDINARY_NOT_CONFIGURED/);
+  });
+
   it('refuses a malformed CLOUDINARY_URL instead of signing with nothing', () => {
     const broken = new UploadSignatureService({
       get: () => 'no-es-una-url',

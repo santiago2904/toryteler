@@ -34,11 +34,16 @@ export async function uploadImages(
     });
 
     if (!res.ok) {
-      // Whatever uploaded before this is already up there and usable; saying
-      // "nothing worked" would be a lie that costs the artist the re-upload.
+      // Cloudinary says why, and it is almost never something the artist did:
+      // swallowing it turned a missing setting into "no se pudo subir", which
+      // is the same sentence for a wrong key, a file too large and a network
+      // that dropped.
+      const reason = await explain(res);
       return {
         ids,
-        error: `No se pudo subir ${file.name}.${ids.length ? ' Las anteriores sí subieron.' : ''}`,
+        error: `No se pudo subir ${file.name}: ${reason}${
+          ids.length ? ' Las anteriores sí subieron.' : ''
+        }`,
       };
     }
 
@@ -49,4 +54,29 @@ export async function uploadImages(
   }
 
   return { ids };
+}
+
+/** Cloudinary's own reason, in words the artist can act on. */
+async function explain(res: Response): Promise<string> {
+  let message = '';
+  try {
+    const body = (await res.json()) as { error?: { message?: string } };
+    message = body.error?.message ?? '';
+  } catch {
+    // No JSON body: the status is all there is.
+  }
+
+  if (/Invalid api_key|Unknown API key/i.test(message)) {
+    return 'la tienda no tiene configuradas las credenciales de Cloudinary.';
+  }
+  if (/Invalid Signature/i.test(message)) {
+    return 'la firma no coincide. Es un fallo nuestro, no tuyo.';
+  }
+  if (/File size too large|too large/i.test(message)) {
+    return 'la imagen pesa más de lo que acepta la cuenta.';
+  }
+  if (res.status === 420 || res.status === 429) {
+    return 'Cloudinary está limitando las subidas. Espera un momento.';
+  }
+  return message || `error ${res.status} de Cloudinary.`;
 }

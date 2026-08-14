@@ -10,6 +10,8 @@ import { apiSend } from './api';
 export type Result<T> = { ok: true; data: T } | { ok: false; error: string };
 
 const MESSAGES: Record<string, string> = {
+  CLOUDINARY_NOT_CONFIGURED:
+    'Falta configurar Cloudinary: el .env de la API todavía tiene las credenciales de ejemplo.',
   CAPACITY_BELOW_GRANTED: 'No puedes bajar los cupos por debajo de los que ya se vendieron.',
   PIECE_NOT_FOUND: 'Esa pieza ya no existe.',
   DROP_NOT_FOUND: 'Ese video ya no existe.',
