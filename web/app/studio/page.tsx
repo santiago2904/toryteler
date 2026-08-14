@@ -3,6 +3,7 @@ import type { Metadata } from 'next';
 import { apiGet } from '@/lib/api';
 import { DropDetail, PieceSummary } from '@/lib/types';
 import { ProductImage } from '@/components/ProductImage';
+import { StudioItemActions } from '@/components/StudioItemActions';
 import { formatPrice } from '@/lib/format';
 import styles from './studio.module.scss';
 
@@ -18,7 +19,7 @@ export default async function PublishedPage() {
     <div className={styles.published}>
       <div className={styles.actions}>
         <h1 className="label muted">
-          {pieces.length} pieces · {videos.length} videos
+          {pieces.length} piezas · {videos.length} videos
         </h1>
         <div className={styles.buttons}>
           <Link href="/studio/nuevo/pieza"><button type="button">Nueva pieza</button></Link>
@@ -28,7 +29,7 @@ export default async function PublishedPage() {
 
       <section className={styles.listGroup}>
         <h2 className="label muted">Piezas</h2>
-        <ul className={styles.orderList}>
+        <ul>
           {pieces.map((piece) => (
             <li key={piece.slug} className={styles.item}>
               <div className={styles.thumb}>
@@ -47,10 +48,14 @@ export default async function PublishedPage() {
                 </span>
               </div>
 
-              <div className={styles.manage}>
-                <button type="button" className="link-button" disabled>Editar</button>
-                <button type="button" className="link-button" disabled>Despublicar</button>
-              </div>
+              <StudioItemActions
+                kind="piece"
+                slug={piece.slug}
+                title={piece.title}
+                left={piece.stock}
+                // lazy: the mock does not carry units sold; the admin endpoint will.
+                sold={piece.stock === 0 ? 1 : 0}
+              />
             </li>
           ))}
         </ul>
@@ -58,11 +63,13 @@ export default async function PublishedPage() {
 
       <section className={styles.listGroup}>
         <h2 className="label muted">Videos</h2>
-        <ul className={styles.orderList}>
+        <ul>
           {videos.map((video) => (
             <li key={video.slug} className={styles.item}>
               <div className={styles.thumb}>
-                {video.posterImage && <ProductImage publicId={video.posterImage} alt={video.title} />}
+                {video.posterImage && (
+                  <ProductImage publicId={video.posterImage} alt={video.title} />
+                )}
               </div>
 
               <div className={styles.meta}>
@@ -75,14 +82,17 @@ export default async function PublishedPage() {
                       ? 'Sin límite de cupos'
                       : `${video.remaining} de ${video.capacity} cupos`}
                   {' · '}
-                  windowHours de {video.viewWindowHours} h
+                  ventana de {video.viewWindowHours} h
                 </span>
               </div>
 
-              <div className={styles.manage}>
-                <button type="button" className="link-button" disabled>Editar</button>
-                <button type="button" className="link-button" disabled>Despublicar</button>
-              </div>
+              <StudioItemActions
+                kind="video"
+                slug={video.slug}
+                title={video.title}
+                left={video.remaining}
+                sold={(video.capacity ?? 0) - (video.remaining ?? 0)}
+              />
             </li>
           ))}
         </ul>

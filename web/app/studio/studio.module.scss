@@ -63,7 +63,7 @@
   padding-top: var(--gutter);
 }
 
-.orderList { list-style: none; }
+.orderList, .listGroup ul { list-style: none; }
 
 .order {
   display: grid;
@@ -138,11 +138,6 @@
   border-bottom: 1px solid var(--line);
 }
 
-.manage {
-  display: flex;
-  gap: var(--gutter);
-  align-items: center;
-}
 
 .save {
   display: flex;

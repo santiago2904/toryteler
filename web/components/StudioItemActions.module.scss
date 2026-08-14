@@ -1,0 +1,30 @@
+.actions {
+  display: flex;
+  gap: var(--gutter);
+  align-items: center;
+}
+
+.dialog {
+  border: 1px solid var(--ink);
+  border-radius: 0;
+  background: var(--bg);
+  color: var(--ink);
+  padding: var(--gutter);
+  max-width: 36rem;
+  width: calc(100vw - var(--gutter) * 2);
+  display: grid;
+  gap: var(--unit);
+
+  // The backdrop isolates the dialog; without enough weight the list behind
+  // keeps competing for attention.
+  &::backdrop {
+    background: rgb(0 0 0 / 0.55);
+  }
+}
+
+.buttons {
+  display: flex;
+  gap: var(--gutter);
+  align-items: center;
+  padding-top: var(--unit);
+}
