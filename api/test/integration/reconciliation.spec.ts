@@ -101,6 +101,8 @@ describe('payment reconciliation', () => {
     const remote = {
       ...gateway,
       fetchTransaction: jest.fn(async () => ({ status, reference: 'x', amountInCents: 50000000 })),
+      // Nothing at the gateway under that reference: an abandoned checkout.
+      findByReference: jest.fn(async () => null),
       eventIdFor: gateway.eventIdFor.bind(gateway),
     } as unknown as PaymentGateway;
     return {
@@ -139,7 +141,9 @@ describe('payment reconciliation', () => {
     const o = await pendingOrder({ ageMinutes: 60, transactionId: null });
     const { service, fetchTransaction } = serviceAnswering('APPROVED');
 
-    expect(await service.run()).toEqual({ checked: 0, expired: 1 });
+    // Checked now: the payment is looked up by reference before giving up on
+    // it, because expiring a paid order returns stock that was sold.
+    expect(await service.run()).toEqual({ checked: 1, expired: 1 });
     expect(fetchTransaction).not.toHaveBeenCalled();
     expect(await orderStatus(o.orderId)).toBe('expired');
     expect(await stock(o.pieceId)).toBe(1);
@@ -187,6 +191,25 @@ describe('payment reconciliation', () => {
     expect(await stock(o.pieceId)).toBe(1);
   });
 
+  it('rescues a payment whose id we never learnt', async () => {
+    // Paid, tab closed, no webhook: the order carries no transaction id at all.
+    // Before, it was expired and the stock went back with the money gone.
+    const o = await pendingOrder({ ageMinutes: 60, transactionId: null });
+    const found = {
+      ...gateway,
+      eventIdFor: gateway.eventIdFor.bind(gateway),
+      fetchTransaction: jest.fn(),
+      findByReference: jest.fn(async () => ({
+        transactionId: 'tx-rescatada', status: 'APPROVED' as PaymentStatus, amountInCents: 50000000,
+      })),
+    } as unknown as PaymentGateway;
+
+    await new ReconciliationService(ds, found, payments, new PiecesService(ds)).run();
+
+    expect(await orderStatus(o.orderId)).toBe('paid');
+    expect(await stock(o.pieceId)).toBe(0);
+  });
+
   it('does not settle twice when the missing webhook finally arrives', async () => {
     const o = await pendingOrder({ ageMinutes: 60, transactionId: 'tx-late' });
     await serviceAnswering('APPROVED').service.run();
@@ -216,6 +239,7 @@ describe('payment reconciliation', () => {
     const remote = {
       ...gateway,
       eventIdFor: gateway.eventIdFor.bind(gateway),
+      findByReference: jest.fn(async () => null),
       fetchTransaction: jest.fn(async () => {
         if (first) { first = false; throw new Error('WOMPI_QUERY_FAILED_500'); }
         return { status: 'APPROVED' as PaymentStatus, reference: 'x', amountInCents: 50000000 };

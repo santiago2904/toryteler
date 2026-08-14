@@ -181,6 +181,10 @@ montado**, así que ese camino no funciona todavía.
   en un `INSERT ... ON CONFLICT` sin `RETURNING`**. Todo pasa por
   `api/src/database/rows.ts`. Las pruebas negativas pasan igual, así que el
   fallo es silencioso.
+- **El webhook ya no es imprescindible.** Al volver de pagar se le pregunta a
+  la pasarela por el id que trae la URL, y la reconciliación busca por
+  referencia los pedidos cuyo id nunca se supo. Sin webhook configurado el
+  sistema sigue liquidando; el webhook solo lo hace inmediato.
 - **Wompi rechaza un `redirect-url` a localhost** con un 403 de CloudFront, que
   parece una cuenta bloqueada y es solo una dirección que no acepta. En
   desarrollo se omite: el pago liquida igual por el webhook y quien compra se

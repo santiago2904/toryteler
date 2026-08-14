@@ -126,6 +126,31 @@ export class WompiGateway extends PaymentGateway {
     };
   }
 
+  async findByReference(reference: string) {
+    const res = await fetch(
+      `${this.get('WOMPI_BASE_URL')}/transactions?reference=${encodeURIComponent(reference)}`,
+      { headers: { Authorization: `Bearer ${this.get('WOMPI_PRIVATE_KEY')}` } },
+    );
+    if (!res.ok) throw new Error(`WOMPI_QUERY_FAILED_${res.status}`);
+
+    const json = (await res.json()) as {
+      data: { id: string; status: string; amount_in_cents: number }[];
+    };
+    const rows = json.data ?? [];
+    if (rows.length === 0) return null;
+
+    // A reference can carry several attempts. An approval settles it; failing
+    // that, the last word is the most recent one.
+    const approved = rows.find((t) => STATUS[t.status] === 'APPROVED');
+    const chosen = approved ?? rows[rows.length - 1];
+
+    return {
+      transactionId: chosen.id,
+      status: STATUS[chosen.status] ?? 'PENDING',
+      amountInCents: chosen.amount_in_cents,
+    };
+  }
+
   /** Integrity signature: reference + cents + currency + secret. */
   private integrity(reference: string, cents: number): string {
     return createHash('sha256')

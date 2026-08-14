@@ -62,16 +62,25 @@ export class ReconciliationService {
       const deadline = ORDER_DEADLINE_MINUTES[order.payment_method] ?? EARLIEST_DEADLINE;
       if (order.minutes_old < deadline) continue;
 
-      // No transaction id means the buyer closed the tab before paying.
-      if (!order.transaction_id) {
-        await this.expire(order.id);
-        expired += 1;
-        continue;
-      }
-
       checked += 1;
       try {
-        const remote = await this.gateway.fetchTransaction(order.transaction_id);
+        // Without a transaction id the payment can still be found by our own
+        // reference. Expiring straight away — which is what this used to do —
+        // returns the stock of an order that may have been paid for and whose
+        // webhook simply never arrived.
+        const remote = order.transaction_id
+          ? {
+              ...(await this.gateway.fetchTransaction(order.transaction_id)),
+              transactionId: order.transaction_id,
+            }
+          : await this.gateway.findByReference(order.reference);
+
+        // Nothing at the gateway: the buyer closed the tab before paying.
+        if (!remote) {
+          await this.expire(order.id);
+          expired += 1;
+          continue;
+        }
 
         if (remote.status === 'PENDING') {
           // Still in progress. Past twice its deadline it is not coming back,
@@ -88,9 +97,9 @@ export class ReconciliationService {
         await this.payments.settle({
           // The same key the webhook would carry, so whichever arrives second
           // is a no-op instead of a second settlement.
-          providerEventId: this.gateway.eventIdFor(order.transaction_id, remote.status),
+          providerEventId: this.gateway.eventIdFor(remote.transactionId, remote.status),
           reference: order.reference,
-          transactionId: order.transaction_id,
+          transactionId: remote.transactionId,
           status: remote.status,
           amountInCents: remote.amountInCents,
           // Built from the provider's own API answer, authenticated with the

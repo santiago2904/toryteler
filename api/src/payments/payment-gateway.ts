@@ -67,4 +67,17 @@ export abstract class PaymentGateway {
     reference: string;
     amountInCents: number;
   }>;
+
+  /**
+   * Finds a payment by our own reference, when the transaction id was never
+   * learnt — the buyer paid and closed the tab, and no webhook arrived.
+   *
+   * Without it the only honest thing to do with such an order is expire it,
+   * which returns the stock while the money is gone.
+   */
+  abstract findByReference(reference: string): Promise<{
+    transactionId: string;
+    status: PaymentStatus;
+    amountInCents: number;
+  } | null>;
 }
