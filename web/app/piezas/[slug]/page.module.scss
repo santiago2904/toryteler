@@ -1,0 +1,57 @@
+@use '../../../styles/breakpoints' as bp;
+
+.pieza {
+  display: grid;
+  grid-template-columns: 1fr;           // móvil primero: ficha bajo las imágenes
+  gap: var(--respiro);
+  padding: var(--margen);
+  align-items: start;
+
+  @include bp.desde(bp.$tableta) {
+    grid-template-columns: 1fr 22rem;
+    gap: calc(var(--u) * 6);
+  }
+}
+
+.imagenes {
+  display: flex;
+  flex-direction: column;
+  gap: var(--margen);
+}
+
+.ficha {
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--u) * 2);
+
+  @include bp.desde(bp.$tableta) {
+    position: sticky;
+    top: var(--margen);
+  }
+}
+
+.datos {
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--u) * 0.5);
+}
+
+.parrafo {
+  max-width: 34ch;
+}
+
+.procedencia {
+  border-top: 1px solid var(--linea);
+  padding-top: var(--margen);
+  display: flex;
+  flex-direction: column;
+  gap: var(--u);
+}
+
+.accion {
+  margin-top: var(--u);
+
+  &:hover {
+    text-decoration: none;
+  }
+}
