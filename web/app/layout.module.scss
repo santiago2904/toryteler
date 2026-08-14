@@ -4,6 +4,14 @@
    360 px sin apretarse, y repartirlos en zonas izquierda/derecha deja el
    centro descolgado. Escritorio: tres zonas, con el zoom a la izquierda. */
 .cabecera {
+  // Fija al desplazar: con la rejilla a ancho completo, el carrito y el zoom
+  // quedarían a diez pantallas de distancia. El fondo debe ser opaco o las
+  // piezas se leerían por debajo.
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background: var(--fondo);
+
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -20,6 +28,7 @@
     text-align: left;
   }
 }
+
 
 .izquierda {
   // Por debajo de 640 px la rejilla ya está en dos columnas y el zoom la

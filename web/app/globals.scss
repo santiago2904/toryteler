@@ -192,8 +192,10 @@ h1, h2 {
   to   { opacity: 1; transform: translate3d(0, 0, 0); }
 }
 
-/* El desplazamiento no puede generar barra horizontal durante la animación. */
-body { overflow-x: hidden; }
+/* El desplazamiento no puede generar barra horizontal durante la animación.
+   `clip` y no `hidden`: hidden convierte el body en contenedor de scroll y eso
+   anula cualquier position:sticky de dentro, incluida la cabecera. */
+body { overflow-x: clip; }
 
 /* Zoom de la rejilla: el navegador interpola posición y tamaño de cada pieza.
    Misma curva y cadencia que el resto del sitio. */
