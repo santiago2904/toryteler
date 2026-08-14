@@ -285,6 +285,14 @@ describe('public and account reads', () => {
         expect((await account.findEntitlement(id, userId))!.id).toBe(id);
         expect(await account.findEntitlement(id, other)).toBeNull();
       });
+
+      it('carries the watermark address on the single access, not on the list', async () => {
+        const userId = await buyer();
+        const id = await entitlement(userId);
+
+        expect((await account.findEntitlement(id, userId))!.viewerEmail).toContain('@');
+        expect((await account.entitlements(userId))[0].viewerEmail).toBeUndefined();
+      });
     });
   });
 });

@@ -33,6 +33,12 @@ export interface EntitlementSummary {
   firstPlayedAt: Date | null;
   expiresAt: Date | null;
   state: 'unopened' | 'open' | 'consumed';
+  /**
+   * Stamped over the video as a watermark. It does not stop a recording; it
+   * makes a shared one traceable. Only sent for the single access being
+   * watched, never in the list.
+   */
+  viewerEmail?: string;
 }
 
 /**
@@ -141,15 +147,17 @@ export class AccountService {
    * rather than telling a stranger the access exists.
    */
   async findEntitlement(id: string, userId: string): Promise<EntitlementSummary | null> {
-    const row = firstRow<EntitlementRow>(
+    const row = firstRow<EntitlementRow & { email: string }>(
       await this.ds.query(
-        `SELECT e.id, d.slug, d.title, e.first_played_at, e.expires_at
-           FROM entitlements e JOIN drops d ON d.id = e.drop_id
+        `SELECT e.id, d.slug, d.title, e.first_played_at, e.expires_at, u.email
+           FROM entitlements e
+           JOIN drops d ON d.id = e.drop_id
+           JOIN users u ON u.id = e.user_id
           WHERE e.id = $1 AND e.user_id = $2`,
         [id, userId],
       ),
     );
-    return row ? this.toEntitlement(row) : null;
+    return row ? { ...this.toEntitlement(row), viewerEmail: row.email } : null;
   }
 
   private toEntitlement(row: EntitlementRow): EntitlementSummary {

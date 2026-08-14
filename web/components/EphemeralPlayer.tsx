@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useCallback, useEffect, useState } from 'react';
 import { ProductImage } from '@/components/ProductImage';
 import { formatDate, timeLeft } from '@/lib/format';
+import { openPlayback } from '@/lib/playback-actions';
 import styles from './EphemeralPlayer.module.scss';
 
 interface Props {
@@ -34,16 +35,16 @@ export function EphemeralPlayer({
     firstPlayedAt ? new Date(firstPlayedAt).getTime() : null,
   );
   const [videoUrl, setVideoUrl] = useState<string | null>(null);
+  const [playbackError, setPlaybackError] = useState<string | null>(null);
   const [, forceTick] = useState(0);
 
   // The URL is requested, never handed over up front: a page rendered for
   // someone who has not opened their window must not contain it.
   const requestPlayback = useCallback(async () => {
-    const res = await fetch(`/api/mock-playback/${dropSlug}`, { method: 'POST' });
-    if (!res.ok) return;
-    const { videoUrl: url } = await res.json();
-    setVideoUrl(url);
-  }, [dropSlug]);
+    const { videoUrl: url, error } = await openPlayback(entitlementId, dropSlug);
+    if (url) setVideoUrl(url);
+    else if (error) setPlaybackError(error);
+  }, [entitlementId, dropSlug]);
 
   useEffect(() => {
     if (firstPlayedAt) return;
@@ -129,7 +130,7 @@ export function EphemeralPlayer({
               <ProductImage publicId={posterImage} alt={title} fit="contain" priority />
             )}
             <div className={styles.placeholder}>
-              <span className="label">Cargando…</span>
+              <span className="label">{playbackError ?? 'Cargando…'}</span>
             </div>
           </>
         )}

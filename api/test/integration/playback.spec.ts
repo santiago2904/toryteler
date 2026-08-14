@@ -132,6 +132,23 @@ describe('ephemeral playback', () => {
     expect((await readEntitlement(e.entitlementId)).views_used).toBe(1);
   });
 
+  it('does not burn the window when the video host is unreachable', async () => {
+    const e = await entitlement();
+    const broken = new PlaybackService(ds, async () => {
+      throw new Error('CF_STREAM_TOKEN_FAILED_503');
+    });
+
+    await expect(broken.play(e.entitlementId, e.userId, ctx)).rejects.toThrow(/CF_STREAM/);
+
+    // Nothing happened: the buyer still has their one chance.
+    const row = await readEntitlement(e.entitlementId);
+    expect(row.first_played_at).toBeNull();
+    expect(row.views_used).toBe(0);
+
+    // And it still works once the host comes back.
+    await expect(playback.play(e.entitlementId, e.userId, ctx)).resolves.toBeTruthy();
+  });
+
   it('reports someone else\'s access as missing rather than forbidden', async () => {
     const mine = await entitlement();
     const other = await entitlement();

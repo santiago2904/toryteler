@@ -49,6 +49,11 @@ export function removeFromCart(kind: CartLine['kind'], slug: string): void {
   save(readCart().filter((l) => !(l.kind === kind && l.slug === slug)));
 }
 
+/** Emptied once an order exists, not when the checkout starts. */
+export function clearCart(): void {
+  save([]);
+}
+
 export function isInCart(kind: CartLine['kind'], slug: string): boolean {
   return readCart().some((l) => l.kind === kind && l.slug === slug);
 }

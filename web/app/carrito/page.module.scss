@@ -43,3 +43,23 @@
   width: 100%;
   padding-top: var(--unit);
 }
+
+/* A link, not a button: it navigates. Dressed as the button it replaced so the
+   page reads the same. */
+.pay {
+  display: inline-block;
+  font-size: var(--text-label);
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-label);
+  background: var(--ink);
+  color: var(--bg);
+  border: 1px solid var(--ink);
+  padding: calc(var(--unit) * 2) calc(var(--unit) * 3);
+  min-height: 44px;
+
+  &:hover {
+    background: var(--bg);
+    color: var(--ink);
+  }
+}

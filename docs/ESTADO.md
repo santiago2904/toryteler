@@ -34,26 +34,37 @@ la referencia es la sobriedad de yeezy.com.
 
 ---
 
-## Front — 13 pantallas, con datos simulados
+## Front — 18 pantallas, conectado a la API
 
 **Tienda:** `/` · `/piezas/[slug]` · `/drops/[slug]` · `/artista` · `/cuenta` ·
 `/carrito` · `/ver/[id]`
 
+**Compra:** `/entrar` · `/auth/verify` · `/checkout` · `/checkout/contrato` ·
+`/checkout/pagar` · `/checkout/resultado`
+
 **Studio:** `/studio` · `/studio/nuevo/pieza` · `/studio/nuevo/video` ·
 `/studio/pieza/[slug]` · `/studio/video/[slug]` · `/studio/pedidos`
 
-Lo único que funciona de verdad es el carrito (vive en el navegador), el cálculo
-de comisión, la ventana de visionado simulada y el reproductor. Todo lo demás
-lee de `web/lib/mock-data.ts`. 14 pruebas de lógica pura.
+Con `API_URL` definida, el front lee y escribe contra la API de verdad. Sin
+ella cae a `web/lib/mock-data.ts`, que es como corre el despliegue de Vercel.
 
-### Faltan 5 pantallas, todas del flujo de compra
+Las escrituras pasan por `web/lib/checkout-actions.ts`: server actions, no
+`fetch` desde el navegador, porque la cookie de sesión es `httpOnly` y la
+dirección de la API no tiene por qué salir del servidor. Devuelven un resultado
+en vez de lanzar: un código vencido o una pieza que alguien se llevó son
+respuestas normales de un formulario, cada una con su frase.
 
-`/entrar` · `/checkout` · `/checkout/contrato` · `/checkout/pagar` ·
-`/checkout/resultado`
+**El flujo completo está probado a mano** contra la API y la base: entrar →
+pedido → contrato firmado con código → URL de Wompi → webhook aprobado →
+pedido pagado, contrato ejecutado, acceso emitido y stock en cero. Reenviar el
+webhook no duplicó nada.
 
-Crean un pedido, descuentan inventario, firman y cobran: maquetarlas sería
-escribir código para tirarlo. **Ya se pueden construir**: la API expone todos
-los endpoints que necesitan.
+### Lo que sigue sin conectar
+
+- **El `/studio` no escribe todavía.** Los formularios existen y los endpoints
+  de administración también, pero no se han unido.
+- **`web/lib/mock-data.ts` sigue ahí** a propósito: es lo que mantiene vivo el
+  despliegue de Vercel mientras la API no esté desplegada.
 
 ---
 
@@ -100,16 +111,14 @@ montado**, así que ese camino no funciona todavía.
 
 ## Lo siguiente que hay que hacer
 
-Ya no queda API pendiente: lo que falta es unir las dos mitades.
-
-1. **Arrancar Docker Desktop** y levantar el Postgres:
-   `docker compose -f docker-compose.test.yml up -d`
-2. Construir las 5 pantallas del checkout. Todos los endpoints que necesitan
-   existen.
-3. Conectar: definir `API_URL` en el front, borrar `web/lib/mock-data.ts` y
-   `web/app/api/mock-playback/`.
-4. Desplegar la API y crear el usuario artista (`users.is_admin = true`), sin
-   el cual `/studio` no tiene a nadie que lo abra.
+1. **Conectar el `/studio`** a los endpoints de `/admin`, incluida la subida de
+   imágenes y video a Cloudinary.
+2. **Desplegar la API** y crear el usuario artista (`UPDATE users SET is_admin
+   = true`), sin el cual `/studio` no tiene a nadie que lo abra.
+3. **Conseguir una cuenta de Cloudflare Stream.** Es lo único que impide ver un
+   video de verdad: con las credenciales de ejemplo, firmar la URL falla.
+4. Definir `API_URL` en Vercel y borrar `web/lib/mock-data.ts`.
+5. Reemplazar las imágenes de ejemplo, que son portadas de discos reales.
 
 ---
 
@@ -168,21 +177,40 @@ Ya no queda API pendiente: lo que falta es unir las dos mitades.
 - **Un tipo usado en una firma decorada se importa con `import type`**, o
   `isolatedModules` + `emitDecoratorMetadata` rompen la compilación.
 - **`inet::text` devuelve `190.0.0.1/32`.** Para el valor sin máscara, `host()`.
+- **Abrir la ventana y firmar la URL van en la misma transacción.** Firmar es
+  una llamada de red y puede fallar; si fallaba después de abrir, el comprador
+  quemaba su única oportunidad sin ver un fotograma. Sin URL, no hay ventana.
 
 ---
 
 ## Cómo correr
 
 ```bash
-# Front
-cd web && npm install && npm run dev -- -p 3001    # http://localhost:3001
-npx jest                                            # 14 pruebas
+# Base de datos (desde la raíz)
+docker compose -f docker-compose.test.yml up -d
 
-# API
-docker compose -f docker-compose.test.yml up -d     # desde la raíz
-cd api && npm install && npx jest                   # 142 pruebas
+# API — http://localhost:3000
+cd api && npm install && npm run start:dev
+npx jest                                            # 144 pruebas
 npm run build                                       # comprobación de tipos
+
+# Front — http://localhost:3001
+cd web && npm install && npm run dev -- -p 3001
+npx jest                                            # 14 pruebas
 ```
+
+**Cuidado: la API en desarrollo y las pruebas comparten la misma base**, así
+que correr `npx jest` con `npm run start:dev` levantado hace fallar alguna
+prueba sin motivo aparente — las pruebas truncan las tablas bajo los pies de la
+API. Para el servidor antes de correrlas.
+
+Para que el front hable con la API hace falta `web/.env.local` con
+`API_URL=http://localhost:3000` (está en `.gitignore`). Sin ese archivo, el
+front corre con datos simulados.
+
+Los correos se registran en la consola de la API con su cuerpo entero mientras
+`RESEND_API_KEY` sea el de ejemplo. Ahí salen el enlace de acceso y el código
+para firmar, que es la única forma de recorrer el flujo a mano.
 
 `api/.env` se copia de `api/.env.example`; con las credenciales de ejemplo, el
 correo y la subida de PDF se simulan en consola en vez de fallar.

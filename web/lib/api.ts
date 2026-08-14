@@ -1,4 +1,5 @@
 import { cookies } from 'next/headers';
+import { redirect } from 'next/navigation';
 
 /**
  * The single boundary with the backend. No page calls fetch on its own.
@@ -20,6 +21,13 @@ export async function apiGet<T>(path: string, authenticated = false): Promise<T>
   }
 
   const res = await fetch(`${BASE}${path}`, { headers, cache: 'no-store' });
+
+  // An expired or missing session on a page that needs one is not an error to
+  // show: it is a trip to the sign-in screen. No `next` here — what is known at
+  // this depth is the API path, not the page the reader was looking at, and
+  // sending them to /me/orders would land them on nothing.
+  if (res.status === 401 && authenticated) redirect('/entrar');
+
   if (!res.ok) throw new Error(`API_${res.status}`);
   return res.json() as Promise<T>;
 }

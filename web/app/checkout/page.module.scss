@@ -1,0 +1,70 @@
+.checkout {
+  padding: var(--gutter);
+  max-width: 40rem;
+  margin-inline: auto;
+  min-height: 60vh;
+  display: flex;
+  flex-direction: column;
+  gap: var(--gutter);
+  align-items: flex-start;
+}
+
+.summary {
+  list-style: none;
+  width: 100%;
+}
+
+.line {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: var(--gutter);
+  align-items: center;
+  padding: var(--unit) 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.thumb {
+  width: 3.5rem;
+  flex-shrink: 0;
+}
+
+.meta {
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--unit) * 0.25);
+  min-width: 0;
+}
+
+.total {
+  display: flex;
+  justify-content: space-between;
+  width: 100%;
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gutter);
+  width: 100%;
+}
+
+.fieldset {
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--unit) * 0.75);
+  border: 0;
+}
+
+.radio {
+  display: flex;
+  align-items: center;
+  gap: var(--unit);
+  /* Comfortably past the 44px minimum for a touch target. */
+  min-height: 2.75rem;
+  cursor: pointer;
+}
+
+.error {
+  border-left: 2px solid var(--ink);
+  padding-left: var(--unit);
+}

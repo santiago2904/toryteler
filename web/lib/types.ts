@@ -68,4 +68,6 @@ export interface EntitlementSummary {
   firstPlayedAt: string | null;
   expiresAt: string | null;
   state: 'unopened' | 'open' | 'consumed';
+  /** Only on a single access, never on the list: it is the watermark. */
+  viewerEmail?: string;
 }

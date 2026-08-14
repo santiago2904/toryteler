@@ -37,7 +37,7 @@ export default async function AccountPage() {
       <section className={styles.section}>
         <h1 className="label muted">Pedidos</h1>
         {orders.length === 0 ? (
-          <p className="muted">Todavía no tienes orders.</p>
+          <p className="muted">Todavía no tienes pedidos.</p>
         ) : (
           <ul className={styles.list}>
             {orders.map((order) => (
@@ -98,7 +98,7 @@ export default async function AccountPage() {
           </p>
         </div>
         {entitlements.length === 0 ? (
-          <p className="muted">Todavía no tienes entitlements.</p>
+          <p className="muted">Todavía no tienes videos.</p>
         ) : (
           <ul className={styles.list}>
             {entitlements.map((entitlement) => (

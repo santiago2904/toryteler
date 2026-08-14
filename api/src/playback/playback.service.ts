@@ -1,4 +1,8 @@
-import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { InjectDataSource } from '@nestjs/typeorm';
 import { DataSource } from 'typeorm';
 import { firstRow } from '../database/rows';
@@ -10,7 +14,10 @@ import { firstRow } from '../database/rows';
  * implementation detail: signed Cloudflare Stream today, something else later,
  * and nothing above this line changes.
  */
-export type PlaybackUrlSigner = (videoAssetId: string, ttlSeconds: number) => Promise<string>;
+export type PlaybackUrlSigner = (
+  videoAssetId: string,
+  ttlSeconds: number,
+) => Promise<string>;
 
 /**
  * How long the URL itself stays valid. Shorter than any viewing window on
@@ -38,12 +45,21 @@ export class PlaybackService {
     userId: string,
     ctx: { ip: string | null; userAgent: string | null },
   ): Promise<{ videoUrl: string; expiresAt: Date }> {
-    // One statement: it opens the window if it was never opened, respects it if
-    // it was, and refuses if it closed. Postgres serialises writes to the row,
-    // so two simultaneous plays share one window instead of racing to set it.
-    const opened = firstRow<{ expires_at: string; video_asset_id: string }>(
-      await this.ds.query(
-        `UPDATE entitlements e
+    /**
+     * Opening the window and getting a working URL are one operation.
+     *
+     * Signing happens over the network and can fail. If it did after the
+     * window had opened, the buyer would have burnt their only chance without
+     * seeing a frame, so the whole thing runs in a transaction: no URL, no
+     * window. The row stays locked across that call, which is the price.
+     */
+    return this.ds.transaction(async (m) => {
+      // One statement: it opens the window if it was never opened, respects it if
+      // it was, and refuses if it closed. Postgres serialises writes to the row,
+      // so two simultaneous plays share one window instead of racing to set it.
+      const opened = firstRow<{ expires_at: string; video_asset_id: string }>(
+        await m.query(
+          `UPDATE entitlements e
             SET first_played_at = COALESCE(e.first_played_at, now()),
                 expires_at = COALESCE(
                   e.expires_at, now() + make_interval(hours => d.view_window_hours)),
@@ -54,21 +70,22 @@ export class PlaybackService {
           WHERE e.id = $1 AND e.user_id = $2 AND e.drop_id = d.id
             AND (e.expires_at IS NULL OR e.expires_at > now())
         RETURNING e.expires_at, d.video_asset_id`,
-        [entitlementId, userId],
-      ),
-    );
+          [entitlementId, userId],
+        ),
+      );
 
-    if (!opened) throw await this.explainRefusal(entitlementId, userId);
+      if (!opened) throw await this.explainRefusal(entitlementId, userId);
 
-    await this.ds.query(
-      `INSERT INTO view_sessions (entitlement_id, ip, user_agent) VALUES ($1, $2, $3)`,
-      [entitlementId, ctx.ip, ctx.userAgent],
-    );
+      await m.query(
+        `INSERT INTO view_sessions (entitlement_id, ip, user_agent) VALUES ($1, $2, $3)`,
+        [entitlementId, ctx.ip, ctx.userAgent],
+      );
 
-    return {
-      videoUrl: await this.signUrl(opened.video_asset_id, URL_TTL_SECONDS),
-      expiresAt: new Date(opened.expires_at),
-    };
+      return {
+        videoUrl: await this.signUrl(opened.video_asset_id, URL_TTL_SECONDS),
+        expiresAt: new Date(opened.expires_at),
+      };
+    });
   }
 
   /**
@@ -76,7 +93,10 @@ export class PlaybackService {
    * theirs. Someone else's entitlement is reported as missing, not as
    * forbidden — confirming it exists tells them something they did not buy.
    */
-  private async explainRefusal(entitlementId: string, userId: string): Promise<Error> {
+  private async explainRefusal(
+    entitlementId: string,
+    userId: string,
+  ): Promise<Error> {
     const mine = firstRow<{ id: string }>(
       await this.ds.query(
         `SELECT id FROM entitlements WHERE id = $1 AND user_id = $2`,

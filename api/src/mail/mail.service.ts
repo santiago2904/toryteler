@@ -26,7 +26,9 @@ export class MailService implements Mailer {
     // Placeholder credentials mean a local run: log instead of failing, so
     // developing does not require a real mail account.
     if (key.endsWith('xxx')) {
-      this.log.log(`[correo simulado] ${to} · ${subject}`);
+      // The body goes to the log too. Magic links and signing codes only ever
+      // travel by mail, so without it the flow cannot be walked by hand.
+      this.log.log(`[correo simulado] ${to} · ${subject}\n${this.asText(html)}`);
       if (dedupeKey) this.sent.add(dedupeKey);
       return;
     }
@@ -38,5 +40,14 @@ export class MailService implements Mailer {
     });
     if (!res.ok) throw new Error(`RESEND_FAILED_${res.status}`);
     if (dedupeKey) this.sent.add(dedupeKey);
+  }
+
+  /** Enough to read a link or a code in a terminal. */
+  private asText(html: string): string {
+    return html
+      .replace(/<a [^>]*href="([^"]+)"[^>]*>/g, '$1 ')
+      .replace(/<[^>]+>/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
   }
 }

@@ -1,0 +1,16 @@
+.pay {
+  padding: var(--gutter);
+  max-width: 32rem;
+  margin-inline: auto;
+  min-height: 60vh;
+  display: flex;
+  flex-direction: column;
+  gap: var(--gutter);
+  align-items: flex-start;
+  justify-content: center;
+}
+
+.error {
+  border-left: 2px solid var(--ink);
+  padding-left: var(--unit);
+}

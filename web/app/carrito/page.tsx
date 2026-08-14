@@ -81,9 +81,7 @@ export default function CartPage() {
         </p>
       )}
 
-      {/* lazy: el checkout necesita la API para reservar las piezas y cobrar. */}
-      <button type="button" disabled>Pagar</button>
-      <p className="muted">El pago estará disponible cuando conectemos la tienda.</p>
+      <Link href="/checkout" className={styles.pay}>Pagar</Link>
     </div>
   );
 }

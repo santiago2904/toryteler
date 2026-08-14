@@ -35,7 +35,7 @@ export default async function WatchPage({ params }: { params: Promise<{ id: stri
       posterUrl={posterUrl}
       windowHours={drop.viewWindowHours}
       // lazy: comes from the session once the API exists.
-      viewerEmail="tu@correo.com"
+      viewerEmail={entitlement.viewerEmail ?? 'tu cuenta'}
       firstPlayedAt={entitlement.firstPlayedAt}
       expiresAt={entitlement.expiresAt}
     />
