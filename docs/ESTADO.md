@@ -115,8 +115,10 @@ montado**, así que ese camino no funciona todavía.
    imágenes y video a Cloudinary.
 2. **Desplegar la API** y crear el usuario artista (`UPDATE users SET is_admin
    = true`), sin el cual `/studio` no tiene a nadie que lo abra.
-3. **Conseguir una cuenta de Cloudflare Stream.** Es lo único que impide ver un
-   video de verdad: con las credenciales de ejemplo, firmar la URL falla.
+3. **Verificar un dominio en Resend.** Hoy los correos salen desde
+   `onboarding@resend.dev`, que solo entrega a la dirección dueña de la cuenta:
+   ningún comprador recibiría su enlace de acceso. Es lo único que falta para
+   poder vender.
 4. Definir `API_URL` en Vercel y borrar `web/lib/mock-data.ts`.
 5. Reemplazar las imágenes de ejemplo, que son portadas de discos reales.
 
@@ -180,6 +182,23 @@ montado**, así que ese camino no funciona todavía.
 - **Abrir la ventana y firmar la URL van en la misma transacción.** Firmar es
   una llamada de red y puede fallar; si fallaba después de abrir, el comprador
   quemaba su única oportunidad sin ver un fotograma. Sin URL, no hay ventana.
+- **Cloudflare Stream:** el host es `customer-<CODE>.cloudflarestream.com` y el
+  código es de la cuenta, no hay uno genérico. El token firmado va **en lugar**
+  del id del video. Y **nada de esto protege un video sin `requireSignedURLs`**:
+  esa bandera es la que hace que el id por sí solo deje de servir, se pone al
+  subirlo y tarda un par de minutos en propagarse.
+- **El manifiesto es HLS y solo Safari lo reproduce nativo.** El resto necesita
+  `hls.js`, que se importa dentro del efecto para no cargarlo donde no hace
+  falta. Servir un MP4 sería más simple pero entrega un archivo, y un archivo
+  que se reproduce es uno que se guarda.
+- **Resend exige un dominio verificado como remitente.** Un Gmail no vale y
+  nunca valdrá: `MAIL_FROM` tiene que ser un dominio propio. `MAIL_REPLY_TO` sí
+  acepta cualquier dirección, porque nadie demuestra ser dueño de donde caen
+  las respuestas.
+- **Las pruebas leen el mismo `.env` que el desarrollo.** En cuanto entraron
+  credenciales reales, una prueba que registra un usuario empezó a mandar
+  correo de verdad. `api/test/setup/env.ts` neutraliza lo que cuesta dinero o
+  sale de la máquina; todo lo de esa clase va ahí.
 
 ---
 
