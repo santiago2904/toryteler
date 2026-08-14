@@ -389,6 +389,8 @@ git commit -m "feat(api): esqueleto NestJS, Postgres de pruebas y esquema base"
 
 ---
 
+> **Esta tarea cambió el 14 de agosto de 2026 y el texto de abajo está desactualizado.** Las piezas dejaron de ser necesariamente irrepetibles: llevan `stock`, la reserva es un decremento condicional y el índice único parcial sobre `order_items(piece_id)` desaparece. La regla vigente está en el spec §5.1; las pruebas de concurrencia siguen siendo las mismas, pero comprobando que de `stock = N` salen exactamente N ventas.
+
 ## Tarea 2: Reserva de pieza — invariante de unicidad
 
 **Archivos:**

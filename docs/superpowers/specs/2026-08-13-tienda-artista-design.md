@@ -228,20 +228,37 @@ user_agent      text
 
 ## 5. Los tres invariantes
 
-### 5.1 Una pieza no se vende dos veces
+### 5.1 No se vende más de lo que hay
 
-Reserva por `UPDATE` condicional — gana uno solo, sin transacciones largas:
+**Corregido el 14 de agosto de 2026.** El diseño original daba por hecho que toda pieza era irrepetible. No lo es: el artista puede publicar una edición de doce copias. `pieces.stock` sustituye al estado `reserved`, y con él cae el índice único parcial sobre `order_items(piece_id)`, que impedía justamente lo que ahora debe permitirse.
+
+```sql
+stock integer NOT NULL DEFAULT 1 CHECK (stock >= 0)
+```
+
+Una unidad es una pieza irrepetible; más de una, una edición. La tienda lo comunica distinto —`ÚNICA` frente a `QUEDAN 12`— pero el mecanismo es el mismo.
+
+**Reserva por decremento condicional.** Postgres serializa las escrituras sobre una misma fila, así que dos compras simultáneas nunca leen el mismo saldo:
+
 ```sql
 UPDATE pieces
-SET status = 'reserved', reserved_until = now() + ($2 * interval '1 minute')  -- TTL según método
-WHERE id = $1 AND status = 'available';
--- 0 filas afectadas: alguien llegó primero
+SET stock = stock - 1
+WHERE id = $1 AND stock > 0
+RETURNING stock;
+-- 0 filas afectadas: se agotó mientras tanto
 ```
 
-Y un índice único parcial que hace la doble venta imposible, no solo improbable:
+El descuento ocurre al crear el pedido, no al pagar: quien llega primero al checkout tiene la unidad mientras completa datos, contrato y pago.
+
+**Devolución del stock.** Si el pago se declina o el pedido expira, la unidad vuelve:
+
 ```sql
-CREATE UNIQUE INDEX uniq_order_item_piece ON order_items (piece_id) WHERE piece_id IS NOT NULL;
+UPDATE pieces SET stock = stock + 1 WHERE id = $1;
 ```
+
+Esto sustituye la expiración perezosa de la versión anterior: un contador no puede recuperarse solo al ser consultado. La devolución ocurre en el mismo sitio donde ya se detecta el fallo — la liquidación del webhook y la reconciliación periódica (§12) —, así que no añade ningún proceso nuevo al sistema.
+
+El TTL por método de pago sigue vigente como plazo del pedido, pero ya no vive en la pieza: es la antigüedad del pedido `pending` la que decide cuándo se considera abandonado.
 
 ### 5.2 No existe el comprador que excede el aforo
 
