@@ -72,15 +72,24 @@ export class WompiGateway extends PaymentGateway {
     if (!this.looksLikeEvent(body)) throw new BadRequestException('MALFORMED_EVENT');
     const tx = body.data.transaction;
 
+    const status = STATUS[tx.status] ?? 'PENDING';
     return {
-      // A transaction goes PENDING then APPROVED: keyed by id alone, the second
-      // event would be discarded as a duplicate and the order never settle.
-      providerEventId: `${tx.id}:${tx.status}`,
+      providerEventId: this.eventIdFor(tx.id, status),
       reference: tx.reference,
       transactionId: tx.id,
-      status: STATUS[tx.status] ?? 'PENDING',
+      status,
       amountInCents: tx.amount_in_cents,
     };
+  }
+
+  /**
+   * Keyed by the normalised status, not Wompi's own word. A transaction goes
+   * PENDING then APPROVED, so the id alone would discard the second event and
+   * the order would never settle — and VOIDED and ERROR both mean DECLINED, so
+   * keying by the raw word would let one payment be declined twice.
+   */
+  eventIdFor(transactionId: string, status: PaymentStatus): string {
+    return `${transactionId}:${status}`;
   }
 
   async fetchTransaction(transactionId: string) {

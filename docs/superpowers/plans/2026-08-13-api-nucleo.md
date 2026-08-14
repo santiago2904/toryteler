@@ -152,6 +152,29 @@ Un pedido se reconoce por su foto antes que por su referencia, de ahí `items`. 
 
 **La URL del video no puede viajar en la página de quien no ha abierto su ventana.** Aunque el reproductor no se dibuje, cualquier dato pasado a la página acaba en su código fuente. Por eso la URL se entrega **solo** como respuesta de `POST /entitlements/:id/play`, nunca como parte de `GET /drops/:slug`. Ese endpoint debe además comprobar que el acceso pertenece a la sesión y que la ventana sigue abierta.
 
+### La tarea 9 se escribió contra un código anterior
+
+El plan de la tarea 9 quedó desfasado tras las tareas 2 y 8. Manda el código:
+
+- No hay `WompiClient` ni `WompiEvent`. La reconciliación depende de
+  `PaymentGateway`, la clase abstracta, y no sabe qué pasarela hay debajo.
+- `settle` ya no verifica firmas —eso ocurre en `handleWebhook`—, así que el
+  «paso 4» del plan sobra. `trusted` sigue en `PaymentEvent` como declaración de
+  procedencia del evento.
+- Las piezas no tienen `status='reserved'`: el inventario se devuelve con
+  `PiecesService.release()`, subiendo `stock`.
+- **El plazo depende del método de pago** (tarjeta 15, Nequi 20, PSE 45), no es
+  uno global de 30 minutos. Un PSE cancelado a los 30 minutos es un pedido vivo.
+- **La expiración no anula el contrato.** Anularlo dejaría un pago tardío con
+  pedido pagado y contrato muerto.
+- Un pago que la pasarela sigue reportando en curso pasado **el doble** de su
+  plazo se expira igual: la unidad vale más que la espera, y si el pago llega
+  después la liquidación la vuelve a tomar o reembolsa.
+- `PaymentGateway.eventIdFor()` es nuevo. Los dos caminos hacia la liquidación
+  —webhook y reconciliación— tienen que producir la misma clave para el mismo
+  desenlace. Sin él, un `VOIDED` tardío liquidaba por segunda vez y devolvía una
+  unidad que nadie había devuelto.
+
 ### Administración
 
 El panel hace más de lo que preveía la tarea 12:

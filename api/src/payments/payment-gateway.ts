@@ -50,6 +50,15 @@ export abstract class PaymentGateway {
   abstract parseWebhook(body: unknown): PaymentEvent;
 
   /**
+   * The idempotency key for one state change of one transaction.
+   *
+   * Both roads into settlement — the webhook and reconciliation asking the
+   * provider directly — must produce the same key for the same outcome, or a
+   * late webhook settles a second time and hands back a unit nobody returned.
+   */
+  abstract eventIdFor(transactionId: string, status: PaymentStatus): string;
+
+  /**
    * Asks the provider what actually happened. Used when a webhook never
    * arrives, which is the one failure a webhook-only design cannot survive.
    */
