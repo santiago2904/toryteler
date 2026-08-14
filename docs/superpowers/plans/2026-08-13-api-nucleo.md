@@ -90,6 +90,23 @@ Cada módulo agrupa lo que cambia junto: entidad, servicio y controlador de un m
 
 ---
 
+## Aviso: TypeORM 1.x cambia lo que devuelve `query`
+
+Descubierto al ejecutar la tarea 2. El plan se escribió asumiendo TypeORM 0.3, y la versión instalada es **1.1**:
+
+```
+SELECT …                    → [{…}, {…}]
+UPDATE … RETURNING stock    → [[{…}], 1]     filas y número de filas afectadas
+```
+
+Leer `.length` sobre la segunda forma da **2 siempre**, haya actualizado algo o no. Eso convierte en silencio un «nadie se llevó la unidad» en «alguien sí» — exactamente el fallo que estas pruebas existen para evitar.
+
+**Todo `UPDATE` condicional de este plan pasa por `src/database/rows.ts`:** `affectedRows()`, `returnedRows()` y `firstRow()` normalizan ambas formas. Los ejemplos de código de las tareas siguientes usan `rows.length === 1`; hay que traducirlos a `affectedRows(result) === 1`.
+
+Es un fallo especialmente traicionero porque las pruebas negativas —"con stock 0 nadie se la lleva"— pasan igual, y solo fallan las positivas.
+
+---
+
 ## Ajustes tras construir el front
 
 El front está hecho y consume estos contratos. Donde el plan y el front difieran, **manda el front**: ya está escrito, desplegado y probado contra estas formas.
