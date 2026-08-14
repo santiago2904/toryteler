@@ -43,7 +43,12 @@ export class PaymentsService {
         reference: order.reference,
         amountCop: order.total_cop,
         customerEmail: order.email,
-        redirectUrl: `${process.env.PUBLIC_WEB_URL}/checkout/resultado?order=${orderId}`,
+        // Separate from PUBLIC_WEB_URL because the two answer different
+        // questions: that one is where the site lives — magic links, CORS —
+        // and this is where a payment provider is allowed to send someone
+        // back. In development they differ: the site is on localhost, which
+        // Wompi refuses, and the return can point at a tunnel.
+        redirectUrl: `${process.env.PAYMENT_RETURN_URL ?? process.env.PUBLIC_WEB_URL}/checkout/resultado?order=${orderId}`,
       }),
     };
   }

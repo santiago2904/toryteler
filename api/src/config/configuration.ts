@@ -10,6 +10,9 @@ export const envSchema = Joi.object({
   DATABASE_URL: Joi.string().required(),
   SESSION_SECRET: Joi.string().min(32).required(),
   PUBLIC_WEB_URL: Joi.string().required(),
+  // A donde puede devolver Wompi al comprador. Solo hace falta cuando el sitio
+  // corre en localhost, que la pasarela rechaza: ahí se apunta a un túnel.
+  PAYMENT_RETURN_URL: Joi.string().optional(),
 
   WOMPI_PUBLIC_KEY: Joi.string().required(),
   WOMPI_PRIVATE_KEY: Joi.string().required(),
