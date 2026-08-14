@@ -1,0 +1,19 @@
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: toryteler
+      POSTGRES_PASSWORD: toryteler
+      POSTGRES_DB: toryteler
+    ports: ['5434:5432']
+    # On disk, unlike the test database: what you seed and then spend an
+    # afternoon clicking through has to survive a restart.
+    #
+    # It is a separate database for a reason that cost time twice: the suite
+    # truncates every table between cases, so sharing one with development
+    # meant running the tests silently wiped the shop — and the next thing to
+    # fail was something unrelated, an hour later.
+    volumes: ['toryteler-db:/var/lib/postgresql/data']
+
+volumes:
+  toryteler-db:

@@ -79,3 +79,30 @@ export interface EntitlementSummary {
   /** Only on a single access, never on the list: it is the watermark. */
   viewerEmail?: string;
 }
+
+/**
+ * The catalogue as the studio sees it: drafts included, and with how many of
+ * each have been sold. Mirrors AdminPiece/AdminDrop in the API.
+ */
+export interface AdminPiece {
+  id: string;
+  slug: string;
+  title: string;
+  priceCop: number;
+  images: string[];
+  stock: number;
+  status: string;
+  sold: number;
+}
+
+export interface AdminDrop {
+  id: string;
+  slug: string;
+  title: string;
+  priceCop: number;
+  posterImage: string | null;
+  capacity: number | null;
+  viewWindowHours: number;
+  status: string;
+  sold: number;
+}

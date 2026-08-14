@@ -61,8 +61,13 @@ webhook no duplicó nada.
 
 ### Lo que sigue sin conectar
 
-- **El `/studio` no escribe todavía.** Los formularios existen y los endpoints
-  de administración también, pero no se han unido.
+- **Los videos no se pueden crear desde el `/studio`.** Las piezas sí: crear,
+  editar, publicar y despublicar funcionan contra la API. Para los videos falta
+  subir el archivo a Cloudflare Stream, que es otro trabajo.
+- **Subir fotos necesita las credenciales reales de Cloudinary.** El `.env`
+  tiene las de ejemplo, así que la firma se genera pero la subida no llega a
+  ninguna parte. El algoritmo está fijado con una prueba y con el ejemplo de la
+  documentación de Cloudinary; lo que falta es la cuenta.
 - **`web/lib/mock-data.ts` sigue ahí** a propósito: es lo que mantiene vivo el
   despliegue de Vercel mientras la API no esté desplegada.
 
@@ -99,9 +104,15 @@ TypeORM, pruebas contra un Postgres real en Docker.
 `POST /entitlements/:id/play` · `GET /me/orders` · `GET /me/entitlements` ·
 `GET /me/entitlements/:id`
 
-**Solo el artista** (`SessionGuard` + `AdminGuard`): `POST|PATCH /admin/pieces`
-· `POST|PATCH /admin/drops` · `PATCH /admin/{pieces,drops}/:id/listed` ·
+**Solo el artista** (`SessionGuard` + `AdminGuard`): `GET /admin/pieces` ·
+`GET /admin/pieces/:slug` · `POST|PATCH /admin/pieces` · `GET /admin/drops` ·
+`GET /admin/drops/:slug` · `POST|PATCH /admin/drops` ·
+`PATCH /admin/{pieces,drops}/:id/listed` · `POST /admin/uploads/signature` ·
 `GET /admin/orders` · `POST /admin/orders/:id/ship` · `GET /admin/contracts`
+
+Los de lectura del panel existen aparte de los públicos porque estos últimos
+esconden los borradores —que es lo que los hace borradores—, así que una pieza
+recién guardada sería invisible incluso para quien la escribió.
 
 La sesión viaja como `Authorization: Bearer`, que es lo que manda el front. El
 guard también acepta una cookie `session`, pero **no hay `cookie-parser`
@@ -209,8 +220,9 @@ montado**, así que ese camino no funciona todavía.
 ## Cómo correr
 
 ```bash
-# Base de datos (desde la raíz)
-docker compose -f docker-compose.test.yml up -d
+# Bases de datos (desde la raíz). Son dos y a propósito:
+docker compose up -d                                # desarrollo, en disco, 5434
+docker compose -f docker-compose.test.yml up -d     # pruebas, en memoria, 5433
 
 # API — http://localhost:3000
 cd api && npm install
@@ -224,10 +236,10 @@ cd web && npm install && npm run dev -- -p 3001
 npx jest                                            # 14 pruebas
 ```
 
-**Cuidado: la API en desarrollo y las pruebas comparten la misma base**, así
-que correr `npx jest` con `npm run start:dev` levantado hace fallar alguna
-prueba sin motivo aparente — las pruebas truncan las tablas bajo los pies de la
-API. Para el servidor antes de correrlas.
+Las pruebas usan su propia base y lo hacen ellas solas: `api/test/setup/env.ts`
+fuerza `DATABASE_URL` a la de pruebas pase lo que pase en `.env`. Antes
+compartían base con el desarrollo y correr la suite borraba en silencio lo
+sembrado; el fallo aparecía una hora después y en otro sitio.
 
 Para que el front hable con la API hace falta `web/.env.local` con
 `API_URL=http://localhost:3000` (está en `.gitignore`). Sin ese archivo, el

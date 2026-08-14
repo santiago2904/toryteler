@@ -23,11 +23,11 @@ export default async function StudioLayout({ children }: { children: React.React
   return (
     <div className={styles.frame}>
       <div className={styles.notice}>
-        <p className="label">Vista previa del panel</p>
+        <p className="label">Los videos todavía no se pueden crear aquí</p>
         <p className="muted">
-          Todavía no está conectado a la tienda: puedes recorrerlo y ver cómo queda, pero
-          ningún botón guarda, publica ni borra nada. Los controles que aún no funcionan
-          aparecen apagados.
+          Las piezas sí: guardar, editar, publicar y despublicar funcionan y afectan a la
+          tienda de verdad. Para los videos falta conectar la subida del archivo, así que
+          ese formulario aún no guarda.
         </p>
       </div>
 

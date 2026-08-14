@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import type { Metadata } from 'next';
 import { apiGet } from '@/lib/api';
-import { DropDetail, PieceSummary } from '@/lib/types';
+import { AdminDrop, AdminPiece } from '@/lib/types';
 import { ProductImage } from '@/components/ProductImage';
 import { StudioItemActions } from '@/components/StudioItemActions';
 import { formatPrice } from '@/lib/format';
@@ -9,17 +9,26 @@ import styles from './studio.module.scss';
 
 export const metadata: Metadata = { title: 'Publicado — Studio' };
 
+/** The list changes the moment anything is saved. */
+export const dynamic = 'force-dynamic';
+
 export default async function PublishedPage() {
+  // The admin endpoints and not the public ones: a draft is invisible to the
+  // shop by design, so saving one and never seeing it again would be the
+  // obvious bug of doing this the easy way.
   const [pieces, videos] = await Promise.all([
-    apiGet<PieceSummary[]>('/pieces'),
-    apiGet<DropDetail[]>('/drops'),
+    apiGet<AdminPiece[]>('/admin/pieces', true),
+    apiGet<AdminDrop[]>('/admin/drops', true),
   ]);
+
+  const drafts = [...pieces, ...videos].filter((item) => item.status !== 'available').length;
 
   return (
     <div className={styles.published}>
       <div className={styles.actions}>
         <h1 className="label muted">
           {pieces.length} piezas · {videos.length} videos
+          {drafts > 0 && ` · ${drafts} sin publicar`}
         </h1>
         <div className={styles.buttons}>
           <Link href="/studio/nuevo/pieza"><button type="button">Nueva pieza</button></Link>
@@ -37,24 +46,32 @@ export default async function PublishedPage() {
               </div>
 
               <div className={styles.meta}>
-                <Link href={`/piezas/${piece.slug}`} className="label">{piece.title}</Link>
+                <Link
+                  href={piece.status === 'available' ? `/piezas/${piece.slug}` : `/studio/pieza/${piece.slug}`}
+                  className="label"
+                >
+                  {piece.title}
+                </Link>
                 <span>{formatPrice(piece.priceCop)}</span>
                 <span className="label muted">
+                  {piece.status !== 'available' && 'Sin publicar · '}
                   {piece.stock === 0
                     ? 'Agotada'
                     : piece.stock === 1
                       ? 'Última unidad'
                       : `${piece.stock} unidades`}
+                  {piece.sold > 0 && ` · ${piece.sold} vendida${piece.sold === 1 ? '' : 's'}`}
                 </span>
               </div>
 
               <StudioItemActions
                 kind="piece"
+                id={piece.id}
                 slug={piece.slug}
                 title={piece.title}
+                listed={piece.status === 'available'}
                 left={piece.stock}
-                // lazy: the mock does not carry units sold; the admin endpoint will.
-                sold={piece.stock === 0 ? 1 : 0}
+                sold={piece.sold}
               />
             </li>
           ))}
@@ -73,14 +90,20 @@ export default async function PublishedPage() {
               </div>
 
               <div className={styles.meta}>
-                <Link href={`/drops/${video.slug}`} className="label">{video.title}</Link>
+                <Link
+                  href={video.status === 'available' ? `/drops/${video.slug}` : `/studio/video/${video.slug}`}
+                  className="label"
+                >
+                  {video.title}
+                </Link>
                 <span>{formatPrice(video.priceCop)}</span>
                 <span className="label muted">
-                  {video.soldOut
-                    ? 'Agotado'
-                    : video.capacity === null
-                      ? 'Sin límite de cupos'
-                      : `${video.remaining} de ${video.capacity} cupos`}
+                  {video.status !== 'available' && 'Sin publicar · '}
+                  {video.capacity === null
+                    ? 'Sin límite de cupos'
+                    : video.sold >= video.capacity
+                      ? 'Agotado'
+                      : `${video.capacity - video.sold} de ${video.capacity} cupos`}
                   {' · '}
                   ventana de {video.viewWindowHours} h
                 </span>
@@ -88,10 +111,12 @@ export default async function PublishedPage() {
 
               <StudioItemActions
                 kind="video"
+                id={video.id}
                 slug={video.slug}
                 title={video.title}
-                left={video.remaining}
-                sold={(video.capacity ?? 0) - (video.remaining ?? 0)}
+                listed={video.status === 'available'}
+                left={video.capacity === null ? null : video.capacity - video.sold}
+                sold={video.sold}
               />
             </li>
           ))}

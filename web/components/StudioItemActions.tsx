@@ -1,13 +1,18 @@
 'use client';
 
 import Link from 'next/link';
-import { useRef } from 'react';
+import { useRouter } from 'next/navigation';
+import { useRef, useState } from 'react';
+import { setListed } from '@/lib/studio-actions';
 import styles from './StudioItemActions.module.scss';
 
 interface Props {
   kind: 'piece' | 'video';
+  id: string;
   slug: string;
   title: string;
+  /** Whether it is in the shop right now. A draft has never been published. */
+  listed: boolean;
   /** Units left for a piece, remaining seats for a video. */
   left: number | null;
   /** How many people already bought it. Drives the whole warning. */
@@ -15,27 +20,61 @@ interface Props {
 }
 
 /**
- * Edit and unpublish for one item in the list.
+ * Edit, publish and unpublish for one item in the list.
  *
  * Unpublishing removes it from the store and nothing else. Anyone who already
  * bought keeps their order and their access — taking that away would be taking
  * back something paid for. The dialog says so explicitly, because the word
  * "unpublish" does not make it obvious.
  *
+ * Publishing needs no confirmation: it is undone by the button next to it.
+ *
  * Uses the native <dialog>: it handles focus trapping, Escape and the backdrop
  * without a line of our own code.
  */
-export function StudioItemActions({ kind, slug, title, left, sold }: Props) {
+export function StudioItemActions({ kind, id, slug, title, listed, left, sold }: Props) {
+  const router = useRouter();
   const dialog = useRef<HTMLDialogElement>(null);
+  const [working, setWorking] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
   const editHref = `/studio/${kind === 'piece' ? 'pieza' : 'video'}/${slug}`;
+
+  async function change(next: boolean) {
+    setWorking(true);
+    setError(null);
+
+    const result = await setListed(kind === 'piece' ? 'piece' : 'drop', id, next);
+    setWorking(false);
+
+    if (!result.ok) {
+      setError(result.error);
+      return;
+    }
+    dialog.current?.close();
+    router.refresh();
+  }
 
   return (
     <div className={styles.actions}>
       <Link href={editHref} className="label">Editar</Link>
 
-      <button type="button" className="link-button" onClick={() => dialog.current?.showModal()}>
-        Despublicar
-      </button>
+      {listed ? (
+        <button
+          type="button"
+          className="link-button"
+          onClick={() => dialog.current?.showModal()}
+          disabled={working}
+        >
+          Despublicar
+        </button>
+      ) : (
+        <button type="button" onClick={() => void change(true)} disabled={working}>
+          {working ? 'Publicando…' : 'Publicar'}
+        </button>
+      )}
+
+      {error && !listed && <span role="alert" className={styles.error}>{error}</span>}
 
       <dialog ref={dialog} className={styles.dialog}>
         <h2 className="label">Despublicar «{title}»</h2>
@@ -72,14 +111,21 @@ export function StudioItemActions({ kind, slug, title, left, sold }: Props) {
 
         <p className="muted">Puedes volver a publicarlo cuando quieras.</p>
 
+        {error && <p role="alert" className={styles.error}>{error}</p>}
+
         <div className={styles.buttons}>
-          <button type="button" className="link-button" onClick={() => dialog.current?.close()}>
+          <button
+            type="button"
+            className="link-button"
+            onClick={() => dialog.current?.close()}
+            disabled={working}
+          >
             Cancelar
           </button>
-          <button type="button" disabled>Despublicar</button>
+          <button type="button" onClick={() => void change(false)} disabled={working}>
+            {working ? 'Despublicando…' : 'Despublicar'}
+          </button>
         </div>
-
-        <p className="muted">Despublicar estará disponible cuando conectemos la tienda.</p>
       </dialog>
     </div>
   );

@@ -3,6 +3,31 @@ import { InjectDataSource } from '@nestjs/typeorm';
 import { DataSource } from 'typeorm';
 import { affectedRows, firstRow, returnedRows } from '../database/rows';
 
+/** The catalogue as the artist sees it, drafts included. */
+export interface AdminPiece {
+  id: string;
+  slug: string;
+  title: string;
+  priceCop: number;
+  images: string[];
+  stock: number;
+  status: string;
+  /** Copies already paid for, which decides what the unpublish dialog warns about. */
+  sold: number;
+}
+
+export interface AdminDrop {
+  id: string;
+  slug: string;
+  title: string;
+  priceCop: number;
+  posterImage: string | null;
+  capacity: number | null;
+  viewWindowHours: number;
+  status: string;
+  sold: number;
+}
+
 export interface NewPiece {
   title: string;
   description?: string | null;
@@ -159,6 +184,109 @@ export class AdminService {
       [orderId, tracking.carrier, tracking.number],
     );
     if (affectedRows(result) === 0) throw new BadRequestException('ORDER_NOT_PAID');
+  }
+
+  /**
+   * The catalogue as the artist sees it: drafts included, and with how many of
+   * each have already been sold.
+   *
+   * The public endpoint cannot serve this — it hides drafts by design, so a
+   * piece saved as a draft would vanish the moment it was created. The sold
+   * count is what the unpublish dialog needs to say whether anybody is holding
+   * one already.
+   */
+  async listPieces(): Promise<AdminPiece[]> {
+    const rows = returnedRows<{
+      id: string; slug: string; title: string; price_cop: number; images: string[];
+      stock: number; status: string; sold: number;
+    }>(
+      await this.ds.query(
+        `SELECT p.id, p.slug, p.title, p.price_cop, p.images, p.stock, p.status,
+                (SELECT count(*)::int
+                   FROM order_items i JOIN orders o ON o.id = i.order_id
+                  WHERE i.piece_id = p.id AND o.status = 'paid') AS sold
+           FROM pieces p
+          WHERE p.status <> 'archived'
+          -- Drafts first: they are the ones waiting for a decision.
+          ORDER BY p.published_at DESC NULLS FIRST, p.slug`,
+      ),
+    );
+    return rows.map((r) => ({
+      id: r.id, slug: r.slug, title: r.title, priceCop: r.price_cop,
+      images: r.images, stock: r.stock, status: r.status, sold: r.sold,
+    }));
+  }
+
+  async listDrops(): Promise<AdminDrop[]> {
+    const rows = returnedRows<{
+      id: string; slug: string; title: string; price_cop: number; poster_image: string | null;
+      capacity: number | null; view_window_hours: number; status: string; sold: number;
+    }>(
+      await this.ds.query(
+        `SELECT d.id, d.slug, d.title, d.price_cop, d.poster_image, d.capacity,
+                d.view_window_hours, d.status,
+                (SELECT count(*)::int FROM entitlements e WHERE e.drop_id = d.id) AS sold
+           FROM drops d
+          WHERE d.status <> 'archived'
+          ORDER BY d.published_at DESC NULLS FIRST, d.slug`,
+      ),
+    );
+    return rows.map((r) => ({
+      id: r.id, slug: r.slug, title: r.title, priceCop: r.price_cop,
+      posterImage: r.poster_image, capacity: r.capacity,
+      viewWindowHours: r.view_window_hours, status: r.status, sold: r.sold,
+    }));
+  }
+
+  /**
+   * One piece for the edit form, whatever its state.
+   *
+   * The public endpoint refuses drafts — that is its job — so editing one
+   * through it is impossible, which is exactly what a draft is for. The
+   * personal note comes along: the artist wrote it and has to be able to see
+   * what it says before changing it.
+   */
+  async findPiece(slug: string) {
+    const row = firstRow<Record<string, unknown>>(
+      await this.ds.query(
+        `SELECT id, slug, title, description, story, personal_note, price_cop,
+                images, stock, status, sold_at
+           FROM pieces WHERE slug = $1`,
+        [slug],
+      ),
+    );
+    if (!row) throw new NotFoundException('PIECE_NOT_FOUND');
+
+    return {
+      id: row.id, slug: row.slug, title: row.title, description: row.description,
+      story: row.story, personalNote: row.personal_note, priceCop: row.price_cop,
+      images: row.images, stock: row.stock, status: row.status, soldAt: row.sold_at,
+      available: (row.stock as number) > 0,
+    };
+  }
+
+  async findDrop(slug: string) {
+    const row = firstRow<Record<string, unknown>>(
+      await this.ds.query(
+        `SELECT d.id, d.slug, d.title, d.description, d.price_cop, d.video_asset_id,
+                d.poster_image, d.capacity, d.view_window_hours, d.status,
+                (SELECT count(*)::int FROM entitlements e WHERE e.drop_id = d.id) AS sold
+           FROM drops d WHERE d.slug = $1`,
+        [slug],
+      ),
+    );
+    if (!row) throw new NotFoundException('DROP_NOT_FOUND');
+
+    const capacity = row.capacity as number | null;
+    const sold = row.sold as number;
+    return {
+      id: row.id, slug: row.slug, title: row.title, description: row.description,
+      priceCop: row.price_cop, videoAssetId: row.video_asset_id,
+      posterImage: row.poster_image, capacity,
+      viewWindowHours: row.view_window_hours, status: row.status, sold,
+      remaining: capacity === null ? null : Math.max(0, capacity - sold),
+      soldOut: capacity !== null && sold >= capacity,
+    };
   }
 
   /** Everything sold, newest first, with who bought it and where it goes. */

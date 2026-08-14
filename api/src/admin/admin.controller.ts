@@ -1,5 +1,6 @@
 import { Body, Controller, Get, Param, ParseUUIDPipe, Patch, Post, UseGuards } from '@nestjs/common';
 import { AdminGuard, SessionGuard } from '../auth/session.guard';
+import { UploadSignatureService } from '../storage/upload-signature.service';
 import { AdminService } from './admin.service';
 import type { NewDrop, NewPiece } from './admin.service';
 
@@ -11,7 +12,36 @@ import type { NewDrop, NewPiece } from './admin.service';
 @Controller('admin')
 @UseGuards(SessionGuard, AdminGuard)
 export class AdminController {
-  constructor(private readonly admin: AdminService) {}
+  constructor(
+    private readonly admin: AdminService,
+    private readonly uploads: UploadSignatureService,
+  ) {}
+
+  /** What the browser needs to upload an image straight to Cloudinary. */
+  @Post('uploads/signature')
+  signUpload(@Body() body: { folder?: 'pieces' | 'posters' }) {
+    return this.uploads.sign(body.folder === 'posters' ? 'posters' : 'pieces');
+  }
+
+  @Get('pieces')
+  listPieces() {
+    return this.admin.listPieces();
+  }
+
+  @Get('pieces/:slug')
+  findPiece(@Param('slug') slug: string) {
+    return this.admin.findPiece(slug);
+  }
+
+  @Get('drops')
+  listDrops() {
+    return this.admin.listDrops();
+  }
+
+  @Get('drops/:slug')
+  findDrop(@Param('slug') slug: string) {
+    return this.admin.findDrop(slug);
+  }
 
   @Post('pieces')
   createPiece(@Body() body: NewPiece) {
