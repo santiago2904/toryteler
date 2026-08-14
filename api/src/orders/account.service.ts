@@ -26,6 +26,14 @@ export interface OrderSummary {
   tracking: OrderTracking | null;
 }
 
+export interface Profile {
+  id: string;
+  email: string;
+  fullName: string | null;
+  /** Read from the database on every call, never baked into the session. */
+  isAdmin: boolean;
+}
+
 export interface EntitlementSummary {
   id: string;
   dropSlug: string;
@@ -85,6 +93,25 @@ interface EntitlementRow {
 @Injectable()
 export class AccountService {
   constructor(@InjectDataSource() private readonly ds: DataSource) {}
+
+  /**
+   * Who the session belongs to, and whether they are the artist.
+   *
+   * The frontend needs this to decide whether to draw the studio at all.
+   * Answering it from the database rather than from the token means revoking
+   * the role takes effect on the next click, not whenever the session expires.
+   */
+  async profile(userId: string): Promise<Profile | null> {
+    const row = firstRow<{ id: string; email: string; full_name: string | null; is_admin: boolean }>(
+      await this.ds.query(
+        `SELECT id, email, full_name, is_admin FROM users WHERE id = $1`,
+        [userId],
+      ),
+    );
+    return row
+      ? { id: row.id, email: row.email, fullName: row.full_name, isAdmin: row.is_admin }
+      : null;
+  }
 
   /**
    * Someone's own orders. An order is recognised by its photograph long before

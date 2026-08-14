@@ -1,4 +1,7 @@
-import { Controller, Get, NotFoundException, Param, ParseUUIDPipe, Req, UseGuards } from '@nestjs/common';
+import {
+  Controller, Get, NotFoundException, Param, ParseUUIDPipe, Req,
+  UnauthorizedException, UseGuards,
+} from '@nestjs/common';
 import type { Request } from 'express';
 import { SessionGuard } from '../auth/session.guard';
 import { AccountService } from './account.service';
@@ -14,6 +17,14 @@ type Authenticated = Request & { user: { id: string } };
 @UseGuards(SessionGuard)
 export class MeController {
   constructor(private readonly account: AccountService) {}
+
+  @Get()
+  async profile(@Req() req: Authenticated) {
+    const profile = await this.account.profile(req.user.id);
+    // The session verified but the user is gone: treat it as no session at all.
+    if (!profile) throw new UnauthorizedException('NO_SESSION');
+    return profile;
+  }
 
   @Get('orders')
   orders(@Req() req: Authenticated) {

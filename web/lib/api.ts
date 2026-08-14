@@ -74,6 +74,16 @@ async function mock<T>(path: string): Promise<T> {
     return drop as T;
   }
 
+  /**
+   * There are no sessions without an API, so the mock hands out the artist's
+   * own profile and /studio stays walkable in the demo deployment. That is the
+   * whole reason the panel is reachable there — with API_URL set, the real
+   * answer decides, and someone who is not the artist gets a 404.
+   */
+  if (path === '/me') {
+    return { id: 'mock', email: 'tory@toryteler.co', fullName: 'Tory', isAdmin: true } as T;
+  }
+
   if (path === '/me/orders') return ORDERS as T;
   if (path === '/me/entitlements') return ENTITLEMENTS as T;
 

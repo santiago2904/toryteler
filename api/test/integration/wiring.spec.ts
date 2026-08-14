@@ -82,6 +82,40 @@ describe('http wiring', () => {
         .expect(200, []);
     });
 
+    it('tells the frontend who is asking, and whether they are the artist', async () => {
+      const buyer = await session();
+      const artist = await session({ admin: true });
+
+      const asBuyer = await request(app.getHttpServer())
+        .get('/me')
+        .set('Authorization', `Bearer ${buyer.token}`)
+        .expect(200);
+      expect(asBuyer.body.isAdmin).toBe(false);
+      expect(asBuyer.body.email).toContain('@');
+
+      const asArtist = await request(app.getHttpServer())
+        .get('/me')
+        .set('Authorization', `Bearer ${artist.token}`)
+        .expect(200);
+      expect(asArtist.body.isAdmin).toBe(true);
+    });
+
+    it('reflects a role revoked a second ago, without waiting for the session to expire', async () => {
+      const { userId, token } = await session({ admin: true });
+      await ds.query(`UPDATE users SET is_admin = false WHERE id = $1`, [userId]);
+
+      const res = await request(app.getHttpServer())
+        .get('/me')
+        .set('Authorization', `Bearer ${token}`)
+        .expect(200);
+      expect(res.body.isAdmin).toBe(false);
+
+      await request(app.getHttpServer())
+        .get('/admin/orders')
+        .set('Authorization', `Bearer ${token}`)
+        .expect(403);
+    });
+
     it('turns away a signed-in stranger from the studio', async () => {
       const { token } = await session();
       await request(app.getHttpServer())

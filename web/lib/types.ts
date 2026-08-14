@@ -3,6 +3,14 @@
  * If these and the API diverge, the API wins.
  */
 
+export interface Profile {
+  id: string;
+  email: string;
+  fullName: string | null;
+  /** Decides whether /studio exists for this visitor. */
+  isAdmin: boolean;
+}
+
 export interface PieceSummary {
   slug: string;
   title: string;

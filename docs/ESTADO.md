@@ -94,7 +94,7 @@ TypeORM, pruebas contra un Postgres real en Docker.
 `GET /drops/:slug` · `POST /auth/magic-link` · `POST /auth/redeem` ·
 `POST /payments/webhook`
 
-**Con sesión:** `POST /orders` · `POST /orders/:id/contract` ·
+**Con sesión:** `GET /me` · `POST /orders` · `POST /orders/:id/contract` ·
 `POST /contracts/:id/sign` · `POST /orders/:id/pay` ·
 `POST /entitlements/:id/play` · `GET /me/orders` · `GET /me/entitlements` ·
 `GET /me/entitlements/:id`
@@ -154,6 +154,10 @@ montado**, así que ese camino no funciona todavía.
   fuente.
 - **Despublicar retira de la tienda y nada más.** Quien compró conserva su
   acceso. La capacidad sube pero nunca baja de lo vendido.
+- **El rol se lee de la base en cada petición**, nunca del token. Quitarle el
+  rol a alguien surte efecto en su siguiente clic, no cuando venza su sesión.
+- **Quien no es el artista recibe 404 en `/studio`, no 403.** La segunda
+  respuesta le cuenta que hay un panel que vale la pena forzar.
 - **Nada fuera de `api/src/payments/wompi/` conoce Wompi.** `PaymentGateway`
   normaliza estado, referencia e id de evento.
 
@@ -238,9 +242,12 @@ correo y la subida de PDF se simulan en consola en vez de fallar.
 
 ## Deuda declarada y avisos
 
-- **`/studio` no tiene control de acceso** y está público en Vercel. El guard de
-  rol es la tarea 12.
-- **`/cuenta` no tiene sesión**: muestra los pedidos simulados a cualquiera.
+- **`/studio` en el despliegue de Vercel sigue abierto**, y es a propósito: sin
+  API no hay sesiones que comprobar, así que los datos simulados responden que
+  quien mira es el artista. Con `API_URL` definida manda `GET /me` y quien no
+  lo sea recibe un 404.
+- **`/cuenta` con datos simulados** muestra pedidos de ejemplo a cualquiera. Con
+  la API conectada exige sesión.
 - **Las imágenes de ejemplo son portadas de discos reales** atribuidas a un
   artista ficticio. **No pueden quedarse** en una tienda pública.
 - **El texto del contrato necesita revisión de un abogado.** Está versionado
