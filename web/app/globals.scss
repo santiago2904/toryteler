@@ -202,20 +202,24 @@ body { overflow-x: hidden; }
   animation-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
 }
 
-/* Las capturas se estiran para llenar el grupo mientras cambia de tamaño, y
-   como vienen con la proporción vieja, se deforman. object-fit las mantiene
-   proporcionadas. El fundido es corto y desigual —la vieja se va antes de que
-   la nueva termine de entrar— para que no haya doble imagen visible. */
+/* Aquí no hay nada que fundir: la captura vieja y la nueva son la misma foto
+   en otro tamaño. Cualquier fundido cruzado deja un instante con ambas a media
+   opacidad, y eso se ve como un parpadeo. Se muestra solo la nueva y el grupo
+   se encarga de escalarla.
+
+   object-fit es imprescindible: sin él, la captura se estira para llenar un
+   contenedor que está cambiando de proporción. */
 ::view-transition-old(*),
 ::view-transition-new(*) {
   width: 100%;
   height: 100%;
   object-fit: cover;
   mix-blend-mode: normal;
+  animation: none;
 }
 
-::view-transition-old(*) { animation-duration: 160ms; animation-timing-function: ease-out; }
-::view-transition-new(*) { animation-duration: 280ms; animation-timing-function: ease-in; }
+::view-transition-old(*) { opacity: 0; }
+::view-transition-new(*) { opacity: 1; }
 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
