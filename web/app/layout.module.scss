@@ -11,8 +11,9 @@
 .izquierda {
   display: flex;
   align-items: center;
-  font-size: 1.25rem;      // el + necesita cuerpo para ser un objetivo táctil real
-  line-height: 1;
+  // El botón mide 44 px por accesibilidad; el margen negativo lo devuelve al
+  // borde óptico para que no parezca desalineado con el resto de la cabecera.
+  margin: calc(var(--u) * -1.5) 0 0 calc(var(--u) * -1.5);
 }
 
 .centro {

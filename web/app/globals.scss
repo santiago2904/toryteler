@@ -102,6 +102,25 @@ button:disabled {
   cursor: not-allowed;
 }
 
+/* El control de zoom: un signo, pero con cuerpo suficiente para verse y para
+   que el dedo lo acierte. 44 px de área táctil aunque el glifo sea pequeño. */
+button.zoom {
+  background: transparent;
+  color: inherit;
+  border: 0;
+  padding: 0;
+  width: 44px;
+  height: 44px;
+  display: grid;
+  place-items: center;
+  font-size: 2rem;
+  font-weight: 400;
+  line-height: 1;
+  letter-spacing: 0;
+  text-transform: none;
+}
+button.zoom:hover { background: transparent; color: var(--tenue); }
+
 /* Un botón que debe leerse como enlace: misma jerarquía que la navegación. */
 button.enlace {
   background: transparent;
@@ -175,6 +194,23 @@ h1, h2 {
 
 /* El desplazamiento no puede generar barra horizontal durante la animación. */
 body { overflow-x: hidden; }
+
+/* Zoom de la rejilla: el navegador interpola posición y tamaño de cada pieza.
+   Misma curva y cadencia que el resto del sitio. */
+::view-transition-group(*) {
+  animation-duration: 520ms;
+  animation-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* Sin esto el navegador funde la imagen vieja con la nueva y se ve turbio
+   mientras escala; así solo se mueve y cambia de tamaño, limpio. */
+::view-transition-old(*),
+::view-transition-new(*) {
+  animation: none;
+  mix-blend-mode: normal;
+  height: 100%;
+  object-fit: cover;
+}
 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {

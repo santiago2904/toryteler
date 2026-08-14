@@ -18,7 +18,9 @@ export default async function Catalogo() {
   return (
     <ul className={estilos.rejilla}>
       {piezas.map((pieza, i) => (
-        <li key={pieza.slug}>
+        // El nombre único es lo que permite al navegador seguir cada pieza
+        // entre las dos retículas y animar su tamaño en vez de fundirlas.
+        <li key={pieza.slug} style={{ viewTransitionName: `pieza-${pieza.slug}` }}>
           <Link href={`/piezas/${pieza.slug}`}>
             {pieza.images[0] && (
               <Imagen publicId={pieza.images[0]} alt={pieza.title} priority={i < 2} />
