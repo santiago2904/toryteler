@@ -1,6 +1,7 @@
 import { Body, Controller, Get, Param, ParseUUIDPipe, Patch, Post, UseGuards } from '@nestjs/common';
 import { AdminGuard, SessionGuard } from '../auth/session.guard';
 import { UploadSignatureService } from '../storage/upload-signature.service';
+import { VideoUploadService } from '../storage/video-upload.service';
 import { AdminService } from './admin.service';
 import type { NewDrop, NewPiece } from './admin.service';
 
@@ -15,12 +16,25 @@ export class AdminController {
   constructor(
     private readonly admin: AdminService,
     private readonly uploads: UploadSignatureService,
+    private readonly videos: VideoUploadService,
   ) {}
 
   /** What the browser needs to upload an image straight to Cloudinary. */
   @Post('uploads/signature')
   signUpload(@Body() body: { folder?: 'pieces' | 'posters' }) {
     return this.uploads.sign(body.folder === 'posters' ? 'posters' : 'pieces');
+  }
+
+  /** A one-time URL to send a video straight to Cloudflare Stream. */
+  @Post('uploads/video')
+  createVideoUpload(@Body() body: { maxDurationSeconds?: number }) {
+    return this.videos.createUpload(body.maxDurationSeconds);
+  }
+
+  /** Whether that video finished transcoding and can be published. */
+  @Get('uploads/video/:uid')
+  videoStatus(@Param('uid') uid: string) {
+    return this.videos.status(uid);
   }
 
   @Get('pieces')

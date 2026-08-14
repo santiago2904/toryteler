@@ -32,6 +32,7 @@ import { PlaybackController } from './playback/playback.controller';
 import { PlaybackService, PlaybackUrlSigner } from './playback/playback.service';
 import { CloudinaryDocumentStore, DocumentStore } from './storage/document-store';
 import { UploadSignatureService } from './storage/upload-signature.service';
+import { VideoUploadService } from './storage/video-upload.service';
 
 /**
  * Signs a short-lived Cloudflare Stream URL.
@@ -108,6 +109,7 @@ const cloudflareSigner =
     ReconciliationService,
     AdminService,
     UploadSignatureService,
+    VideoUploadService,
     // The rest of the system depends on the abstract class, so swapping the
     // provider is this one line.
     { provide: PaymentGateway, useClass: WompiGateway },

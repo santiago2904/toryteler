@@ -116,3 +116,41 @@ export async function uploadTicket(folder: 'pieces' | 'posters'): Promise<Result
     false,
   );
 }
+
+export interface VideoTicket {
+  uploadUrl: string;
+  uid: string;
+}
+
+/**
+ * A one-time URL for sending a video to Cloudflare Stream.
+ *
+ * The video is marked as requiring signed URLs at this point, before a single
+ * byte arrives, so it is never publicly reachable — not even in the gap
+ * between the upload finishing and somebody remembering to protect it.
+ */
+export async function videoTicket(maxDurationSeconds = 3600): Promise<Result<VideoTicket>> {
+  return attempt(
+    () => apiSend<VideoTicket>('/admin/uploads/video', 'POST', { maxDurationSeconds }),
+    false,
+  );
+}
+
+export interface VideoStatus {
+  uid: string;
+  ready: boolean;
+  state: string;
+  durationSeconds: number | null;
+  errorMessage: string | null;
+}
+
+/** Cloudflare transcodes after the upload; nothing is playable until it does. */
+export async function videoStatus(uid: string): Promise<Result<VideoStatus>> {
+  return attempt(
+    async () => {
+      const { apiGet } = await import('./api');
+      return apiGet<VideoStatus>(`/admin/uploads/video/${uid}`, true);
+    },
+    false,
+  );
+}

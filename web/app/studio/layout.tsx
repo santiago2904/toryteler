@@ -22,15 +22,6 @@ export default async function StudioLayout({ children }: { children: React.React
 
   return (
     <div className={styles.frame}>
-      <div className={styles.notice}>
-        <p className="label">Los videos todavía no se pueden crear aquí</p>
-        <p className="muted">
-          Las piezas sí: guardar, editar, publicar y despublicar funcionan y afectan a la
-          tienda de verdad. Para los videos falta conectar la subida del archivo, así que
-          ese formulario aún no guarda.
-        </p>
-      </div>
-
       <nav className={`${styles.nav} label`}>
         <Link href="/studio">Publicado</Link>
         <Link href="/studio/pedidos">Pedidos</Link>

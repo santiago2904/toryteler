@@ -61,13 +61,10 @@ webhook no duplicó nada.
 
 ### Lo que sigue sin conectar
 
-- **Los videos no se pueden crear desde el `/studio`.** Las piezas sí: crear,
-  editar, publicar y despublicar funcionan contra la API. Para los videos falta
-  subir el archivo a Cloudflare Stream, que es otro trabajo.
-- **Subir fotos necesita las credenciales reales de Cloudinary.** El `.env`
-  tiene las de ejemplo, así que la firma se genera pero la subida no llega a
-  ninguna parte. El algoritmo está fijado con una prueba y con el ejemplo de la
-  documentación de Cloudinary; lo que falta es la cuenta.
+El panel ya publica piezas y videos, con sus archivos. Nada de eso pasa por la
+API: las fotos van del navegador a Cloudinary con una firma, y los videos a
+Cloudflare con una URL de un solo uso. Reenviarlos costaría tener el archivo en
+memoria y pagar los bytes dos veces.
 - **`web/lib/mock-data.ts` sigue ahí** a propósito: es lo que mantiene vivo el
   despliegue de Vercel mientras la API no esté desplegada.
 
@@ -203,6 +200,15 @@ montado**, así que ese camino no funciona todavía.
 - **Abrir la ventana y firmar la URL van en la misma transacción.** Firmar es
   una llamada de red y puede fallar; si fallaba después de abrir, el comprador
   quemaba su única oportunidad sin ver un fotograma. Sin URL, no hay ventana.
+- **`requireSignedURLs` se pone al reservar la subida**, no después. Así el
+  video no es público ni en el hueco entre que llega el archivo y alguien se
+  acuerda de protegerlo.
+- **Un video no se puede reproducir en cuanto se sube:** Cloudflare lo procesa
+  después, y publicarlo antes vende un cupo a una pantalla negra. El formulario
+  espera a `readyToStream`, y si tarda demasiado guarda igual y lo dice.
+- **Subir por POST tiene un techo de 200 MB.** Más grande exige el protocolo
+  tus, que es otra dependencia; por ahora se avisa y se pide exportar más
+  liviano.
 - **Cloudflare Stream:** el host es `customer-<CODE>.cloudflarestream.com` y el
   código es de la cuenta, no hay uno genérico. El token firmado va **en lugar**
   del id del video. Y **nada de esto protege un video sin `requireSignedURLs`**:

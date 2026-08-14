@@ -1,4 +1,7 @@
-import { uploadTicket } from './studio-actions';
+import { uploadTicket, videoStatus, videoTicket } from './studio-actions';
+
+/** Cloudflare's limit for a plain POST upload. Past it the protocol is tus. */
+const MAX_VIDEO_BYTES = 200 * 1024 * 1024;
 
 /**
  * Sends files straight from the browser to Cloudinary and returns the ids the
@@ -54,6 +57,67 @@ export async function uploadImages(
   }
 
   return { ids };
+}
+
+/**
+ * Sends a video to Cloudflare Stream and waits until it can actually be played.
+ *
+ * Two waits, and they are different: the upload, which has a percentage worth
+ * showing, and the transcode afterwards, which has no progress at all — a
+ * video is not playable the moment it arrives. Publishing between the two
+ * would sell a seat to a black screen.
+ *
+ * XMLHttpRequest and not fetch because it is the only one that reports upload
+ * progress, and a bar that does not move on a 90 MB file reads as broken.
+ */
+export async function uploadVideo(
+  file: File,
+  onProgress: (stage: 'subiendo' | 'procesando', percent: number) => void,
+): Promise<{ uid?: string; durationSeconds?: number | null; error?: string }> {
+  if (file.size > MAX_VIDEO_BYTES) {
+    const mb = Math.round(file.size / 1024 / 1024);
+    return { error: `El video pesa ${mb} MB y el máximo es 200 MB. Exporta una versión más liviana.` };
+  }
+
+  const ticket = await videoTicket();
+  if (!ticket.ok) return { error: ticket.error };
+  const { uploadUrl, uid } = ticket.data;
+
+  const uploaded = await new Promise<string | null>((resolve) => {
+    const request = new XMLHttpRequest();
+    request.open('POST', uploadUrl);
+
+    request.upload.onprogress = (event) => {
+      if (event.lengthComputable) {
+        onProgress('subiendo', Math.round((event.loaded / event.total) * 100));
+      }
+    };
+    request.onload = () =>
+      resolve(request.status >= 200 && request.status < 300 ? null : `Cloudflare respondió ${request.status}.`);
+    request.onerror = () => resolve('Se cortó la conexión durante la subida.');
+
+    const form = new FormData();
+    form.append('file', file);
+    request.send(form);
+  });
+  if (uploaded) return { error: uploaded };
+
+  // Transcoding. Cloudflare gives no percentage, so this reports the wait
+  // itself rather than inventing one.
+  for (let attempt = 0; attempt < 60; attempt++) {
+    const status = await videoStatus(uid);
+    if (!status.ok) return { error: status.error };
+    if (status.data.ready) return { uid, durationSeconds: status.data.durationSeconds };
+    if (status.data.state === 'error') {
+      return { error: status.data.errorMessage ?? 'Cloudflare no pudo procesar el video.' };
+    }
+    onProgress('procesando', 0);
+    await new Promise((r) => setTimeout(r, 3000));
+  }
+
+  // Still not ready after three minutes: the video is safe, it just is not
+  // playable yet, and saying so beats blocking the form forever.
+  return { uid, error: 'PROCESANDO' };
 }
 
 /** Cloudinary's own reason, in words the artist can act on. */

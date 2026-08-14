@@ -12,7 +12,13 @@ export const metadata: Metadata = { title: 'Publicado — Studio' };
 /** The list changes the moment anything is saved. */
 export const dynamic = 'force-dynamic';
 
-export default async function PublishedPage() {
+export default async function PublishedPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ procesando?: string }>;
+}) {
+  const { procesando } = await searchParams;
+
   // The admin endpoints and not the public ones: a draft is invisible to the
   // shop by design, so saving one and never seeing it again would be the
   // obvious bug of doing this the easy way.
@@ -25,6 +31,15 @@ export default async function PublishedPage() {
 
   return (
     <div className={styles.published}>
+      {/* The video was saved but Cloudflare had not finished with it. Said here
+          because publishing it now would sell a seat to a black screen. */}
+      {procesando && (
+        <p className={styles.notice}>
+          El video quedó guardado, pero Cloudflare todavía lo está procesando. Espera unos
+          minutos antes de publicarlo.
+        </p>
+      )}
+
       <div className={styles.actions}>
         <h1 className="label muted">
           {pieces.length} piezas · {videos.length} videos

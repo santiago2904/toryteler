@@ -106,3 +106,20 @@ export interface AdminDrop {
   status: string;
   sold: number;
 }
+
+/** One video in the studio, whatever its state. Mirrors AdminService.findDrop. */
+export interface AdminDropDetail {
+  id: string;
+  slug: string;
+  title: string;
+  description: string | null;
+  priceCop: number;
+  videoAssetId: string;
+  posterImage: string | null;
+  capacity: number | null;
+  viewWindowHours: number;
+  status: string;
+  sold: number;
+  remaining: number | null;
+  soldOut: boolean;
+}
