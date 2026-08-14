@@ -178,8 +178,13 @@ h1, h2 {
 @keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
 
 /* Going forward enters from the right; going back, from the left.
-   Same curve as the zoom: one single cadence across the site. */
-.page-transition { animation: enter-forward 420ms cubic-bezier(0.22, 1, 0.36, 1) both; }
+   Same curve as the zoom: one single cadence across the site.
+
+   `backwards` and not `both`: `both` keeps the final keyframe applied forever,
+   and a lingering transform — even an identity one — turns the element into
+   the containing block for anything fixed inside it, which pulls modals off
+   centre. */
+.page-transition { animation: enter-forward 420ms cubic-bezier(0.22, 1, 0.36, 1) backwards; }
 .page-transition[data-direction='back'] { animation-name: enter-back; }
 
 @keyframes enter-forward {

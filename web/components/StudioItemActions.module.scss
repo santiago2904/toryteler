@@ -19,6 +19,16 @@
   &[open] {
     display: grid;
     gap: var(--unit);
+
+    // Centred explicitly instead of relying on the browser's `margin: auto`
+    // for modals: that default is easy to lose, and a long dialog needs to
+    // scroll inside itself rather than run off the screen.
+    position: fixed;
+    inset: 0;
+    margin: auto;
+    height: fit-content;
+    max-height: calc(100dvh - var(--gutter) * 2);
+    overflow-y: auto;
   }
 
   // The backdrop isolates the dialog; without enough weight the list behind
