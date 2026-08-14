@@ -37,7 +37,13 @@ export default async function Pieza({ params }: { params: Promise<{ slug: string
     <article className={estilos.pieza}>
       <div className={estilos.imagenes}>
         {pieza.images.map((id, i) => (
-          <Imagen key={id} publicId={id} alt={`${pieza.title} — imagen ${i + 1}`} priority={i === 0} />
+          <Imagen
+            key={id}
+            publicId={id}
+            alt={`${pieza.title} — imagen ${i + 1}`}
+            priority={i === 0}
+            encuadre="completa"
+          />
         ))}
       </div>
 

@@ -1,13 +1,50 @@
 /* La fuente la carga next/font en layout.tsx y expone --fuente-inter.
    Nada de @import a Google: una petición menos y cero parpadeo de fuente. */
 
-:root {
-  /* Dos tonos y dos grises. No hay más colores en el proyecto. */
-  --fondo: #0a0a0a;
-  --tinta: #ededed;   /* 16.9:1 sobre el fondo — AAA sin la halación del blanco puro */
-  --tenue: #8a8a8a;   /* 5.4:1 sobre el fondo — AA para texto secundario */
-  --linea: #242424;
+/* ─────────────────────────────────────────────────────────────
+   Dos temas, cuatro valores cada uno. El resto del proyecto no
+   sabe qué tema está activo: solo consume --fondo y --tinta.
+   ───────────────────────────────────────────────────────────── */
 
+:root {
+  /* Tema claro: negro sobre blanco. */
+  --fondo: #fafafa;
+  --tinta: #101010;   /* 18.2:1 sobre el fondo */
+  --tenue: #5f5f5f;   /* 6.1:1 — AA holgado para texto secundario */
+  --linea: #e2e2e2;
+  color-scheme: light;
+}
+
+/* Tema oscuro: blanco sobre negro. Se aplica si el sistema lo pide
+   y quien navega no ha elegido explícitamente el claro. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-tema='claro']) {
+    --fondo: #0a0a0a;
+    --tinta: #ededed;   /* 16.9:1 — no blanco puro: evita la halación en OLED */
+    --tenue: #8a8a8a;   /* 5.4:1 */
+    --linea: #242424;
+    color-scheme: dark;
+  }
+}
+
+/* La elección manual gana sobre el sistema, en ambos sentidos. */
+:root[data-tema='oscuro'] {
+  --fondo: #0a0a0a;
+  --tinta: #ededed;
+  --tenue: #8a8a8a;
+  --linea: #242424;
+  color-scheme: dark;
+}
+
+:root[data-tema='claro'] {
+  --fondo: #fafafa;
+  --tinta: #101010;
+  --tenue: #5f5f5f;
+  --linea: #e2e2e2;
+  color-scheme: light;
+}
+
+:root {
   --fuente: var(--fuente-inter), -apple-system, 'Helvetica Neue', Arial, sans-serif;
 
   --etiqueta: 0.75rem;
@@ -24,8 +61,6 @@
 }
 
 * { margin: 0; padding: 0; box-sizing: border-box; }
-
-html { color-scheme: dark; }
 
 body {
   background: var(--fondo);
@@ -65,6 +100,21 @@ button:disabled {
   color: var(--tenue);
   border-color: var(--linea);
   cursor: not-allowed;
+}
+
+/* Un botón que debe leerse como enlace: misma jerarquía que la navegación. */
+button.enlace {
+  background: transparent;
+  color: inherit;
+  border: 0;
+  padding: 0;
+  min-height: 0;
+}
+button.enlace:hover {
+  background: transparent;
+  color: inherit;
+  text-decoration: underline;
+  text-underline-offset: 0.3em;
 }
 
 input, textarea, select {

@@ -2,9 +2,20 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: var(--margen);
   padding: var(--margen);
+  max-width: 78rem;
+  margin-inline: auto;
+}
+
+.nav {
+  display: flex;
+  align-items: center;
+  gap: var(--margen);
 }
 
 .pie {
   padding: var(--respiro) var(--margen) var(--margen);
+  max-width: 78rem;
+  margin-inline: auto;
 }
