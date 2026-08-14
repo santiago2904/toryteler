@@ -3020,6 +3020,559 @@ git commit -m "feat(api): visionado efímero con ventana única y token firmado"
 
 ---
 
+## Tarea 11: Endpoints de lectura pública y de cuenta
+
+**Archivos:**
+- Crear: `src/pieces/pieces.controller.ts`, `src/drops/drops.controller.ts`, `src/orders/me.controller.ts`
+- Modificar: `src/pieces/pieces.service.ts` (añadir métodos de consulta), `src/drops/drops.service.ts`
+- Prueba: `test/integration/public-read.spec.ts`
+
+**Interfaces:**
+- Consume: `Piece`, `Drop`, `Entitlement`, `SessionGuard`.
+- Produce: `GET /pieces`, `GET /pieces/:slug`, `GET /drops/:slug`, `GET /me/orders`, `GET /me/entitlements`. Tipos de respuesta `PieceSummary`, `PieceDetail`, `DropDetail`, `OrderSummary`, `EntitlementSummary` — el front del plan 2 los consume literalmente.
+
+- [ ] **Paso 1: Escribir la prueba que falla**
+
+`api/test/integration/public-read.spec.ts`:
+
+```ts
+import { DataSource } from 'typeorm';
+import { testDb, truncateAll } from '../setup/db';
+import { PiecesService } from '../../src/pieces/pieces.service';
+import { DropsService } from '../../src/drops/drops.service';
+
+describe('lectura pública', () => {
+  let ds: DataSource;
+  let pieces: PiecesService;
+  let drops: DropsService;
+
+  beforeAll(async () => { ds = await testDb(); pieces = new PiecesService(ds); drops = new DropsService(ds); });
+  beforeEach(async () => { await truncateAll(ds); });
+  afterAll(async () => { await ds.destroy(); });
+
+  it('el catálogo excluye borradores y archivadas, e incluye vendidas', async () => {
+    await ds.query(`INSERT INTO pieces (slug,title,price_cop,status,published_at)
+                    VALUES ('a','A',1000,'available',now()),
+                           ('b','B',1000,'draft',NULL),
+                           ('c','C',1000,'sold',now()),
+                           ('d','D',1000,'archived',now())`);
+    const list = await pieces.listPublished();
+    expect(list.map((p) => p.slug).sort()).toEqual(['a', 'c']);
+  });
+
+  it('el detalle de pieza incluye historia y nota, y marca si está disponible', async () => {
+    await ds.query(`INSERT INTO pieces (slug,title,price_cop,status,story,personal_note,published_at)
+                    VALUES ('x','X',250000,'available','La usé en la gira','Gracias',now())`);
+    const detail = await pieces.findBySlug('x');
+    expect(detail!.story).toBe('La usé en la gira');
+    expect(detail!.available).toBe(true);
+    expect(detail!.priceCop).toBe(250000);
+  });
+
+  it('una pieza en borrador no se puede consultar por slug', async () => {
+    await ds.query(`INSERT INTO pieces (slug,title,price_cop,status) VALUES ('y','Y',1000,'draft')`);
+    await expect(pieces.findBySlug('y')).resolves.toBeNull();
+  });
+
+  it('el detalle del drop reporta los cupos restantes', async () => {
+    const [d] = await ds.query(
+      `INSERT INTO drops (slug,title,price_cop,video_asset_id,capacity,status,published_at)
+       VALUES ('dr','DR',15000,'vid',3,'available',now()) RETURNING id`);
+    const [u] = await ds.query(`INSERT INTO users (email) VALUES ('a@b.co') RETURNING id`);
+    const [o] = await ds.query(
+      `INSERT INTO orders (user_id,total_cop,payment_method,reference)
+       VALUES ($1,15000,'CARD','r1') RETURNING id`, [u.id]);
+    await ds.query(`INSERT INTO entitlements (user_id,drop_id,order_id) VALUES ($1,$2,$3)`,
+      [u.id, d.id, o.id]);
+    const detail = await drops.findBySlug('dr');
+    expect(detail!.remaining).toBe(2);
+    expect(detail!.soldOut).toBe(false);
+  });
+
+  it('un drop sin capacidad reporta cupos ilimitados', async () => {
+    await ds.query(`INSERT INTO drops (slug,title,price_cop,video_asset_id,capacity,status,published_at)
+                    VALUES ('inf','INF',15000,'vid',NULL,'available',now())`);
+    const detail = await drops.findBySlug('inf');
+    expect(detail!.remaining).toBeNull();
+    expect(detail!.soldOut).toBe(false);
+  });
+});
+```
+
+- [ ] **Paso 2: Ejecutar la prueba y verificar que falla**
+
+Ejecutar: `npx jest test/integration/public-read.spec.ts`
+Esperado: FALLA — `pieces.listPublished` no es una función.
+
+- [ ] **Paso 3: Añadir los métodos de consulta**
+
+Añadir a `api/src/pieces/pieces.service.ts`:
+
+```ts
+export interface PieceSummary {
+  slug: string; title: string; priceCop: number; images: string[]; available: boolean;
+}
+export interface PieceDetail extends PieceSummary {
+  id: string; description: string | null; story: string | null; soldAt: Date | null;
+}
+```
+
+y dentro de la clase:
+
+```ts
+  async listPublished(): Promise<PieceSummary[]> {
+    const rows = await this.ds.query(
+      `SELECT slug, title, price_cop, images, status
+         FROM pieces
+        WHERE status IN ('available','reserved','sold') AND published_at IS NOT NULL
+        ORDER BY published_at DESC`,
+    );
+    return rows.map((r: any) => ({
+      slug: r.slug, title: r.title, priceCop: r.price_cop, images: r.images,
+      available: r.status === 'available',
+    }));
+  }
+
+  async findBySlug(slug: string): Promise<PieceDetail | null> {
+    const [r] = await this.ds.query(
+      `SELECT id, slug, title, description, story, price_cop, images, status, sold_at
+         FROM pieces
+        WHERE slug=$1 AND status IN ('available','reserved','sold') AND published_at IS NOT NULL`,
+      [slug],
+    );
+    if (!r) return null;
+    return {
+      id: r.id, slug: r.slug, title: r.title, description: r.description, story: r.story,
+      priceCop: r.price_cop, images: r.images, available: r.status === 'available', soldAt: r.sold_at,
+    };
+  }
+```
+
+Añadir a `api/src/drops/drops.service.ts`:
+
+```ts
+export interface DropDetail {
+  id: string; slug: string; title: string; description: string | null;
+  priceCop: number; posterImage: string | null;
+  capacity: number | null; remaining: number | null; soldOut: boolean;
+  viewWindowHours: number;
+}
+```
+
+y dentro de la clase:
+
+```ts
+  async findBySlug(slug: string): Promise<DropDetail | null> {
+    const [r] = await this.ds.query(
+      `SELECT d.id, d.slug, d.title, d.description, d.price_cop, d.poster_image,
+              d.capacity, d.view_window_hours,
+              (SELECT count(*)::int FROM entitlements e WHERE e.drop_id = d.id) AS granted
+         FROM drops d
+        WHERE d.slug = $1 AND d.status = 'available' AND d.published_at IS NOT NULL`,
+      [slug],
+    );
+    if (!r) return null;
+    const remaining = r.capacity === null ? null : Math.max(0, r.capacity - r.granted);
+    return {
+      id: r.id, slug: r.slug, title: r.title, description: r.description,
+      priceCop: r.price_cop, posterImage: r.poster_image,
+      capacity: r.capacity, remaining, soldOut: remaining === 0,
+      viewWindowHours: r.view_window_hours,
+    };
+  }
+```
+
+- [ ] **Paso 4: Ejecutar la prueba y verificar que pasa**
+
+Ejecutar: `npx jest test/integration/public-read.spec.ts`
+Esperado: PASA — 5 pruebas.
+
+- [ ] **Paso 5: Exponer los controladores**
+
+`api/src/pieces/pieces.controller.ts`:
+
+```ts
+import { Controller, Get, NotFoundException, Param } from '@nestjs/common';
+import { PiecesService } from './pieces.service';
+
+@Controller('pieces')
+export class PiecesController {
+  constructor(private readonly pieces: PiecesService) {}
+
+  @Get()
+  list() { return this.pieces.listPublished(); }
+
+  @Get(':slug')
+  async detail(@Param('slug') slug: string) {
+    const piece = await this.pieces.findBySlug(slug);
+    if (!piece) throw new NotFoundException('PIECE_NOT_FOUND');
+    return piece;
+  }
+}
+```
+
+`api/src/drops/drops.controller.ts`:
+
+```ts
+import { Controller, Get, NotFoundException, Param } from '@nestjs/common';
+import { DropsService } from './drops.service';
+
+@Controller('drops')
+export class DropsController {
+  constructor(private readonly drops: DropsService) {}
+
+  @Get(':slug')
+  async detail(@Param('slug') slug: string) {
+    const drop = await this.drops.findBySlug(slug);
+    if (!drop) throw new NotFoundException('DROP_NOT_FOUND');
+    return drop;
+  }
+}
+```
+
+`api/src/orders/me.controller.ts`:
+
+```ts
+import { Controller, Get, Req, UseGuards } from '@nestjs/common';
+import { InjectDataSource } from '@nestjs/typeorm';
+import { DataSource } from 'typeorm';
+import { SessionGuard } from '../auth/session.guard';
+
+export interface OrderSummary {
+  id: string; reference: string; status: string; totalCop: number;
+  createdAt: Date; trackingNumber: string | null;
+}
+export interface EntitlementSummary {
+  id: string; dropSlug: string; dropTitle: string;
+  firstPlayedAt: Date | null; expiresAt: Date | null; state: 'unopened' | 'open' | 'consumed';
+}
+
+@Controller('me')
+@UseGuards(SessionGuard)
+export class MeController {
+  constructor(@InjectDataSource() private readonly ds: DataSource) {}
+
+  @Get('orders')
+  async orders(@Req() req: any): Promise<OrderSummary[]> {
+    const rows = await this.ds.query(
+      `SELECT id, reference, status, total_cop, created_at, tracking_number
+         FROM orders WHERE user_id=$1 ORDER BY created_at DESC`,
+      [req.user.id],
+    );
+    return rows.map((r: any) => ({
+      id: r.id, reference: r.reference, status: r.status, totalCop: r.total_cop,
+      createdAt: r.created_at, trackingNumber: r.tracking_number,
+    }));
+  }
+
+  @Get('entitlements')
+  async entitlements(@Req() req: any): Promise<EntitlementSummary[]> {
+    const rows = await this.ds.query(
+      `SELECT e.id, d.slug, d.title, e.first_played_at, e.expires_at
+         FROM entitlements e JOIN drops d ON d.id = e.drop_id
+        WHERE e.user_id=$1 ORDER BY e.granted_at DESC`,
+      [req.user.id],
+    );
+    return rows.map((r: any) => ({
+      id: r.id, dropSlug: r.slug, dropTitle: r.title,
+      firstPlayedAt: r.first_played_at, expiresAt: r.expires_at,
+      state: r.first_played_at === null
+        ? 'unopened'
+        : new Date(r.expires_at).getTime() > Date.now() ? 'open' : 'consumed',
+    }));
+  }
+}
+```
+
+- [ ] **Paso 6: Commit**
+
+```bash
+git add api
+git commit -m "feat(api): endpoints de catálogo público y de cuenta"
+```
+
+---
+
+## Tarea 12: Administración del artista
+
+**Archivos:**
+- Crear: `src/admin/admin.guard.ts`, `src/admin/admin.controller.ts`, `src/admin/admin.service.ts`
+- Crear: `src/database/migrations/1755900000000-admin.ts`
+- Prueba: `test/integration/admin.spec.ts`
+
+**Interfaces:**
+- Consume: `SessionGuard`, `Piece`, `Drop`, `Order`, `Contract`.
+- Produce: `AdminGuard` (exige `users.is_admin`); endpoints `POST/PATCH /admin/pieces`, `POST/PATCH /admin/drops`, `GET /admin/orders`, `POST /admin/orders/:id/ship`, `GET /admin/contracts`. `AdminService.updateDropCapacity(dropId, capacity)` rechaza reducir por debajo de lo emitido.
+
+- [ ] **Paso 1: Escribir la prueba que falla**
+
+`api/test/integration/admin.spec.ts`:
+
+```ts
+import { DataSource } from 'typeorm';
+import { testDb, truncateAll } from '../setup/db';
+import { AdminService } from '../../src/admin/admin.service';
+
+describe('administración', () => {
+  let ds: DataSource;
+  let admin: AdminService;
+
+  beforeAll(async () => { ds = await testDb(); admin = new AdminService(ds); });
+  beforeEach(async () => { await truncateAll(ds); });
+  afterAll(async () => { await ds.destroy(); });
+
+  async function dropWith(capacity: number | null, granted: number) {
+    const [d] = await ds.query(
+      `INSERT INTO drops (slug,title,price_cop,video_asset_id,capacity,status)
+       VALUES ($1,'D',15000,'vid',$2,'available') RETURNING id`,
+      [`d-${Math.random().toString(36).slice(2)}`, capacity]);
+    for (let i = 0; i < granted; i++) {
+      const [u] = await ds.query(`INSERT INTO users (email) VALUES ($1) RETURNING id`,
+        [`u${i}-${Math.random().toString(36).slice(2)}@x.co`]);
+      const [o] = await ds.query(
+        `INSERT INTO orders (user_id,total_cop,payment_method,reference)
+         VALUES ($1,15000,'CARD',$2) RETURNING id`,
+        [u.id, `r-${Math.random().toString(36).slice(2)}`]);
+      await ds.query(`INSERT INTO entitlements (user_id,drop_id,order_id) VALUES ($1,$2,$3)`,
+        [u.id, d.id, o.id]);
+    }
+    return d.id;
+  }
+
+  it('permite aumentar la capacidad', async () => {
+    const id = await dropWith(10, 5);
+    await admin.updateDropCapacity(id, 20);
+    const [d] = await ds.query(`SELECT capacity FROM drops WHERE id=$1`, [id]);
+    expect(d.capacity).toBe(20);
+  });
+
+  it('rechaza reducir la capacidad por debajo de lo ya emitido', async () => {
+    const id = await dropWith(10, 5);
+    await expect(admin.updateDropCapacity(id, 3)).rejects.toThrow(/CAPACITY_BELOW_GRANTED/);
+    const [d] = await ds.query(`SELECT capacity FROM drops WHERE id=$1`, [id]);
+    expect(d.capacity).toBe(10);
+  });
+
+  it('permite quitar el límite de capacidad', async () => {
+    const id = await dropWith(10, 5);
+    await admin.updateDropCapacity(id, null);
+    const [d] = await ds.query(`SELECT capacity FROM drops WHERE id=$1`, [id]);
+    expect(d.capacity).toBeNull();
+  });
+
+  it('registra el envío de un pedido pagado', async () => {
+    const [u] = await ds.query(`INSERT INTO users (email) VALUES ('s@x.co') RETURNING id`);
+    const [o] = await ds.query(
+      `INSERT INTO orders (user_id,total_cop,payment_method,reference,status)
+       VALUES ($1,500000,'CARD','r-ship','paid') RETURNING id`, [u.id]);
+    await admin.markShipped(o.id, 'GUIA-123');
+    const [order] = await ds.query(`SELECT tracking_number, shipped_at FROM orders WHERE id=$1`, [o.id]);
+    expect(order.tracking_number).toBe('GUIA-123');
+    expect(order.shipped_at).not.toBeNull();
+  });
+
+  it('no permite marcar enviado un pedido no pagado', async () => {
+    const [u] = await ds.query(`INSERT INTO users (email) VALUES ('t@x.co') RETURNING id`);
+    const [o] = await ds.query(
+      `INSERT INTO orders (user_id,total_cop,payment_method,reference)
+       VALUES ($1,500000,'CARD','r-np') RETURNING id`, [u.id]);
+    await expect(admin.markShipped(o.id, 'G')).rejects.toThrow(/ORDER_NOT_PAID/);
+  });
+});
+```
+
+- [ ] **Paso 2: Ejecutar la prueba y verificar que falla**
+
+Ejecutar: `npx jest test/integration/admin.spec.ts`
+Esperado: FALLA — `AdminService` no existe.
+
+- [ ] **Paso 3: Migración**
+
+`api/src/database/migrations/1755900000000-admin.ts`:
+
+```ts
+import { MigrationInterface, QueryRunner } from 'typeorm';
+
+export class Admin1755900000000 implements MigrationInterface {
+  public async up(q: QueryRunner): Promise<void> {
+    await q.query(`ALTER TABLE users ADD COLUMN is_admin boolean NOT NULL DEFAULT false`);
+    await q.query(`ALTER TABLE orders ADD COLUMN tracking_number text`);
+    await q.query(`ALTER TABLE orders ADD COLUMN shipped_at timestamptz`);
+  }
+
+  public async down(q: QueryRunner): Promise<void> {
+    await q.query(`ALTER TABLE orders DROP COLUMN shipped_at`);
+    await q.query(`ALTER TABLE orders DROP COLUMN tracking_number`);
+    await q.query(`ALTER TABLE users DROP COLUMN is_admin`);
+  }
+}
+```
+
+- [ ] **Paso 4: Implementar guard y servicio**
+
+`api/src/admin/admin.guard.ts`:
+
+```ts
+import { CanActivate, ExecutionContext, ForbiddenException, Injectable } from '@nestjs/common';
+import { InjectDataSource } from '@nestjs/typeorm';
+import { DataSource } from 'typeorm';
+
+@Injectable()
+export class AdminGuard implements CanActivate {
+  constructor(@InjectDataSource() private readonly ds: DataSource) {}
+
+  async canActivate(ctx: ExecutionContext): Promise<boolean> {
+    const req = ctx.switchToHttp().getRequest();
+    const [user] = await this.ds.query(`SELECT is_admin FROM users WHERE id=$1`, [req.user?.id]);
+    if (!user?.is_admin) throw new ForbiddenException('NOT_ADMIN');
+    return true;
+  }
+}
+```
+
+`api/src/admin/admin.service.ts`:
+
+```ts
+import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import { InjectDataSource } from '@nestjs/typeorm';
+import { DataSource } from 'typeorm';
+
+@Injectable()
+export class AdminService {
+  constructor(@InjectDataSource() private readonly ds: DataSource) {}
+
+  /** La capacidad sube libremente; bajarla nunca puede revocar accesos pagados. */
+  async updateDropCapacity(dropId: string, capacity: number | null): Promise<void> {
+    await this.ds.transaction(async (m) => {
+      const [drop] = await m.query(`SELECT id FROM drops WHERE id=$1 FOR UPDATE`, [dropId]);
+      if (!drop) throw new NotFoundException('DROP_NOT_FOUND');
+      if (capacity !== null) {
+        const [{ granted }] = await m.query(
+          `SELECT count(*)::int AS granted FROM entitlements WHERE drop_id=$1`, [dropId]);
+        if (capacity < granted) throw new ConflictException('CAPACITY_BELOW_GRANTED');
+      }
+      await m.query(`UPDATE drops SET capacity=$2 WHERE id=$1`, [dropId, capacity]);
+    });
+  }
+
+  async markShipped(orderId: string, trackingNumber: string): Promise<void> {
+    const rows = await this.ds.query(
+      `UPDATE orders SET tracking_number=$2, shipped_at=now()
+        WHERE id=$1 AND status='paid' RETURNING id`,
+      [orderId, trackingNumber],
+    );
+    if (rows.length === 0) throw new BadRequestException('ORDER_NOT_PAID');
+  }
+}
+```
+
+`api/src/admin/admin.controller.ts`:
+
+```ts
+import { Body, Controller, Get, Param, Patch, Post, UseGuards } from '@nestjs/common';
+import { InjectDataSource } from '@nestjs/typeorm';
+import { DataSource } from 'typeorm';
+import { SessionGuard } from '../auth/session.guard';
+import { AdminGuard } from './admin.guard';
+import { AdminService } from './admin.service';
+
+@Controller('admin')
+@UseGuards(SessionGuard, AdminGuard)
+export class AdminController {
+  constructor(
+    private readonly admin: AdminService,
+    @InjectDataSource() private readonly ds: DataSource,
+  ) {}
+
+  @Post('pieces')
+  async createPiece(@Body() b: {
+    slug: string; title: string; description?: string; story?: string;
+    personalNote?: string; priceCop: number; images: string[];
+  }) {
+    const [p] = await this.ds.query(
+      `INSERT INTO pieces (slug,title,description,story,personal_note,price_cop,images)
+       VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING id`,
+      [b.slug, b.title, b.description ?? null, b.story ?? null, b.personalNote ?? null,
+       b.priceCop, JSON.stringify(b.images)],
+    );
+    return { id: p.id };
+  }
+
+  @Patch('pieces/:id/publish')
+  async publishPiece(@Param('id') id: string) {
+    await this.ds.query(
+      `UPDATE pieces SET status='available', published_at=now()
+        WHERE id=$1 AND status='draft'`, [id]);
+    return { ok: true };
+  }
+
+  @Post('drops')
+  async createDrop(@Body() b: {
+    slug: string; title: string; description?: string; priceCop: number;
+    videoAssetId: string; posterImage?: string; capacity: number | null; viewWindowHours: number;
+  }) {
+    const [d] = await this.ds.query(
+      `INSERT INTO drops (slug,title,description,price_cop,video_asset_id,poster_image,
+                          capacity,view_window_hours)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8) RETURNING id`,
+      [b.slug, b.title, b.description ?? null, b.priceCop, b.videoAssetId,
+       b.posterImage ?? null, b.capacity, b.viewWindowHours],
+    );
+    return { id: d.id };
+  }
+
+  @Patch('drops/:id/publish')
+  async publishDrop(@Param('id') id: string) {
+    await this.ds.query(
+      `UPDATE drops SET status='available', published_at=now() WHERE id=$1 AND status='draft'`, [id]);
+    return { ok: true };
+  }
+
+  @Patch('drops/:id/capacity')
+  async capacity(@Param('id') id: string, @Body() b: { capacity: number | null }) {
+    await this.admin.updateDropCapacity(id, b.capacity);
+    return { ok: true };
+  }
+
+  @Get('orders')
+  orders() {
+    return this.ds.query(
+      `SELECT o.id, o.reference, o.status, o.total_cop, o.created_at, o.tracking_number,
+              o.shipping_address, u.email, u.full_name
+         FROM orders o JOIN users u ON u.id=o.user_id
+        ORDER BY o.created_at DESC LIMIT 200`);
+  }
+
+  @Post('orders/:id/ship')
+  async ship(@Param('id') id: string, @Body() b: { trackingNumber: string }) {
+    await this.admin.markShipped(id, b.trackingNumber);
+    return { ok: true };
+  }
+
+  @Get('contracts')
+  contracts() {
+    return this.ds.query(
+      `SELECT c.id, c.pdf_url, c.status, c.signed_at, o.reference, u.full_name, u.document_id
+         FROM contracts c JOIN orders o ON o.id=c.order_id JOIN users u ON u.id=o.user_id
+        ORDER BY c.created_at DESC LIMIT 200`);
+  }
+}
+```
+
+- [ ] **Paso 5: Ejecutar la suite completa**
+
+Ejecutar: `npx jest`
+Esperado: PASA — 10 suites, 59 pruebas.
+
+- [ ] **Paso 6: Commit**
+
+```bash
+git add api
+git commit -m "feat(api): administración del artista con guard de rol"
+```
+
+---
+
 ## Autorrevisión
 
 **Cobertura del spec:**
@@ -3034,11 +3587,12 @@ git commit -m "feat(api): visionado efímero con ventana única y token firmado"
 | §6 idempotencia (4 puntos) | 4 (clave), 8 (webhooks, transiciones, efectos externos) |
 | §7 contrato y acta de evidencias | 7 |
 | §8 visionado efímero | 10 |
-| §9 superficie de API | 5, 6, 7, 8, 10 |
+| §9 superficie de API | 5, 6, 7, 8, 10, 11, 12 |
+| §10 panel del artista (API) | 12 |
 | §12 casos borde | 8 (pago tardío, cupo lleno, declinado), 9 (webhook perdido) |
 | §13 pruebas 1-8 | 2, 3, 4, 8, 10 |
 
-Fuera de este plan por decisión de alcance: §10 panel del artista y §11 principios de interfaz — corresponden a los planes 2 y 3.
+Fuera de este plan por decisión de alcance: §11 principios de interfaz — corresponde al plan 2, que cubre la web pública y la interfaz del panel en `/studio`.
 
 **Marcador de deuda declarado:** la deduplicación de correos en `MailService` es en memoria (`lazy:` en el código). Basta con una instancia; si la API escala horizontalmente, mover a tabla.
 
