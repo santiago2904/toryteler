@@ -21,5 +21,8 @@ export const envSchema = Joi.object({
   CLOUDINARY_URL: Joi.string().required(),
   CF_STREAM_ACCOUNT_ID: Joi.string().required(),
   CF_STREAM_TOKEN: Joi.string().required(),
+  // The playback host is customer-<CODE>.cloudflarestream.com, and the code
+  // belongs to the account: there is no generic hostname that works.
+  CF_STREAM_CUSTOMER_CODE: Joi.string().required(),
   RESEND_API_KEY: Joi.string().required(),
 }).unknown(true);

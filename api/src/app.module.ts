@@ -38,6 +38,15 @@ import { CloudinaryDocumentStore, DocumentStore } from './storage/document-store
  * Lives here rather than inside PlaybackService so the service never learns who
  * hosts the video: the tests hand it a fake signer and exercise the window
  * logic without a network.
+ *
+ * Uses the /token endpoint, which costs one API call per play and is rate
+ * limited. Cloudflare recommends it below a thousand tokens a day, which a shop
+ * selling seats in the dozens is nowhere near. Past that, the way out is a
+ * signing key and building the JWT here, with no call at all.
+ *
+ * None of this protects a video whose `requireSignedURLs` was never turned on:
+ * that flag is what makes the id alone stop working, and it is set when the
+ * video is uploaded.
  */
 const cloudflareSigner =
   (config: ConfigService): PlaybackUrlSigner =>
@@ -57,7 +66,9 @@ const cloudflareSigner =
     if (!res.ok) throw new Error(`CF_STREAM_TOKEN_FAILED_${res.status}`);
 
     const json = (await res.json()) as { result: { token: string } };
-    return `https://customer-stream.cloudflarestream.com/${json.result.token}/manifest/video.m3u8`;
+    // The token goes where the video id would, and the host carries a code
+    // specific to the account — there is no shared hostname to fall back on.
+    return `https://customer-${config.get<string>('CF_STREAM_CUSTOMER_CODE')}.cloudflarestream.com/${json.result.token}/manifest/video.m3u8`;
   };
 
 @Module({
