@@ -1,6 +1,9 @@
 import Image from 'next/image';
 
-const CLOUD = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD;
+// El nombre de la cuenta viaja en cada URL de imagen: es público por diseño.
+// Va como valor por defecto para que un despliegue nuevo muestre las fotos sin
+// configurar nada; la variable sigue mandando si se define.
+const CLOUD = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD ?? 'dtiuqixet';
 
 /** Ancho máximo que servimos. Una foto de celular trae 4000 px que nadie necesita. */
 const ANCHO_MAXIMO = 1400;
