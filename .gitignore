@@ -1,0 +1,11 @@
+# dependencias y compilados
+node_modules/
+dist/
+.next/
+
+# variables locales
+.env
+.env.local
+
+# sistema
+.DS_Store
