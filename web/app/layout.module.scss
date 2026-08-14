@@ -9,11 +9,19 @@
 }
 
 .izquierda {
-  display: flex;
-  align-items: center;
-  // El botón mide 44 px por accesibilidad; el margen negativo lo devuelve al
-  // borde óptico para que no parezca desalineado con el resto de la cabecera.
-  margin: calc(var(--u) * -1.5) 0 0 calc(var(--u) * -1.5);
+  // Por debajo de 640 px la rejilla ya está en dos columnas y el zoom la
+  // dejaría igual: el control no cambiaría nada, así que no existe. display:
+  // none también lo saca del árbol de accesibilidad, que es lo correcto para
+  // algo sin efecto.
+  display: none;
+
+  @include bp.desde(bp.$movil-grande) {
+    display: flex;
+    align-items: center;
+    // El botón mide 44 px por accesibilidad; el margen negativo lo devuelve al
+    // borde óptico para que no parezca desalineado con el resto de la cabecera.
+    margin: calc(var(--u) * -1.5) 0 0 calc(var(--u) * -1.5);
+  }
 }
 
 .centro {
