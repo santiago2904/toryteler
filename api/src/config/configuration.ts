@@ -30,4 +30,11 @@ export const envSchema = Joi.object({
   MAIL_FROM: Joi.string().default('Toryteler <onboarding@resend.dev>'),
   // Any address at all: nobody has to prove they own where replies land.
   MAIL_REPLY_TO: Joi.string().email().optional(),
+
+  // Quién vende, tal como aparece en el contrato de compraventa. Es la
+  // identidad legal del artista, no una constante del software.
+  SELLER_NAME: Joi.string().default('Toryteler'),
+  SELLER_DOCUMENT: Joi.string().default('C.C. pendiente'),
+  SELLER_EMAIL: Joi.string().default('hola@toryteler.co'),
+  SELLER_CITY: Joi.string().default('Medellín'),
 }).unknown(true);

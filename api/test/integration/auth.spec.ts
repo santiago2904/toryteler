@@ -7,8 +7,12 @@ import { MailService } from '../../src/mail/mail.service';
 
 /** Captures what would have been sent, so the code can be read back. */
 class FakeMail {
-  sent: { to: string; html: string }[] = [];
-  async send(to: string, _subject: string, html: string) { this.sent.push({ to, html }); }
+  sent: { to: string; text: string }[] = [];
+  // The plain-text part is what these tests read: the code and the link are
+  // both in it, and it does not change when the HTML is restyled.
+  async send(message: { to: string; text: string }) {
+    this.sent.push({ to: message.to, text: message.text });
+  }
 }
 
 const CONFIG = {
@@ -104,7 +108,7 @@ describe('auth', () => {
       const [u] = await ds.query(`INSERT INTO users (email) VALUES ($1) RETURNING id`, [email]);
       return u.id;
     };
-    const codeFromMail = () => mail.sent[0].html.match(/\b(\d{6})\b/)![1];
+    const codeFromMail = () => mail.sent[0].text.match(/\b(\d{6})\b/)![1];
 
     it('accepts the right code once', async () => {
       const id = await otp.issue(await newUser('e@x.co'), 'CONTRACT_SIGNATURE');

@@ -25,7 +25,7 @@ const CONFIG = {
 
 class FakeMail {
   sent: string[] = [];
-  async send(_to: string, _s: string, _h: string, key?: string) { this.sent.push(key ?? 'sin-clave'); }
+  async send(message: { dedupeKey?: string }) { this.sent.push(message.dedupeKey ?? 'sin-clave'); }
 }
 
 /** Builds a webhook exactly as Wompi does, uppercase checksum included. */

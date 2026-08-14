@@ -1,8 +1,15 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { Message } from './templates';
+
+export interface Outgoing extends Message {
+  to: string;
+  /** What keeps a retried webhook from sending the same receipt three times. */
+  dedupeKey?: string;
+}
 
 export interface Mailer {
-  send(to: string, subject: string, html: string, dedupeKey?: string): Promise<void>;
+  send(message: Outgoing): Promise<void>;
 }
 
 @Injectable()
@@ -13,23 +20,20 @@ export class MailService implements Mailer {
   constructor(private readonly config: ConfigService) {}
 
   /**
-   * `dedupeKey` is what keeps Wompi's webhook retries from sending the same
-   * contract three times.
-   *
    * lazy: dedupe lives in memory. Fine on one instance; move it to a table
    * before running more than one.
    */
-  async send(to: string, subject: string, html: string, dedupeKey?: string): Promise<void> {
-    if (dedupeKey && this.sent.has(dedupeKey)) return;
+  async send(message: Outgoing): Promise<void> {
+    if (message.dedupeKey && this.sent.has(message.dedupeKey)) return;
 
     const key = this.config.get<string>('RESEND_API_KEY') ?? '';
     // Placeholder credentials mean a local run: log instead of failing, so
-    // developing does not require a real mail account.
+    // developing does not require a real mail account. The plain-text version
+    // goes to the console — magic links and signing codes only travel by
+    // mail, so without it the flow cannot be walked by hand.
     if (key.endsWith('xxx')) {
-      // The body goes to the log too. Magic links and signing codes only ever
-      // travel by mail, so without it the flow cannot be walked by hand.
-      this.log.log(`[correo simulado] ${to} · ${subject}\n${this.asText(html)}`);
-      if (dedupeKey) this.sent.add(dedupeKey);
+      this.log.log(`[correo simulado] ${message.to} · ${message.subject}\n${message.text}`);
+      if (message.dedupeKey) this.sent.add(message.dedupeKey);
       return;
     }
 
@@ -43,29 +47,24 @@ export class MailService implements Mailer {
         // refuses outright: it must be a domain verified in that account, and
         // a hardcoded one turns every send into a 403 nobody expected.
         from: this.config.get<string>('MAIL_FROM') ?? 'Toryteler <onboarding@resend.dev>',
-        to,
-        subject,
-        html,
+        to: message.to,
+        subject: message.subject,
+        html: message.html,
+        // Sent alongside the HTML: a message without a text part is likelier
+        // to be filed as spam, and some clients show nothing without it.
+        text: message.text,
         // Where an answer lands. This one can be any address — a personal
         // mailbox included — because nobody has to prove they own the place
         // replies go to, only the place mail comes from.
         ...(replyTo ? { reply_to: replyTo } : {}),
       }),
     });
+
     if (!res.ok) {
       // The body says which of the two it is — an unverified sender or a
       // recipient the sandbox will not deliver to — and guessing costs an hour.
       throw new Error(`RESEND_FAILED_${res.status}: ${(await res.text()).slice(0, 200)}`);
     }
-    if (dedupeKey) this.sent.add(dedupeKey);
-  }
-
-  /** Enough to read a link or a code in a terminal. */
-  private asText(html: string): string {
-    return html
-      .replace(/<a [^>]*href="([^"]+)"[^>]*>/g, '$1 ')
-      .replace(/<[^>]+>/g, ' ')
-      .replace(/\s+/g, ' ')
-      .trim();
+    if (message.dedupeKey) this.sent.add(message.dedupeKey);
   }
 }

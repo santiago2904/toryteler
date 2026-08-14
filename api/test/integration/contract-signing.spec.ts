@@ -1,15 +1,27 @@
+import { ConfigService } from '@nestjs/config';
 import { DataSource } from 'typeorm';
 import { createHash } from 'crypto';
 import { testDb, truncateAll } from '../setup/db';
 import { ContractsService } from '../../src/contracts/contracts.service';
-import { ContractPdfService } from '../../src/contracts/contract-pdf.service';
+import { CONSENT_TEXT_VERSION, ContractPdfService } from '../../src/contracts/contract-pdf.service';
+
+/** The seller's legal identity, which the contract has to name. */
+const SELLER_CONFIG = {
+  get: (key: string) =>
+    ({
+      SELLER_NAME: 'Tory Teler',
+      SELLER_DOCUMENT: 'C.C. 1.234.567.890',
+      SELLER_EMAIL: 'hola@toryteler.co',
+      SELLER_CITY: 'Medellín',
+    })[key],
+} as unknown as ConfigService;
 import { OtpService } from '../../src/otp/otp.service';
 import { MailService } from '../../src/mail/mail.service';
 import { DocumentStore } from '../../src/storage/document-store';
 
 class FakeMail {
-  sent: { html: string }[] = [];
-  async send(_to: string, _s: string, html: string) { this.sent.push({ html }); }
+  sent: { text: string }[] = [];
+  async send(message: { text: string }) { this.sent.push({ text: message.text }); }
 }
 
 class FakeStore extends DocumentStore {
@@ -32,7 +44,7 @@ describe('contract signing', () => {
     store = new FakeStore();
     contracts = new ContractsService(
       ds,
-      new ContractPdfService(),
+      new ContractPdfService(SELLER_CONFIG),
       new OtpService(ds, mail as unknown as MailService),
       store,
     );
@@ -42,7 +54,7 @@ describe('contract signing', () => {
   afterAll(async () => { await ds.destroy(); });
 
   const signer = { fullName: 'Ana Ruiz', documentId: '1017234567', phone: '3001234567' };
-  const codeFromMail = () => mail.sent[mail.sent.length - 1].html.match(/\b(\d{6})\b/)![1];
+  const codeFromMail = () => mail.sent[mail.sent.length - 1].text.match(/\b(\d{6})\b/)![1];
 
   async function orderWithPiece(): Promise<{ orderId: string; userId: string; pieceId: string }> {
     const [u] = await ds.query(`INSERT INTO users (email) VALUES ($1) RETURNING id`,
@@ -122,7 +134,10 @@ describe('contract signing', () => {
       expect(c.signed_at).not.toBeNull();
       expect(c.evidence.document_hash).toBe(prepared.documentHash);
       expect(c.evidence.signer.document_id).toBe('1017234567');
-      expect(c.evidence.consent_text_version).toBe('v1');
+      // Against the constant, not a literal: what matters is that the version
+      // in force is the one recorded, and pinning the number here would break
+      // this test every time the wording is revised.
+      expect(c.evidence.consent_text_version).toBe(CONSENT_TEXT_VERSION);
       expect(c.evidence.ip).toBe('190.1.2.3');
       expect(c.evidence.otp_verification_id).toBe(prepared.otpChallengeId);
       expect(c.evidence.document_scrolled_to_end).toBe(true);

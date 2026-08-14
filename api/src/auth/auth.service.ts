@@ -4,6 +4,7 @@ import { InjectDataSource } from '@nestjs/typeorm';
 import { createHmac, randomBytes, timingSafeEqual } from 'crypto';
 import { DataSource } from 'typeorm';
 import { MailService } from '../mail/mail.service';
+import { magicLink } from '../mail/templates';
 import { affectedRows, firstRow, returnedRows } from '../database/rows';
 
 const LINK_MINUTES = 20;
@@ -44,11 +45,7 @@ export class AuthService {
     );
 
     const url = `${this.config.get<string>('PUBLIC_WEB_URL')}/auth/verify?token=${token}`;
-    await this.mail.send(
-      email,
-      'Tu acceso a Toryteler',
-      `<p><a href="${url}">Entrar</a></p><p>El enlace vence en ${LINK_MINUTES} minutos.</p>`,
-    );
+    await this.mail.send({ to: email, ...magicLink(url, LINK_MINUTES) });
   }
 
   /**

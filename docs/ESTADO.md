@@ -190,6 +190,12 @@ montado**, así que ese camino no funciona todavía.
   rompe `position: sticky`. Usar `clip`.
 - **`animation-fill-mode: both`** deja un transform permanente que descentra
   cualquier modal dentro. Usar `backwards`.
+- **El PDF del contrato tiene que ser reproducible byte a byte.** Se firma una
+  huella, así que dos renders de la misma venta deben dar el mismo archivo: por
+  eso las fechas del PDF se fijan en cero en vez de dejar que pdf-lib estampe
+  la hora actual. Hay una prueba que lo sostiene.
+- **La constancia de firma no renumera las páginas anteriores.** Cambiarlas
+  cambiaría sus bytes, y con ellos la huella que el comprador firmó.
 - **Las dos vías de liquidación tienen que producir la misma clave.** Wompi
   llama `VOIDED` a lo que aquí es `DECLINED`; con la palabra cruda como clave,
   un webhook tardío liquidaba dos veces y devolvía al inventario una unidad que
@@ -293,7 +299,12 @@ correo y la subida de PDF se simulan en consola en vez de fallar.
 - **Las imágenes de ejemplo son portadas de discos reales** atribuidas a un
   artista ficticio. **No pueden quedarse** en una tienda pública.
 - **El texto del contrato necesita revisión de un abogado.** Está versionado
-  (`consent_text_version`), así que cambiarlo no afecta a lo ya firmado.
+  (`consent_text_version`), así que cambiarlo no afecta a lo ya firmado. La v2
+  identifica al vendedor, numera las cláusulas y menciona el derecho de
+  retracto del artículo 47 de la Ley 1480 de 2011.
+- **`SELLER_NAME`, `SELLER_DOCUMENT`, `SELLER_EMAIL` y `SELLER_CITY`** son la
+  identidad legal del artista y salen impresas en el contrato. Con los valores
+  por defecto, el documento dice «C.C. pendiente».
 - **La cuenta comercial de Wompi tarda semanas.** Todo va contra el sandbox.
 - **Deduplicación de correos en memoria**: basta con una instancia.
 - **Wompi soporta ocho métodos de pago**; `orders` solo admite tres porque el

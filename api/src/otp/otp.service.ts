@@ -3,6 +3,7 @@ import { InjectDataSource } from '@nestjs/typeorm';
 import { createHash, randomInt } from 'crypto';
 import { DataSource } from 'typeorm';
 import { MailService } from '../mail/mail.service';
+import { signingCode } from '../mail/templates';
 import { affectedRows, firstRow } from '../database/rows';
 
 const MAX_ATTEMPTS = 5;
@@ -35,11 +36,7 @@ export class OtpService {
     const user = firstRow<{ email: string }>(
       await this.ds.query(`SELECT email FROM users WHERE id = $1`, [userId]),
     );
-    await this.mail.send(
-      user!.email,
-      'Tu código para firmar',
-      `<p>Tu código es <b>${code}</b>. Vence en ${LIFETIME_MINUTES} minutos.</p>`,
-    );
+    await this.mail.send({ to: user!.email, ...signingCode(code, LIFETIME_MINUTES) });
 
     return row.id;
   }

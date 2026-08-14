@@ -4,13 +4,13 @@ import { DataSource, EntityManager } from 'typeorm';
 import { DropsService } from '../drops/drops.service';
 import { PiecesService } from '../pieces/pieces.service';
 import { MailService } from '../mail/mail.service';
+import { Message, purchaseConfirmed, refunded } from '../mail/templates';
 import { affectedRows, firstRow, returnedRows } from '../database/rows';
 import { PaymentEvent, PaymentGateway } from './payment-gateway';
 
 interface Notification {
   email: string;
-  subject: string;
-  html: string;
+  message: Message;
 }
 
 @Injectable()
@@ -101,7 +101,11 @@ export class PaymentsService {
     // Mail goes out after the transaction commits, with a dedupe key: sending
     // inside would deliver a contract for a transaction that then rolled back.
     if (notify) {
-      await this.mail.send(notify.email, notify.subject, notify.html, event.providerEventId);
+      await this.mail.send({
+        to: notify.email,
+        ...notify.message,
+        dedupeKey: event.providerEventId,
+      });
     }
   }
 
@@ -148,10 +152,23 @@ export class PaymentsService {
     const user = firstRow<{ email: string }>(
       await m.query(`SELECT email FROM users WHERE id = $1`, [userId]),
     );
+    const bought = returnedRows<{ title: string }>(
+      await m.query(
+        `SELECT COALESCE(p.title, d.title) AS title
+           FROM order_items i
+           LEFT JOIN pieces p ON p.id = i.piece_id
+           LEFT JOIN drops d ON d.id = i.drop_id
+          WHERE i.order_id = $1`,
+        [orderId],
+      ),
+    );
+
     return {
       email: user!.email,
-      subject: 'Compra confirmada',
-      html: '<p>Tu compra quedó confirmada. Si incluye una pieza física, adjuntamos el contrato firmado.</p>',
+      message: purchaseConfirmed({
+        items: bought.map((row) => row.title),
+        accountUrl: `${process.env.PUBLIC_WEB_URL}/cuenta`,
+      }),
     };
   }
 
@@ -201,8 +218,7 @@ export class PaymentsService {
     );
     return {
       email: user!.email,
-      subject: 'Reembolso de tu compra',
-      html: `<p>${reason} Te reembolsamos el valor completo.</p>`,
+      message: refunded(reason, `${process.env.PUBLIC_WEB_URL}/cuenta`),
     };
   }
 }
