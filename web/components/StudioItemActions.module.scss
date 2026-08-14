@@ -12,8 +12,14 @@
   padding: var(--gutter);
   max-width: 36rem;
   width: calc(100vw - var(--gutter) * 2);
-  display: grid;
-  gap: var(--unit);
+
+  // Only when open. A bare `display` here would override the `display: none`
+  // the browser gives a closed <dialog>, and every dialog on the page would
+  // paint at once.
+  &[open] {
+    display: grid;
+    gap: var(--unit);
+  }
 
   // The backdrop isolates the dialog; without enough weight the list behind
   // keeps competing for attention.

@@ -49,16 +49,24 @@ export function StudioItemActions({ kind, slug, title, left, sold }: Props) {
         {sold > 0 && (
           <p>
             {kind === 'piece'
-              ? `Las ${sold} ${sold === 1 ? 'persona que ya la compró la recibe' : 'personas que ya la compraron la reciben'} igual: los pedidos siguen su curso.`
-              : `${sold} ${sold === 1 ? 'persona ya lo compró y conserva' : 'personas ya lo compraron y conservan'} su acceso. Podrán verlo aunque lo despubliques.`}
+              ? sold === 1
+                ? 'La persona que ya la compró la recibe igual: su pedido sigue su curso.'
+                : `Las ${sold} personas que ya la compraron la reciben igual: sus pedidos siguen su curso.`
+              : sold === 1
+                ? 'Una persona ya lo compró y conserva su acceso: podrá verlo aunque lo despubliques.'
+                : `${sold} personas ya lo compraron y conservan su acceso: podrán verlo aunque lo despubliques.`}
           </p>
         )}
 
         {left !== null && left > 0 && (
           <p className="muted">
             {kind === 'piece'
-              ? `Quedan ${left} sin vender.`
-              : `Quedan ${left} cupos sin vender que ya no se venderán.`}
+              ? left === 1
+                ? 'Queda una unidad sin vender.'
+                : `Quedan ${left} unidades sin vender.`
+              : left === 1
+                ? 'Queda un cupo sin vender que ya no se venderá.'
+                : `Quedan ${left} cupos sin vender que ya no se venderán.`}
           </p>
         )}
 
