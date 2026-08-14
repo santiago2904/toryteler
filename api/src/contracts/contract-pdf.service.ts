@@ -20,8 +20,15 @@ export interface ContractData {
  * v2 identifies the seller — v1 said "the SELLER declares" without ever saying
  * who that was — numbers the clauses, and states the right of withdrawal that
  * Colombian law grants on distance sales.
+ *
+ * v3 adds the artist's fifteen-year buy-back conversation. Deliberately an
+ * obligation to negotiate rather than a pacto de retroventa: that one caps at
+ * four years (art. 1943) and a pacto de retracto at one (art. 1944), and both
+ * would let the artist take the piece back. This does not. It obliges the
+ * buyer to sit down and answer, and nothing more — which is what was asked
+ * for, and what survives fifteen years.
  */
-export const CONSENT_TEXT_VERSION = 'v2';
+export const CONSENT_TEXT_VERSION = 'v3';
 
 @Injectable()
 export class ContractPdfService {
@@ -73,6 +80,8 @@ export class ContractPdfService {
       `El COMPRADOR declara conocer el estado de la pieza, incluidas las marcas de uso o del paso del tiempo que la descripción menciona, y aceptarlo. Se trata de un objeto usado o único, no de un producto nuevo de fabricación en serie.`,
       `La entrega se hará a la dirección registrada en el pedido, dentro del territorio colombiano. El riesgo se transfiere al COMPRADOR con la entrega.`,
       `El COMPRADOR puede ejercer el derecho de retracto dentro de los cinco (5) días hábiles siguientes a la entrega, conforme al artículo 47 de la Ley 1480 de 2011, devolviendo la pieza en el mismo estado en que la recibió.`,
+      `Durante los quince (15) años siguientes a la firma de este contrato, el VENDEDOR podrá manifestar por escrito al COMPRADOR su interés en recomprar la pieza. El COMPRADOR se obliga a atender esa manifestación y a negociar de buena fe un precio aceptable para ambas partes, dentro de los treinta (30) días siguientes a recibirla.`,
+      `La obligación anterior es de negociar, no de vender: si las partes no llegan a un acuerdo, el COMPRADOR conserva la propiedad de la pieza sin ninguna consecuencia, y el VENDEDOR podrá volver a manifestar su interés más adelante dentro del mismo plazo. Esta cláusula no restringe la facultad del COMPRADOR de disponer de la pieza.`,
       `Este contrato se firma electrónicamente conforme a la Ley 527 de 1999 y al Decreto 2364 de 2012. La firma se acredita mediante la verificación de un código de un solo uso enviado al correo del COMPRADOR, cuyo registro se conserva junto a este documento.`,
       `Las partes acuerdan que este documento electrónico tiene la misma validez que uno en papel, y que su integridad se acredita mediante la huella criptográfica que consta en la constancia de firma.`,
       `Este contrato se rige por la ley colombiana. Cualquier controversia se resolverá ante los jueces competentes de ${seller.city}.`,

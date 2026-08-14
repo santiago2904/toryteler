@@ -313,9 +313,14 @@ correo y la subida de PDF se simulan en consola en vez de fallar.
 - **Las imágenes de ejemplo son portadas de discos reales** atribuidas a un
   artista ficticio. **No pueden quedarse** en una tienda pública.
 - **El texto del contrato necesita revisión de un abogado.** Está versionado
-  (`consent_text_version`), así que cambiarlo no afecta a lo ya firmado. La v2
-  identifica al vendedor, numera las cláusulas y menciona el derecho de
-  retracto del artículo 47 de la Ley 1480 de 2011.
+  (`consent_text_version`), así que cambiarlo no afecta a lo ya firmado. La v3
+  identifica al vendedor, numera las cláusulas, menciona el derecho de retracto
+  del artículo 47 de la Ley 1480 de 2011 y añade la recompra a quince años.
+- **La recompra está redactada como obligación de negociar, no de retroventa.**
+  El pacto de retroventa tope a cuatro años (art. 1943) y el de retracto a uno
+  (art. 1944), y los dos permitirían al artista recuperar la pieza. Este no:
+  obliga al comprador a sentarse y responder, y nada más. Por eso aguanta
+  quince años.
 - **`SELLER_NAME`, `SELLER_DOCUMENT`, `SELLER_EMAIL` y `SELLER_CITY`** son la
   identidad legal del artista y salen impresas en el contrato. Con los valores
   por defecto, el documento dice «C.C. pendiente».
