@@ -136,6 +136,21 @@ export async function signContract(
   });
 }
 
+/**
+ * Asks the gateway what happened, using the transaction id it put in the URL
+ * on the way back. Turns "confirmando tu pago" into an answer straight away
+ * instead of waiting for a webhook the buyer cannot see.
+ */
+export async function confirmPayment(
+  orderId: string,
+  transactionId: string,
+): Promise<Result<null>> {
+  return attempt(async () => {
+    await apiSend(`/orders/${orderId}/confirm`, 'POST', { transactionId });
+    return null;
+  });
+}
+
 export async function startPayment(orderId: string): Promise<Result<{ checkoutUrl: string }>> {
   return attempt(() =>
     apiSend<{ checkoutUrl: string }>(`/orders/${orderId}/pay`, 'POST', {}),

@@ -202,6 +202,61 @@ describe('payment settlement', () => {
     });
   });
 
+  describe('confirming from the return URL', () => {
+    /** The gateway, answering about a transaction we did not ask it about. */
+    function answering(reference: string, status: 'APPROVED' | 'PENDING') {
+      const remote = {
+        ...gateway,
+        eventIdFor: gateway.eventIdFor.bind(gateway),
+        fetchTransaction: async () => ({ status, reference, amountInCents: 50000000 }),
+      } as unknown as WompiGateway;
+      return new PaymentsService(
+        ds, remote, new PiecesService(ds), new DropsService(ds), mail as unknown as MailService,
+      );
+    }
+
+    it('settles the order the gateway says the payment belongs to', async () => {
+      const o = await pendingOrder({ piece: true });
+      const userId = await ownerOf(o.orderId);
+
+      await answering(o.reference, 'APPROVED').confirm(o.orderId, userId, 'tx30');
+      expect(await status(o.orderId)).toBe('paid');
+    });
+
+    it('refuses a transaction that belongs to another order', async () => {
+      // The id arrives from a URL, so it could name somebody else's payment.
+      // What closes that is the provider's own answer, not the id.
+      const mine = await pendingOrder({ piece: true });
+      const other = await pendingOrder({ piece: true });
+      const userId = await ownerOf(mine.orderId);
+
+      await expect(
+        answering(other.reference, 'APPROVED').confirm(mine.orderId, userId, 'tx31'),
+      ).rejects.toThrow(/TRANSACTION_MISMATCH/);
+      expect(await status(mine.orderId)).toBe('pending');
+    });
+
+    it('refuses to confirm an order that is not the buyer\'s', async () => {
+      const o = await pendingOrder({ piece: true });
+      const [stranger] = await ds.query(`INSERT INTO users (email) VALUES ('ajeno@x.co') RETURNING id`);
+
+      await expect(
+        answering(o.reference, 'APPROVED').confirm(o.orderId, stranger.id, 'tx32'),
+      ).rejects.toThrow(/ORDER_NOT_FOUND/);
+    });
+
+    it('leaves a payment still in progress alone', async () => {
+      const o = await pendingOrder({ piece: true });
+      const userId = await ownerOf(o.orderId);
+
+      await answering(o.reference, 'PENDING').confirm(o.orderId, userId, 'tx33');
+      expect(await status(o.orderId)).toBe('pending');
+    });
+
+    const ownerOf = async (orderId: string): Promise<string> =>
+      (await ds.query(`SELECT user_id FROM orders WHERE id = $1`, [orderId]))[0].user_id;
+  });
+
   describe('declined', () => {
     it('gives the unit back and voids the contract', async () => {
       const o = await pendingOrder({ piece: true });

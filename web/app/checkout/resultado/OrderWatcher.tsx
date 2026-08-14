@@ -3,6 +3,7 @@
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 import { clearCart } from '@/lib/cart';
+import { confirmPayment } from '@/lib/checkout-actions';
 
 const POLL_MS = 4000;
 const GIVE_UP_MS = 90_000;
@@ -16,13 +17,30 @@ const GIVE_UP_MS = 90_000;
  * a few times and then stops: the account page tells the same story later, and
  * an email arrives either way.
  */
-export function OrderWatcher({ status }: { status: string }) {
+export function OrderWatcher({
+  status,
+  orderId,
+  transactionId,
+}: {
+  status: string;
+  orderId: string;
+  /** Put there by the gateway when it sent the buyer back. */
+  transactionId: string | null;
+}) {
   const router = useRouter();
 
   useEffect(() => {
     // The order exists, so whatever was in the cart is now its problem.
     if (status !== 'failed' && status !== 'expired') clearCart();
   }, [status]);
+
+  // Ask the gateway directly before falling back to waiting. The webhook is
+  // the mechanism; this is what keeps the buyer from staring at "confirmando"
+  // while it travels.
+  useEffect(() => {
+    if (status !== 'pending' || !transactionId) return;
+    void confirmPayment(orderId, transactionId).then(() => router.refresh());
+  }, [status, orderId, transactionId, router]);
 
   useEffect(() => {
     if (status !== 'pending') return;

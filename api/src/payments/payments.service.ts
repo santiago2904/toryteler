@@ -53,6 +53,47 @@ export class PaymentsService {
     };
   }
 
+  /**
+   * Settles a payment by asking the provider, instead of waiting to be told.
+   *
+   * The gateway sends the buyer back with the transaction id in the URL. That
+   * id arrives from a browser and is worth nothing on its own, so it is used
+   * only to look the payment up: what makes this safe is that the provider's
+   * answer has to name this very order, and the settlement is the same
+   * idempotent path a webhook takes. Whichever arrives second does nothing.
+   *
+   * Without it, someone who has just paid comes back to a page that says it
+   * knows nothing — true, but useless — until a webhook lands.
+   */
+  async confirm(orderId: string, userId: string, transactionId: string): Promise<void> {
+    const order = firstRow<{ reference: string }>(
+      await this.ds.query(
+        `SELECT reference FROM orders WHERE id = $1 AND user_id = $2`,
+        [orderId, userId],
+      ),
+    );
+    if (!order) throw new BadRequestException('ORDER_NOT_FOUND');
+
+    const remote = await this.gateway.fetchTransaction(transactionId);
+
+    // The id came from a URL: it could name somebody else's payment. Settling
+    // only when the provider says it belongs to this order is what closes that.
+    if (remote.reference !== order.reference) {
+      this.log.warn(`Transacción ${transactionId} no corresponde a ${order.reference}`);
+      throw new BadRequestException('TRANSACTION_MISMATCH');
+    }
+    if (remote.status === 'PENDING') return;
+
+    await this.settle({
+      providerEventId: this.gateway.eventIdFor(transactionId, remote.status),
+      reference: order.reference,
+      transactionId,
+      status: remote.status,
+      amountInCents: remote.amountInCents,
+      trusted: true,
+    });
+  }
+
   /** Verifies a raw webhook body and settles it. */
   async handleWebhook(body: unknown): Promise<void> {
     if (!this.gateway.verifyWebhook(body)) throw new BadRequestException('INVALID_SIGNATURE');

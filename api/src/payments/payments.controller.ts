@@ -1,4 +1,5 @@
-import { Body, Controller, HttpCode, Param, ParseUUIDPipe, Post, UseGuards } from '@nestjs/common';
+import { Body, Controller, HttpCode, Param, ParseUUIDPipe, Post, Req, UseGuards } from '@nestjs/common';
+import type { Request } from 'express';
 import { SessionGuard } from '../auth/session.guard';
 import { PaymentsService } from './payments.service';
 
@@ -11,6 +12,24 @@ export class PaymentsController {
   @UseGuards(SessionGuard)
   start(@Param('id', ParseUUIDPipe) id: string) {
     return this.payments.startPayment(id);
+  }
+
+  /**
+   * Asks the provider what happened, on the way back from paying.
+   *
+   * The buyer lands here with a transaction id in the URL; this turns it into
+   * a settled order without waiting for the webhook. Same idempotent path, so
+   * the webhook arriving later changes nothing.
+   */
+  @Post('orders/:id/confirm')
+  @UseGuards(SessionGuard)
+  async confirm(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() body: { transactionId: string },
+    @Req() req: Request & { user: { id: string } },
+  ) {
+    await this.payments.confirm(id, req.user.id, body.transactionId);
+    return { ok: true };
   }
 
   /**

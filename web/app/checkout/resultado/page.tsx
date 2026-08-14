@@ -37,9 +37,9 @@ const OUTCOMES: Record<OrderSummary['status'], { title: string; body: string }> 
 export default async function ResultPage({
   searchParams,
 }: {
-  searchParams: Promise<{ order?: string }>;
+  searchParams: Promise<{ order?: string; id?: string }>;
 }) {
-  const { order: orderId } = await searchParams;
+  const { order: orderId, id: transactionId } = await searchParams;
   const orders = await apiGet<OrderSummary[]>('/me/orders', true);
   const order = orders.find((o) => o.id === orderId);
 
@@ -57,7 +57,7 @@ export default async function ResultPage({
 
   return (
     <div className={styles.result}>
-      <OrderWatcher status={order.status} />
+      <OrderWatcher status={order.status} orderId={order.id} transactionId={transactionId ?? null} />
 
       <h1 className="label muted">{outcome.title}</h1>
       <p>{outcome.body}</p>
