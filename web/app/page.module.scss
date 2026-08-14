@@ -1,0 +1,23 @@
+@use '../styles/breakpoints' as bp;
+
+.rejilla {
+  list-style: none;
+  display: grid;
+  grid-template-columns: 1fr;          // móvil primero: una columna
+  gap: calc(var(--u) * 8);
+  padding: var(--margen);
+
+  @include bp.desde(bp.$movil-grande) {
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: var(--respiro) var(--margen);
+  }
+}
+
+.pie {
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--u) * 0.5);
+  padding-top: var(--margen);
+}
+
+.vacio { padding: var(--respiro) var(--margen); }

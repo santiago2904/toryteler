@@ -1,0 +1,11 @@
+// Puntos de quiebre en un solo lugar. Móvil primero: estos son "a partir de".
+$movil-grande: 640px;
+$tableta: 900px;
+
+@mixin desde($ancho) {
+  @media (min-width: $ancho) { @content; }
+}
+
+@mixin hasta($ancho) {
+  @media (max-width: $ancho - 1px) { @content; }
+}

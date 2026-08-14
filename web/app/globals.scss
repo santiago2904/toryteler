@@ -1,0 +1,108 @@
+/* La fuente la carga next/font en layout.tsx y expone --fuente-inter.
+   Nada de @import a Google: una petición menos y cero parpadeo de fuente. */
+
+:root {
+  /* Dos tonos y dos grises. No hay más colores en el proyecto. */
+  --fondo: #0a0a0a;
+  --tinta: #ededed;   /* 16.9:1 sobre el fondo — AAA sin la halación del blanco puro */
+  --tenue: #8a8a8a;   /* 5.4:1 sobre el fondo — AA para texto secundario */
+  --linea: #242424;
+
+  --fuente: var(--fuente-inter), -apple-system, 'Helvetica Neue', Arial, sans-serif;
+
+  --etiqueta: 0.75rem;
+  --cuerpo: 1rem;
+  --titulo: clamp(2.5rem, 9vw, 7rem);
+
+  --tracking-etiqueta: 0.16em;
+  --tracking-titulo: -0.03em;
+
+  --u: 8px;                /* toda medida es múltiplo de esto */
+  --margen: calc(var(--u) * 3);
+  --respiro: calc(var(--u) * 12);
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+html { color-scheme: dark; }
+
+body {
+  background: var(--fondo);
+  color: var(--tinta);
+  font-family: var(--fuente);
+  font-size: var(--cuerpo);
+  font-weight: 400;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+a { color: inherit; text-decoration: none; }
+a:hover { text-decoration: underline; text-underline-offset: 0.3em; }
+
+/* El foco es obligatorio y visible: la navegación por teclado no se negocia. */
+:focus-visible { outline: 1px solid var(--tinta); outline-offset: 4px; }
+
+/* Inversión, no relleno de color: el botón es el negativo de la página. */
+button {
+  font: inherit;
+  font-size: var(--etiqueta);
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-etiqueta);
+  background: var(--tinta);
+  color: var(--fondo);
+  border: 1px solid var(--tinta);
+  border-radius: 0;
+  padding: calc(var(--u) * 2) calc(var(--u) * 3);
+  min-height: 44px;              /* área táctil mínima */
+  cursor: pointer;
+}
+button:hover { background: var(--fondo); color: var(--tinta); }
+button:disabled {
+  background: transparent;
+  color: var(--tenue);
+  border-color: var(--linea);
+  cursor: not-allowed;
+}
+
+input, textarea, select {
+  font: inherit;
+  font-size: var(--cuerpo);      /* 16px evita el zoom automático de iOS */
+  width: 100%;
+  min-height: 44px;
+  padding: calc(var(--u) * 1.5);
+  border: 1px solid var(--linea);
+  border-radius: 0;
+  background: transparent;
+  color: var(--tinta);
+}
+input:focus, textarea:focus { border-color: var(--tinta); }
+
+label { font-size: var(--etiqueta); color: var(--tenue); }
+
+h1, h2 { font-weight: 400; letter-spacing: var(--tracking-titulo); line-height: 1.05; }
+
+::selection { background: var(--tinta); color: var(--fondo); }
+
+.mayusculas {
+  font-size: var(--etiqueta);
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-etiqueta);
+}
+.tenue { color: var(--tenue); }
+
+.titulo { font-size: var(--titulo); }
+
+/* Única animación del sitio: el contenido aparece, no aterriza. */
+.aparece { animation: aparecer 400ms ease-out both; }
+
+@keyframes aparecer { from { opacity: 0; } to { opacity: 1; } }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}

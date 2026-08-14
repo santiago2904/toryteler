@@ -1,0 +1,10 @@
+.cabecera {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--margen);
+}
+
+.pie {
+  padding: var(--respiro) var(--margen) var(--margen);
+}
