@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { useCallback, useEffect, useState } from 'react';
+import { HlsVideo } from '@/components/HlsVideo';
 import { ProductImage } from '@/components/ProductImage';
 import { formatDate, timeLeft } from '@/lib/format';
 import { openPlayback } from '@/lib/playback-actions';
@@ -112,17 +113,11 @@ export function EphemeralPlayer({
     <section className={styles.player}>
       <div className={styles.frame}>
         {videoUrl ? (
-          <video
+          <HlsVideo
             src={videoUrl}
             poster={posterUrl ?? undefined}
-            controls
-            autoPlay
-            playsInline
-            // Neither of these stops anything: they remove the obvious download
-            // button. Screen recording is impossible to prevent and we say so.
-            controlsList="nodownload noplaybackrate"
-            disablePictureInPicture
             className={styles.video}
+            onError={setPlaybackError}
           />
         ) : (
           <>
@@ -144,6 +139,14 @@ export function EphemeralPlayer({
         <span className="label">{title}</span>
         <span className="label muted">Se cierra en {timeLeft(new Date(closesAt!).toISOString())}</span>
       </div>
+
+      {/* A failure once the video is on screen has nowhere else to be said, and
+          staying quiet about it would look like the video simply not working. */}
+      {playbackError && videoUrl && (
+        <p role="alert" className={styles.playbackError}>
+          {playbackError} Tu ventana sigue abierta.
+        </p>
+      )}
     </section>
   );
 }

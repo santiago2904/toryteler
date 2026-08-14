@@ -25,4 +25,9 @@ export const envSchema = Joi.object({
   // belongs to the account: there is no generic hostname that works.
   CF_STREAM_CUSTOMER_CODE: Joi.string().required(),
   RESEND_API_KEY: Joi.string().required(),
+  // Must be a domain verified in Resend. The default one only delivers to the
+  // address that owns the account, which is enough to develop against.
+  MAIL_FROM: Joi.string().default('Toryteler <onboarding@resend.dev>'),
+  // Any address at all: nobody has to prove they own where replies land.
+  MAIL_REPLY_TO: Joi.string().email().optional(),
 }).unknown(true);

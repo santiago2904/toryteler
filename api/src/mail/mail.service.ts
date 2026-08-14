@@ -33,12 +33,30 @@ export class MailService implements Mailer {
       return;
     }
 
+    const replyTo = this.config.get<string>('MAIL_REPLY_TO');
+
     const res = await fetch('https://api.resend.com/emails', {
       method: 'POST',
       headers: { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ from: 'Toryteler <no-reply@toryteler.com>', to, subject, html }),
+      body: JSON.stringify({
+        // Configurable because the sender is the one thing a mail provider
+        // refuses outright: it must be a domain verified in that account, and
+        // a hardcoded one turns every send into a 403 nobody expected.
+        from: this.config.get<string>('MAIL_FROM') ?? 'Toryteler <onboarding@resend.dev>',
+        to,
+        subject,
+        html,
+        // Where an answer lands. This one can be any address — a personal
+        // mailbox included — because nobody has to prove they own the place
+        // replies go to, only the place mail comes from.
+        ...(replyTo ? { reply_to: replyTo } : {}),
+      }),
     });
-    if (!res.ok) throw new Error(`RESEND_FAILED_${res.status}`);
+    if (!res.ok) {
+      // The body says which of the two it is — an unverified sender or a
+      // recipient the sandbox will not deliver to — and guessing costs an hour.
+      throw new Error(`RESEND_FAILED_${res.status}: ${(await res.text()).slice(0, 200)}`);
+    }
     if (dedupeKey) this.sent.add(dedupeKey);
   }
 

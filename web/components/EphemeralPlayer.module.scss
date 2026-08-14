@@ -56,3 +56,10 @@
   justify-content: space-between;
   gap: var(--unit);
 }
+
+/* An error that arrives once the video is already on screen: stated plainly,
+   below the frame, without covering what the buyer came to watch. */
+.playbackError {
+  border-left: 2px solid var(--ink);
+  padding-left: var(--unit);
+}
