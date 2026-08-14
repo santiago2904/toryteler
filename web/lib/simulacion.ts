@@ -47,11 +47,99 @@ export const PIEZAS: PieceDetail[] = [
     available: false,
     soldAt: '2026-07-28T19:12:00Z',
   },
+  {
+    id: '44444444-0000-0000-0000-000000000004',
+    slug: 'plantilla-de-mezcla',
+    title: 'Plantilla de mezcla',
+    description: 'Cartón de trabajo con la retícula de la portada dibujada a mano, 30 × 30 cm.',
+    story:
+      'Antes de que existiera el arte final existió esto: una cuadrícula a lápiz para saber dónde iba cada cosa. Lo usábamos de mantel cuando pedíamos comida al estudio, y se nota.',
+    priceCop: 620000,
+    images: [
+      'v1786679538/unknown-cd-album-mixtape-cover-design-templat-template-a0089f026a71f9722a55157364f22590_screen.jpg',
+    ],
+    available: true,
+    soldAt: null,
+  },
+  {
+    id: '55555555-0000-0000-0000-000000000005',
+    slug: 'retrato-sin-usar',
+    title: 'Retrato sin usar',
+    description: 'Copia fotográfica de la sesión de portada, 30 × 30 cm. Sin retoque.',
+    story:
+      'De esa sesión salieron cuatrocientas fotos y se usó una. Esta es la que yo quería. Me dijeron que se me veía cansado; llevaba dos días sin dormir, así que tenían razón.',
+    priceCop: 1750000,
+    images: ['v1786679538/rihanna-anti-cover-2016-billboard-1240.jpg'],
+    available: true,
+    soldAt: null,
+  },
+  {
+    id: '66666666-0000-0000-0000-000000000006',
+    slug: 'maqueta-de-empaque',
+    title: 'Maqueta de empaque',
+    description: 'Maqueta física del empaque, armada a mano con cinta y cartón.',
+    story:
+      'La armé yo en la cocina para ver si el disco cabía. No cabía. Le sobra medio centímetro por un lado y ahí quedó la marca del corte que le hice con un bisturí.',
+    priceCop: 1100000,
+    images: ['v1786679539/Ecomm-PreLaunch-CD-16STD-1_d64d3610-8393-4a07-95db-959456b7f15c.png'],
+    available: true,
+    soldAt: null,
+  },
+  {
+    id: '77777777-0000-0000-0000-000000000007',
+    slug: 'lamina-de-calcomanias',
+    title: 'Lámina de calcomanías',
+    description: 'Lámina de calcomanías de la primera gira, 30 × 30 cm. Faltan tres.',
+    story:
+      'Repartimos estas láminas en la primera gira. De la mía faltan tres calcomanías: dos se las pegué a la guitarra y una la perdí en un aeropuerto.',
+    priceCop: 480000,
+    images: ['v1786679540/TattooYou81.jpg.jpg'],
+    available: false,
+    soldAt: '2026-08-02T22:40:00Z',
+  },
+  {
+    id: '88888888-0000-0000-0000-000000000008',
+    slug: 'portada-alterna-vinilo',
+    title: 'Portada alterna — vinilo',
+    description: 'Portada alterna impresa para la edición en vinilo, 31 × 31 cm.',
+    story:
+      'Sacamos doscientos vinilos con esta portada y nunca se repitió. Esta es la copia cero, la que sale antes de la tirada para revisar que todo esté bien.',
+    priceCop: 2950000,
+    images: ['v1786679541/RR8051_The-Travelled-Road.jpg'],
+    available: true,
+    soldAt: null,
+  },
+  {
+    id: '99999999-0000-0000-0000-000000000009',
+    slug: 'estudio-de-luz',
+    title: 'Estudio de luz',
+    description: 'Impresión de un estudio de luz para la portada, 30 × 30 cm.',
+    story:
+      'Estuvimos una noche entera probando cómo se rompía la luz al pasar por un vidrio. De ahí salió todo lo demás. Es la imagen más antigua del proyecto.',
+    priceCop: 4200000,
+    images: [
+      'v1786682102/6.-Pink-Floyd-_E2_80_98Dark-Side-of-the-Moon-1973-album-art-billboard-1240.jpg',
+    ],
+    available: true,
+    soldAt: null,
+  },
+  {
+    id: 'aaaaaaaa-0000-0000-0000-00000000000a',
+    slug: 'contraportada-original',
+    title: 'Contraportada original',
+    description: 'Arte de contraportada con los créditos escritos a máquina, 30 × 30 cm.',
+    story:
+      'Los créditos los escribí en la máquina de mi abuelo. Hay un nombre mal escrito que nunca corregimos y que sigue mal en todas las ediciones.',
+    priceCop: 1350000,
+    images: ['v1786682103/63a008f631ae7492a75a001bd0791e8f.jpg'],
+    available: true,
+    soldAt: null,
+  },
 ];
 
 export const DROPS: DropDetail[] = [
   {
-    id: '44444444-4444-4444-4444-444444444444',
+    id: 'bbbbbbbb-0000-0000-0000-00000000000b',
     slug: 'la-vara',
     title: 'La vara',
     description: 'Cuatro minutos hablando de por qué casi no saco el disco. Grabado a las 3 de la mañana.',
@@ -66,7 +154,7 @@ export const DROPS: DropDetail[] = [
 
 export const PEDIDOS: OrderSummary[] = [
   {
-    id: '55555555-5555-5555-5555-555555555555',
+    id: 'cccccccc-0000-0000-0000-00000000000c',
     reference: 'ord_a1b2c3d4e5f6',
     status: 'paid',
     totalCop: 2400000,
@@ -77,7 +165,7 @@ export const PEDIDOS: OrderSummary[] = [
 
 export const ACCESOS: EntitlementSummary[] = [
   {
-    id: '66666666-6666-6666-6666-666666666666',
+    id: 'dddddddd-0000-0000-0000-00000000000d',
     dropSlug: 'la-vara',
     dropTitle: 'La vara',
     firstPlayedAt: null,

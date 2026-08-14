@@ -1,21 +1,38 @@
+@use '../styles/breakpoints' as bp;
+
 .cabecera {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: start;
   gap: var(--margen);
   padding: var(--margen);
-  max-width: 78rem;
-  margin-inline: auto;
 }
 
-.nav {
+.izquierda {
   display: flex;
   align-items: center;
+  font-size: 1.25rem;      // el + necesita cuerpo para ser un objetivo táctil real
+  line-height: 1;
+}
+
+.centro {
+  display: flex;
+  justify-content: center;
   gap: var(--margen);
+}
+
+.derecha {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--margen);
+  flex-wrap: wrap;
 }
 
 .pie {
   padding: var(--respiro) var(--margen) var(--margen);
-  max-width: 78rem;
-  margin-inline: auto;
+}
+
+@include bp.hasta(bp.$movil-grande) {
+  .derecha { gap: calc(var(--u) * 1.5); }
 }

@@ -151,10 +151,30 @@ h1, h2 {
 
 .titulo { font-size: var(--titulo); }
 
-/* Única animación del sitio: el contenido aparece, no aterriza. */
+/* Movimiento: solo transiciones de página y el acercamiento de la rejilla.
+   Nada rebota, nada escala, nada llama la atención sobre sí mismo. */
+
 .aparece { animation: aparecer 400ms ease-out both; }
 
 @keyframes aparecer { from { opacity: 0; } to { opacity: 1; } }
+
+/* Avanzar entra desde la derecha; retroceder, desde la izquierda.
+   La curva es la misma que la del zoom: una sola cadencia en todo el sitio. */
+.transicion { animation: entrar-adelante 420ms cubic-bezier(0.22, 1, 0.36, 1) both; }
+.transicion[data-direccion='atras'] { animation-name: entrar-atras; }
+
+@keyframes entrar-adelante {
+  from { opacity: 0; transform: translate3d(3%, 0, 0); }
+  to   { opacity: 1; transform: translate3d(0, 0, 0); }
+}
+
+@keyframes entrar-atras {
+  from { opacity: 0; transform: translate3d(-3%, 0, 0); }
+  to   { opacity: 1; transform: translate3d(0, 0, 0); }
+}
+
+/* El desplazamiento no puede generar barra horizontal durante la animación. */
+body { overflow-x: hidden; }
 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {

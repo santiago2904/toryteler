@@ -1,27 +1,47 @@
 @use '../styles/breakpoints' as bp;
 
+// La rejilla ocupa todo el ancho: la pieza manda, no un contenedor centrado.
 .rejilla {
   list-style: none;
   display: grid;
-  grid-template-columns: minmax(0, 1fr);   // móvil primero: una columna
-  gap: calc(var(--u) * 8);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: calc(var(--u) * 6) var(--margen);
   padding: var(--margen);
-  max-width: 78rem;
-  margin-inline: auto;
+  // Animar grid-template-columns es lo que da la sensación de acercarse:
+  // las columnas se ensanchan en vez de saltar de golpe.
+  transition: grid-template-columns 500ms cubic-bezier(0.22, 1, 0.36, 1);
 
   @include bp.desde(bp.$movil-grande) {
-    grid-template-columns: repeat(auto-fill, minmax(min(320px, 100%), 1fr));
-    gap: var(--respiro) var(--margen);
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  @include bp.desde(bp.$tableta) {
+    grid-template-columns: repeat(6, minmax(0, 1fr));
   }
 
   > li { min-width: 0; }
+
+  // Zoom: tres por fila para mirar la pieza de verdad.
+  :global(html[data-zoom='cerca']) & {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+
+    @include bp.desde(bp.$tableta) {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: var(--respiro) calc(var(--u) * 6);
+    }
+  }
 }
 
 .pie {
   display: flex;
   flex-direction: column;
   gap: calc(var(--u) * 0.5);
-  padding-top: var(--margen);
+  padding-top: calc(var(--u) * 2);
+  text-align: center;
 }
 
 .vacio { padding: var(--respiro) var(--margen); }
+
+@media (prefers-reduced-motion: reduce) {
+  .rejilla { transition: none; }
+}

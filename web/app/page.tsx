@@ -26,7 +26,7 @@ export default async function Catalogo() {
             <div className={estilos.pie}>
               <span className="mayusculas">{pieza.title}</span>
               <Precio cop={pieza.priceCop} />
-              <EstadoPieza available={pieza.available} soldAt={null} />
+              {!pieza.available && <EstadoPieza available={false} soldAt={null} />}
             </div>
           </Link>
         </li>

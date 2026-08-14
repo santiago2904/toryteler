@@ -2,6 +2,8 @@ import type { Metadata } from 'next';
 import { Inter } from 'next/font/google';
 import Link from 'next/link';
 import { Tema } from '@/components/Tema';
+import { Zoom } from '@/components/Zoom';
+import { TransicionPagina } from '@/components/TransicionPagina';
 import './globals.scss';
 import estilos from './layout.module.scss';
 
@@ -18,13 +20,15 @@ export const metadata: Metadata = {
 };
 
 /**
- * Corre antes del primer pintado: sin esto, quien eligió un tema distinto al
- * del sistema ve un fogonazo del tema equivocado en cada carga.
+ * Corre antes del primer pintado: sin esto, quien eligió un tema o una
+ * densidad distintos a los de por defecto ve un fogonazo del estado equivocado.
  */
-const TEMA_SIN_PARPADEO = `
+const PREFERENCIAS_SIN_PARPADEO = `
 try {
   var t = localStorage.getItem('tema');
   if (t === 'claro' || t === 'oscuro') document.documentElement.dataset.tema = t;
+  var z = localStorage.getItem('zoom');
+  if (z === 'cerca' || z === 'lejos') document.documentElement.dataset.zoom = z;
 } catch (e) {}
 `;
 
@@ -32,17 +36,27 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="es" className={inter.variable} suppressHydrationWarning>
       <head>
-        <script dangerouslySetInnerHTML={{ __html: TEMA_SIN_PARPADEO }} />
+        <script dangerouslySetInnerHTML={{ __html: PREFERENCIAS_SIN_PARPADEO }} />
       </head>
       <body>
         <header className={estilos.cabecera}>
-          <Link href="/" className="mayusculas">Toryteler</Link>
-          <nav className={`${estilos.nav} mayusculas`}>
+          <div className={estilos.izquierda}>
+            <Zoom />
+          </div>
+
+          <nav className={`${estilos.centro} mayusculas`}>
+            <Link href="/">La casa de Tory</Link>
+          </nav>
+
+          <div className={`${estilos.derecha} mayusculas`}>
+            <Link href="/artista">Toryteler</Link>
             <Link href="/cuenta">Cuenta</Link>
             <Tema />
-          </nav>
+          </div>
         </header>
-        <main className="aparece">{children}</main>
+
+        <TransicionPagina>{children}</TransicionPagina>
+
         <footer className={`${estilos.pie} tenue mayusculas`}>Medellín, Colombia</footer>
       </body>
     </html>
