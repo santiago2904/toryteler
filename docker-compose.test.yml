@@ -1,0 +1,11 @@
+services:
+  db-test:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: toryteler
+      POSTGRES_PASSWORD: toryteler
+      POSTGRES_DB: toryteler_test
+    ports: ['5433:5432']
+    # In memory: tests truncate between cases and nothing needs to survive a
+    # restart. It also keeps the suite fast.
+    tmpfs: ['/var/lib/postgresql/data']

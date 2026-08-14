@@ -1,0 +1,15 @@
+# dependencias y compilados
+/node_modules
+/dist
+/build
+
+# variables locales
+.env
+.env.local
+
+# pruebas y herramientas
+/coverage
+*.tsbuildinfo
+
+# sistema
+.DS_Store
