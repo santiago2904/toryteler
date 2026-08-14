@@ -32,6 +32,25 @@ export async function apiGet<T>(path: string, authenticated = false): Promise<T>
   return res.json() as Promise<T>;
 }
 
+/**
+ * A binary response, base64 encoded so a server action can return it.
+ *
+ * Used for images the browser cannot fetch on its own because they sit behind
+ * the session — a frame of a protected video, for instance.
+ */
+export async function apiBytes(path: string): Promise<string> {
+  if (!BASE) throw new Error('API_NOT_CONFIGURED');
+
+  const session = (await cookies()).get('session')?.value;
+  const res = await fetch(`${BASE}${path}`, {
+    headers: session ? { Authorization: `Bearer ${session}` } : {},
+    cache: 'no-store',
+  });
+  if (!res.ok) throw new Error(`API_${res.status}`);
+
+  return Buffer.from(await res.arrayBuffer()).toString('base64');
+}
+
 export async function apiSend<T>(
   path: string,
   method: 'POST' | 'PATCH',

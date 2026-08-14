@@ -1,0 +1,28 @@
+.picker {
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--unit) * 0.75);
+  width: 100%;
+}
+
+.frame {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--line);
+  overflow: hidden;
+  background: var(--bg);
+
+  img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+  }
+
+  /* While a new frame loads, the old one dims instead of disappearing: a gap
+     makes the slider feel like it broke something. */
+  &[data-loading] img {
+    opacity: 0.5;
+  }
+}

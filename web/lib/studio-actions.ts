@@ -144,6 +144,33 @@ export interface VideoStatus {
   errorMessage: string | null;
 }
 
+/**
+ * One frame of the video, as a data URI, to look at while choosing the cover.
+ *
+ * It comes through here because the video is protected and its thumbnails
+ * answer 401 to a browser. Signing them for the browser instead would hand it
+ * a key to the video, which is the one thing the whole design avoids.
+ */
+export async function framePreview(uid: string, seconds: number): Promise<Result<string>> {
+  return attempt(async () => {
+    const { apiBytes } = await import('./api');
+    const bytes = await apiBytes(`/admin/uploads/video/${uid}/frame?seconds=${seconds}`);
+    return `data:image/jpeg;base64,${bytes}`;
+  }, false);
+}
+
+/** Copies that frame to public storage and returns the id the drop stores. */
+export async function freezePoster(uid: string, seconds: number): Promise<Result<string>> {
+  return attempt(async () => {
+    const { image } = await apiSend<{ image: string }>(
+      `/admin/uploads/video/${uid}/poster`,
+      'POST',
+      { seconds },
+    );
+    return image;
+  }, false);
+}
+
 /** Cloudflare transcodes after the upload; nothing is playable until it does. */
 export async function videoStatus(uid: string): Promise<Result<VideoStatus>> {
   return attempt(

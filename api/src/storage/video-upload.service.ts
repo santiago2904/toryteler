@@ -58,6 +58,28 @@ export class VideoUploadService {
     };
   }
 
+  /**
+   * A frame of the video, as an image.
+   *
+   * Signed like everything else about a protected video: its thumbnails answer
+   * 401 to anyone without a token, which is why a frame cannot be used
+   * directly as the shop's poster and has to be copied somewhere public.
+   */
+  async frame(uid: string, seconds: number, height = 720): Promise<Buffer> {
+    const json = await this.call(`stream/${uid}/token`, {
+      method: 'POST',
+      body: JSON.stringify({ exp: Math.floor(Date.now() / 1000) + 300 }),
+    });
+
+    const code = this.config.get<string>('CF_STREAM_CUSTOMER_CODE');
+    const res = await fetch(
+      `https://customer-${code}.cloudflarestream.com/${json.result.token}/thumbnails/thumbnail.jpg` +
+        `?time=${Math.max(0, seconds)}s&height=${height}`,
+    );
+    if (!res.ok) throw new ServiceUnavailableException(`CF_STREAM_THUMBNAIL_FAILED_${res.status}`);
+    return Buffer.from(await res.arrayBuffer());
+  }
+
   private async call(path: string, init: RequestInit = {}) {
     const account = this.config.get<string>('CF_STREAM_ACCOUNT_ID') ?? '';
     const token = this.config.get<string>('CF_STREAM_TOKEN') ?? '';

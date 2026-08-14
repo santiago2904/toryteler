@@ -200,6 +200,14 @@ montado**, así que ese camino no funciona todavía.
 - **Abrir la ventana y firmar la URL van en la misma transacción.** Firmar es
   una llamada de red y puede fallar; si fallaba después de abrir, el comprador
   quemaba su única oportunidad sin ver un fotograma. Sin URL, no hay ventana.
+- **La portada de un video es una imagen aparte, en Cloudinary.** El thumbnail
+  de Cloudflare también exige firma —comprobado: 401 sin token—, así que no
+  sirve como portada pública. El studio deja elegir el fotograma y ese
+  fotograma se copia a Cloudinary, que sí es público.
+- **Al SDK de Cloudinary hay que darle las credenciales.** Leerlas él solo de
+  `CLOUDINARY_URL` funcionaba a veces; cuando no, el error era
+  «Must supply api_key» a mitad de una subida, que no se parece en nada a un
+  ajuste que falta.
 - **`requireSignedURLs` se pone al reservar la subida**, no después. Así el
   video no es público ni en el hueco entre que llega el archivo y alguien se
   acuerda de protegerlo.

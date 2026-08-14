@@ -1,6 +1,7 @@
 import { Injectable, ServiceUnavailableException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { createHash } from 'crypto';
+import { parseCloudinaryUrl } from './cloudinary-url';
 
 export interface UploadSignature {
   cloudName: string;
@@ -38,19 +39,8 @@ export class UploadSignatureService {
     return { cloudName, apiKey, timestamp, signature, folder };
   }
 
-  /** `cloudinary://key:secret@cloud` unpacked. */
+  /** `cloudinary://key:secret@cloud` unpacked, and refused if it is the example. */
   private credentials(): { cloudName: string; apiKey: string; apiSecret: string } {
-    const raw = this.config.get<string>('CLOUDINARY_URL') ?? '';
-    const match = raw.match(/^cloudinary:\/\/([^:]+):([^@]+)@(.+)$/);
-    if (!match) throw new Error('CLOUDINARY_URL_MALFORMED');
-
-    const [, apiKey, apiSecret, cloudName] = match;
-    // Refusing here beats handing out a signature that Cloudinary will reject
-    // with "Invalid api_key": that error arrives at the end of an upload and
-    // reads like a bug rather than like a missing setting.
-    if (apiKey === 'key' || apiSecret === 'secret') {
-      throw new ServiceUnavailableException('CLOUDINARY_NOT_CONFIGURED');
-    }
-    return { apiKey, apiSecret, cloudName };
+    return parseCloudinaryUrl(this.config.get<string>('CLOUDINARY_URL') ?? '');
   }
 }

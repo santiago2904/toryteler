@@ -2,10 +2,11 @@
 
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { PayoutHint } from '@/components/PayoutHint';
+import { PosterPicker } from '@/components/PosterPicker';
 import { PriceInput } from '@/components/PriceInput';
-import { createDrop, updateDrop } from '@/lib/studio-actions';
+import { createDrop, freezePoster, updateDrop, videoStatus } from '@/lib/studio-actions';
 import { uploadImages, uploadVideo } from '@/lib/upload';
 import { AdminDropDetail } from '@/lib/types';
 import styles from '@/app/studio/studio.module.scss';
@@ -21,55 +22,94 @@ export function VideoForm({ video }: { video?: AdminDropDetail }) {
   const [unlimited, setUnlimited] = useState(video?.capacity === null);
   const [seats, setSeats] = useState(video?.capacity ?? 50);
   const [windowHours, setWindowHours] = useState(video?.viewWindowHours ?? 24);
-  const [file, setFile] = useState<File | null>(null);
+
+  /**
+   * The video is uploaded when it is chosen, not when the form is submitted.
+   * Choosing a frame for the cover needs the video to already be up there, and
+   * uploading while the rest of the form is being filled in is time nobody
+   * spends waiting.
+   */
+  const [uploadedUid, setUploadedUid] = useState<string | null>(video?.videoAssetId ?? null);
+  const [duration, setDuration] = useState<number | null>(null);
+  const [uploadStatus, setUploadStatus] = useState<string | null>(null);
+  const [processing, setProcessing] = useState(false);
+
+  const [posterSource, setPosterSource] = useState<'frame' | 'file'>(
+    video?.videoAssetId ? 'frame' : 'file',
+  );
+  const [posterSeconds, setPosterSeconds] = useState(1);
   const [poster, setPoster] = useState<File | null>(null);
 
   const [status, setStatus] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
+  // Editing: ask how long it is, so the frame slider has a real range.
+  useEffect(() => {
+    if (!video?.videoAssetId) return;
+    void videoStatus(video.videoAssetId).then((result) => {
+      if (result.ok) setDuration(result.data.durationSeconds);
+    });
+  }, [video?.videoAssetId]);
+
   // Capacity can go up but never below what has already been sold: those
   // people paid, and lowering it would strand them.
   const belowSold = editing && !unlimited && seats < sold;
+
+  async function chooseFile(file: File | null) {
+    if (!file) return;
+    setError(null);
+    setUploadedUid(null);
+    setDuration(null);
+
+    const uploaded = await uploadVideo(file, (stage, percent) =>
+      setUploadStatus(
+        stage === 'subiendo'
+          ? `Subiendo… ${percent}%`
+          : 'Cloudflare está procesando el video. Puede tardar unos minutos.',
+      ),
+    );
+    setUploadStatus(null);
+
+    // PROCESANDO is not a failure: the video is safely uploaded, it just is
+    // not playable yet.
+    if (uploaded.error && uploaded.error !== 'PROCESANDO') {
+      setError(uploaded.error);
+      return;
+    }
+    setUploadedUid(uploaded.uid ?? null);
+    setDuration(uploaded.durationSeconds ?? null);
+    setProcessing(uploaded.error === 'PROCESANDO');
+    if (uploaded.uid && !uploaded.error) setPosterSource('frame');
+  }
 
   async function save(event: React.FormEvent) {
     event.preventDefault();
     setSaving(true);
     setError(null);
 
-    let videoAssetId = video?.videoAssetId;
-    let stillProcessing = false;
-
-    if (file) {
-      const uploaded = await uploadVideo(file, (stage, percent) =>
-        setStatus(
-          stage === 'subiendo'
-            ? `Subiendo el video… ${percent}%`
-            : 'Cloudflare está procesando el video. Puede tardar unos minutos.',
-        ),
-      );
-
-      // PROCESANDO is not a failure: the video is safely uploaded, it just is
-      // not playable yet. Losing everything else typed in would be the failure.
-      if (uploaded.error && uploaded.error !== 'PROCESANDO') {
-        setSaving(false);
-        setStatus(null);
-        setError(uploaded.error);
-        return;
-      }
-      videoAssetId = uploaded.uid;
-      stillProcessing = uploaded.error === 'PROCESANDO';
-    }
+    const videoAssetId = uploadedUid;
+    const stillProcessing = processing;
 
     if (!videoAssetId) {
       setSaving(false);
-      setStatus(null);
-      setError('Falta el archivo del video.');
+      setError('Falta subir el video.');
       return;
     }
 
     let posterImage = video?.posterImage ?? null;
-    if (poster) {
+
+    if (posterSource === 'frame') {
+      setStatus('Guardando la portada…');
+      const frozen = await freezePoster(videoAssetId, posterSeconds);
+      if (!frozen.ok) {
+        setSaving(false);
+        setStatus(null);
+        setError(frozen.error);
+        return;
+      }
+      posterImage = frozen.data;
+    } else if (poster) {
       setStatus('Subiendo la portada…');
       const uploadedPoster = await uploadImages([poster], 'posters');
       if (uploadedPoster.error) {
@@ -107,7 +147,9 @@ export function VideoForm({ video }: { video?: AdminDropDetail }) {
     );
   }
 
-  const ready = title.trim().length > 2 && price > 0 && (editing || file !== null) && !belowSold;
+  const ready =
+    title.trim().length > 2 && price > 0 && uploadedUid !== null && !belowSold &&
+    uploadStatus === null;
 
   return (
     <form onSubmit={save} className={styles.form}>
@@ -129,22 +171,66 @@ export function VideoForm({ video }: { video?: AdminDropDetail }) {
       <label htmlFor="video">Video</label>
       <input
         id="video" name="video" type="file" accept="video/*"
-        onChange={(e) => setFile(e.target.files?.[0] ?? null)}
+        onChange={(e) => void chooseFile(e.target.files?.[0] ?? null)}
+        disabled={uploadStatus !== null}
       />
       <p className="muted">
-        Va directo a Cloudflare, no pasa por la tienda. Máximo 200 MB.
-        {editing && ' Ya hay uno cargado: subir otro lo reemplaza.'}
+        {uploadStatus ??
+          (uploadedUid && !editing
+            ? processing
+              ? 'Subido. Cloudflare lo sigue procesando: podrás publicarlo en unos minutos.'
+              : 'Subido y listo.'
+            : `Va directo a Cloudflare, no pasa por la tienda. Máximo 200 MB.${
+                editing ? ' Ya hay uno cargado: subir otro lo reemplaza.' : ''
+              }`)}
       </p>
 
-      <label htmlFor="portada">Portada</label>
-      <input
-        id="portada" name="portada" type="file" accept="image/*"
-        onChange={(e) => setPoster(e.target.files?.[0] ?? null)}
-      />
-      <p className="muted">
-        Es lo que se ve antes de darle play.
-        {editing && video!.posterImage && ' Ya tiene una: subir otra la reemplaza.'}
-      </p>
+      <fieldset className={styles.group}>
+        <legend>Portada</legend>
+        <p className="muted">Es lo que se ve antes de darle play.</p>
+
+        <label className={styles.checkbox}>
+          <input
+            type="radio" name="portada-origen" checked={posterSource === 'frame'}
+            onChange={() => setPosterSource('frame')}
+            disabled={!uploadedUid}
+          />
+          Un fotograma del video
+        </label>
+
+        {posterSource === 'frame' && uploadedUid && (
+          <PosterPicker
+            uid={uploadedUid}
+            durationSeconds={duration}
+            seconds={posterSeconds}
+            onChange={setPosterSeconds}
+          />
+        )}
+        {!uploadedUid && (
+          <p className="muted">
+            Para elegir un fotograma hay que subir el video primero.
+          </p>
+        )}
+
+        <label className={styles.checkbox}>
+          <input
+            type="radio" name="portada-origen" checked={posterSource === 'file'}
+            onChange={() => setPosterSource('file')}
+          />
+          Una imagen aparte
+        </label>
+
+        {posterSource === 'file' && (
+          <input
+            id="portada" name="portada" type="file" accept="image/*"
+            onChange={(e) => setPoster(e.target.files?.[0] ?? null)}
+          />
+        )}
+
+        {editing && video!.posterImage && (
+          <p className="muted">Ya tiene una portada: lo que elijas aquí la reemplaza.</p>
+        )}
+      </fieldset>
 
       <label htmlFor="precio">Precio</label>
       <PriceInput id="precio" value={price} onChange={setPrice} />
