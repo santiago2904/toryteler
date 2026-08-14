@@ -15,9 +15,14 @@ const ESTADO_PEDIDO: Record<OrderSummary['status'], string> = {
   refunded: 'Reembolsado',
 };
 
+/**
+ * «Quedan» está reservado para los cupos de un video en la tienda. Usar la
+ * misma palabra para el tiempo restante hacía que dos cosas distintas se
+ * leyeran igual.
+ */
 function textoAcceso(acceso: EntitlementSummary): string {
   if (acceso.state === 'unopened') return 'Sin abrir';
-  if (acceso.state === 'open') return `Quedan ${tiempoRestante(acceso.expiresAt!)}`;
+  if (acceso.state === 'open') return `Se cierra en ${tiempoRestante(acceso.expiresAt!)}`;
   return `Visto ${formatearFecha(acceso.firstPlayedAt!)}`;
 }
 
@@ -51,7 +56,16 @@ export default async function Cuenta() {
       </section>
 
       <section className={estilos.seccion}>
-        <h1 className="mayusculas tenue">Accesos</h1>
+        <div className={estilos.encabezado}>
+          <h1 className="mayusculas tenue">Videos</h1>
+          {/* La regla no es evidente y de ella depende que alguien no pierda
+              lo que pagó. Va aquí, no en unos términos que nadie abre. */}
+          <p className={`${estilos.nota} tenue`}>
+            Cada video se ve una sola vez. Al darle play se abre tu ventana y, mientras esté
+            abierta, puedes entrar y salir cuantas veces quieras. Cuando se cierra, no vuelve
+            a abrirse.
+          </p>
+        </div>
         {accesos.length === 0 ? (
           <p className="tenue">Todavía no tienes accesos.</p>
         ) : (

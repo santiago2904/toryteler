@@ -14,6 +14,16 @@
   gap: var(--margen);
 }
 
+.encabezado {
+  display: flex;
+  flex-direction: column;
+  gap: var(--u);
+}
+
+.nota {
+  max-width: 56ch;
+}
+
 .lista {
   list-style: none;
 }
