@@ -140,15 +140,42 @@ export const PIEZAS: PieceDetail[] = [
 export const DROPS: DropDetail[] = [
   {
     id: 'bbbbbbbb-0000-0000-0000-00000000000b',
-    slug: 'la-vara',
-    title: 'La vara',
-    description: 'Cuatro minutos hablando de por qué casi no saco el disco. Grabado a las 3 de la mañana.',
-    priceCop: 4000,
-    posterImage: 'v1786679537/3YV2PTJAVFGCVJK5IC6RJYY6EA.jpg',
+    slug: 'ojitos-verdes-maqueta',
+    title: 'Ojitos verdes — máster de maqueta',
+    description:
+      'La maqueta original, sin mezclar. Se oye el conteo, se oye la silla, y en el segundo verso me equivoco y sigo. Es la primera vez que la canción existió completa.',
+    priceCop: 25000,
+    posterImage: 'v1786679539/800w-KKOAYz5esa4.jpg',
     capacity: 50,
     remaining: 12,
     soldOut: false,
     viewWindowHours: 24,
+  },
+  {
+    id: 'bbbbbbbb-0000-0000-0000-00000000000c',
+    slug: 'casa-42-maqueta',
+    title: 'Casa 42 — máster de maqueta',
+    description:
+      'Grabada en la casa que le da el nombre, con un micrófono prestado y la ventana abierta. Al final se oye pasar una moto y por eso nunca la usamos.',
+    priceCop: 25000,
+    posterImage: 'v1786682103/63a008f631ae7492a75a001bd0791e8f.jpg',
+    capacity: 30,
+    remaining: 0,
+    soldOut: true,
+    viewWindowHours: 24,
+  },
+  {
+    id: 'bbbbbbbb-0000-0000-0000-00000000000d',
+    slug: 'como-conoci-a-gabi',
+    title: 'Cómo conocí a Gabi',
+    description:
+      'Siete minutos contando cómo nos conocimos, sin editar y sin guion. Es la historia que está detrás de medio disco y que nunca he contado en una entrevista.',
+    priceCop: 4000,
+    posterImage: 'v1786679541/RR8051_The-Travelled-Road.jpg',
+    capacity: 200,
+    remaining: 147,
+    soldOut: false,
+    viewWindowHours: 48,
   },
 ];
 
@@ -163,13 +190,34 @@ export const PEDIDOS: OrderSummary[] = [
   },
 ];
 
+// Los tres estados posibles de un acceso, para poder verlos todos en /cuenta.
+// Las fechas se calculan al vuelo: una fecha fija haría que el acceso «abierto»
+// apareciera vencido a las pocas horas de escribir esto.
+const HORA = 3_600_000;
+
 export const ACCESOS: EntitlementSummary[] = [
   {
     id: 'dddddddd-0000-0000-0000-00000000000d',
-    dropSlug: 'la-vara',
-    dropTitle: 'La vara',
+    dropSlug: 'ojitos-verdes-maqueta',
+    dropTitle: 'Ojitos verdes — máster de maqueta',
     firstPlayedAt: null,
     expiresAt: null,
     state: 'unopened',
+  },
+  {
+    id: 'dddddddd-0000-0000-0000-00000000000e',
+    dropSlug: 'casa-42-maqueta',
+    dropTitle: 'Casa 42 — máster de maqueta',
+    firstPlayedAt: new Date(Date.now() - 20.7 * HORA).toISOString(),
+    expiresAt: new Date(Date.now() + 3.3 * HORA).toISOString(),
+    state: 'open',
+  },
+  {
+    id: 'dddddddd-0000-0000-0000-00000000000f',
+    dropSlug: 'como-conoci-a-gabi',
+    dropTitle: 'Cómo conocí a Gabi',
+    firstPlayedAt: new Date(Date.now() - 9 * 24 * HORA).toISOString(),
+    expiresAt: new Date(Date.now() - 7 * 24 * HORA).toISOString(),
+    state: 'consumed',
   },
 ];
