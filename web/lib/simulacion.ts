@@ -186,7 +186,42 @@ export const PEDIDOS: OrderSummary[] = [
     status: 'paid',
     totalCop: 2400000,
     createdAt: '2026-08-10T14:30:00Z',
-    trackingNumber: 'GUIA-99120384',
+    items: [
+      {
+        kind: 'piece',
+        slug: 'boceto-portada-primer-disco',
+        title: 'Boceto de portada — primer disco',
+        image: 'v1786679539/800w-KKOAYz5esa4.jpg',
+      },
+    ],
+    tracking: {
+      number: '99120384',
+      carrier: 'Servientrega',
+      url: 'https://www.servientrega.com/wps/portal/rastreo-envio?guia=99120384',
+    },
+  },
+  {
+    // Pedido con varias cosas y sin envío todavía: pieza física más video.
+    id: 'cccccccc-0000-0000-0000-00000000000e',
+    reference: 'ord_9f8e7d6c5b4a',
+    status: 'paid',
+    totalCop: 925000,
+    createdAt: '2026-08-13T20:05:00Z',
+    items: [
+      {
+        kind: 'piece',
+        slug: 'prueba-de-color',
+        title: 'Prueba de color',
+        image: 'v1786679537/3YV2PTJAVFGCVJK5IC6RJYY6EA.jpg',
+      },
+      {
+        kind: 'drop',
+        slug: 'ojitos-verdes-maqueta',
+        title: 'Ojitos verdes — máster de maqueta',
+        image: 'v1786679539/800w-KKOAYz5esa4.jpg',
+      },
+    ],
+    tracking: null,
   },
 ];
 

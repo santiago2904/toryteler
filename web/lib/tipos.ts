@@ -31,13 +31,32 @@ export interface DropDetail {
   viewWindowHours: number;
 }
 
+export interface OrderItem {
+  kind: 'piece' | 'drop';
+  slug: string;
+  title: string;
+  image: string | null;
+}
+
+/**
+ * La URL de rastreo la arma el backend a partir de la transportadora: mantener
+ * ese mapa en el front obligaría a desplegar la web cada vez que una cambia su
+ * sitio. Si viene en null, se muestra el número sin enlace.
+ */
+export interface OrderTracking {
+  number: string;
+  carrier: string;
+  url: string | null;
+}
+
 export interface OrderSummary {
   id: string;
   reference: string;
   status: 'pending' | 'paid' | 'failed' | 'expired' | 'refunded';
   totalCop: number;
   createdAt: string;
-  trackingNumber: string | null;
+  items: OrderItem[];
+  tracking: OrderTracking | null;
 }
 
 export interface EntitlementSummary {

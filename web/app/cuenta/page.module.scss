@@ -14,6 +14,36 @@
   gap: var(--margen);
 }
 
+/* Un pedido se reconoce por la foto antes que por su referencia. */
+.pedido {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: var(--margen);
+  align-items: start;
+  padding: var(--margen) 0;
+  border-bottom: 1px solid var(--linea);
+}
+
+.miniaturas {
+  list-style: none;
+  display: flex;
+  gap: calc(var(--u) * 0.5);
+}
+
+.miniatura {
+  width: 4.5rem;
+  flex-shrink: 0;
+
+  a:hover { text-decoration: none; }
+}
+
+.datos {
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--u) * 0.5);
+  min-width: 0;
+}
+
 .encabezado {
   display: flex;
   flex-direction: column;

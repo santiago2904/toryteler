@@ -2,6 +2,7 @@ import Link from 'next/link';
 import type { Metadata } from 'next';
 import { apiGet } from '@/lib/api';
 import { EntitlementSummary, OrderSummary } from '@/lib/tipos';
+import { Imagen } from '@/components/Imagen';
 import { formatearFecha, formatearPrecio, tiempoRestante } from '@/lib/formato';
 import estilos from './page.module.scss';
 
@@ -41,14 +42,45 @@ export default async function Cuenta() {
         ) : (
           <ul className={estilos.lista}>
             {pedidos.map((pedido) => (
-              <li key={pedido.id} className={estilos.fila}>
-                <span className="mayusculas">{pedido.reference}</span>
-                <span>{formatearPrecio(pedido.totalCop)}</span>
-                <span className="mayusculas tenue">{ESTADO_PEDIDO[pedido.status]}</span>
-                <span className="tenue">{formatearFecha(pedido.createdAt)}</span>
-                {pedido.trackingNumber && (
-                  <span className="tenue">Guía {pedido.trackingNumber}</span>
-                )}
+              <li key={pedido.id} className={estilos.pedido}>
+                <ul className={estilos.miniaturas}>
+                  {pedido.items.map((item) => (
+                    <li key={`${item.kind}-${item.slug}`} className={estilos.miniatura}>
+                      <Link href={`/${item.kind === 'piece' ? 'piezas' : 'drops'}/${item.slug}`}>
+                        {item.image ? (
+                          <Imagen publicId={item.image} alt={item.title} />
+                        ) : (
+                          <span className="mayusculas tenue">{item.title}</span>
+                        )}
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+
+                <div className={estilos.datos}>
+                  <span className="mayusculas">{pedido.reference}</span>
+                  <span className="tenue">
+                    {pedido.items.map((item) => item.title).join(' · ')}
+                  </span>
+                  <span>{formatearPrecio(pedido.totalCop)}</span>
+                  <span className="mayusculas tenue">
+                    {ESTADO_PEDIDO[pedido.status]} · {formatearFecha(pedido.createdAt)}
+                  </span>
+
+                  {pedido.tracking && (
+                    <span className="mayusculas">
+                      {pedido.tracking.url ? (
+                        <a href={pedido.tracking.url} target="_blank" rel="noopener noreferrer">
+                          Rastrear · {pedido.tracking.carrier} {pedido.tracking.number}
+                        </a>
+                      ) : (
+                        <span className="tenue">
+                          {pedido.tracking.carrier} {pedido.tracking.number}
+                        </span>
+                      )}
+                    </span>
+                  )}
+                </div>
               </li>
             ))}
           </ul>

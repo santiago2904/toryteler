@@ -1,0 +1,114 @@
+@use '../../styles/breakpoints' as bp;
+
+.marco {
+  padding: var(--margen);
+  max-width: 72rem;
+  margin-inline: auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--margen);
+}
+
+/* Mientras nada se guarda, decirlo evita que alguien escriba media ficha
+   creyendo que la está publicando. */
+.aviso {
+  border: 1px solid var(--linea);
+  padding: var(--u) calc(var(--u) * 1.5);
+}
+
+.nav {
+  display: flex;
+  gap: var(--margen);
+  padding-bottom: var(--margen);
+  border-bottom: 1px solid var(--linea);
+
+  > * { min-height: 44px; display: inline-flex; align-items: center; }
+}
+
+.formularios {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--respiro);
+  padding-top: var(--margen);
+
+  @include bp.desde(bp.$tableta) {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: calc(var(--u) * 8);
+  }
+}
+
+.formulario {
+  display: grid;
+  gap: calc(var(--u) * 0.75);
+  align-content: start;
+
+  h1 { margin-bottom: var(--u); }
+}
+
+.guia {
+  // El texto cambia al escribir el precio; reservar el alto evita que el
+  // formulario dé un salto en cuanto aparece.
+  min-height: 3rem;
+}
+
+.grupo {
+  border: 1px solid var(--linea);
+  padding: var(--margen);
+  display: grid;
+  gap: var(--u);
+
+  legend { font-size: var(--etiqueta); color: var(--tenue); padding: 0 var(--u); }
+}
+
+.casilla {
+  display: flex;
+  align-items: center;
+  gap: var(--u);
+
+  input { width: auto; min-height: 0; }
+}
+
+/* Pedidos */
+
+.pedidos {
+  display: flex;
+  flex-direction: column;
+  gap: var(--margen);
+  padding-top: var(--margen);
+}
+
+.listaPedidos { list-style: none; }
+
+.pedido {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: var(--margen);
+  align-items: start;
+  padding: var(--margen) 0;
+  border-bottom: 1px solid var(--linea);
+}
+
+.miniaturas {
+  list-style: none;
+  display: flex;
+  gap: calc(var(--u) * 0.5);
+}
+
+.miniatura {
+  width: 4.5rem;
+  flex-shrink: 0;
+}
+
+.datos {
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--u) * 0.5);
+  min-width: 0;
+}
+
+.envio {
+  display: grid;
+  gap: calc(var(--u) * 0.5);
+  padding-top: var(--u);
+  max-width: 20rem;
+}
