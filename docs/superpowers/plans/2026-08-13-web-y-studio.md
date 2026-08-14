@@ -16,9 +16,11 @@
 - Node 20 LTS. TypeScript `strict`. App Router, no Pages Router.
 - **Idioma: español únicamente.** Todo el texto de interfaz, errores y correos en español, con acentuación correcta.
 - **CSS Modules**, sin framework de utilidades. La paleta y la tipografía se definen una sola vez como variables CSS en `app/globals.css` y nadie declara colores fuera de ahí.
-- Estética: fondo plano, sin sombras, sin bordes redondeados, sin gradientes. Una tipografía, dos pesos. Navegación de máximo tres entradas.
+- **Radio de borde: 0 en todo el proyecto.** Sin `box-shadow`, sin gradientes, sin translucidez. La profundidad se construye con líneas de 1 px y con inversión de color, nunca con sombra.
+- Una sola familia tipográfica (Inter Variable), dos pesos. Navegación de máximo tres entradas.
 - **El estado se comunica con palabras, no con color:** `AGOTADO`, `VISTO 13 AGO 2026`, `QUEDAN 12`.
 - Accesibilidad no negociable: contraste AA, foco visible, navegación completa por teclado, `alt` en cada imagen, ningún control que dependa solo del color.
+- **Texto mínimo de 12 px, y solo para etiquetas cortas en mayúsculas.** El cuerpo nunca baja de 16 px en móvil (por debajo, iOS hace zoom automático en los formularios).
 - Precios siempre formateados con `Intl.NumberFormat('es-CO')` y sufijo `COP`. Nunca decimales.
 - El navegador nunca llama a la API directamente: siempre vía Route Handler de Next bajo `/api/`.
 - Ninguna llave secreta en código de cliente. `NEXT_PUBLIC_*` solo para valores realmente públicos.
@@ -67,6 +69,51 @@ Cada página vive con su `.module.css` al lado: lo que cambia junto, junto. Los 
 
 ---
 
+## Lenguaje visual
+
+Estilo base: **monocromo minimalista**, en su variante oscura. La referencia es la sobriedad de yeezy.com, no el lujo decorativo: nada de serifas de revista, nada de vidrio esmerilado, ningún color de acento.
+
+**La paleta es la ausencia de paleta.** Dos tonos y dos grises, sin excepciones.
+
+| Rol | Valor | Uso |
+|---|---|---|
+| Fondo | `#0A0A0A` | Todo el sitio |
+| Tinta | `#EDEDED` | Texto principal |
+| Tenue | `#8A8A8A` | Texto secundario y estados pasados — 5.4:1 sobre el fondo |
+| Línea | `#242424` | Divisiones de una sola unidad de grosor |
+
+**Por qué no es negro puro sobre blanco puro.** `#FFFFFF` sobre `#000000` da 21:1, pero produce halación: el texto parece vibrar y cansa en pantallas OLED, que es donde va a mirarse esto. `#EDEDED` sobre `#0A0A0A` da **16.9:1** —muy por encima de AAA— sin la fatiga. Es la diferencia entre austero y agresivo.
+
+**Tipografía: Inter Variable, y nada más.** Una sola familia con dos pesos (400 y 500). La jerarquía no se construye con familias distintas ni con negritas: se construye con **tamaño y con espaciado entre letras**.
+
+| Rol | Tamaño | Peso | Tracking |
+|---|---|---|---|
+| Etiqueta / navegación / estado | `0.75rem` (12 px) | 500 | `0.16em` |
+| Cuerpo | `1rem` (16 px) | 400 | normal |
+| Título de pieza | `clamp(2.5rem, 9vw, 7rem)` | 400 | `-0.03em` |
+
+Esa tensión —lo diminuto y muy espaciado contra lo enorme y muy junto— es de donde sale el aire de misterio. No hay tamaños intermedios: si algo no es una etiqueta ni un cuerpo ni un título, no debería existir.
+
+**Ritmo espacial:** múltiplos de 8 px, con saltos deliberadamente grandes. El vacío es el material principal; una sección respira con 6 rem, no con 2.
+
+**Movimiento:** una sola transición en todo el sitio, `opacity 400ms ease-out`, para que el contenido aparezca en vez de aterrizar. Nada se mueve, nada rebota, nada escala. Bajo `prefers-reduced-motion` desaparece por completo.
+
+**Estados, siempre en palabras y en mayúsculas espaciadas:**
+
+| Situación | Texto | Tono |
+|---|---|---|
+| Pieza disponible | `DISPONIBLE` | Tinta |
+| Pieza vendida | `VENDIDA · 13 AGO 2026` | Tenue |
+| Drop con cupo | `QUEDAN 12` | Tinta |
+| Drop sin cupo | `AGOTADO` | Tenue |
+| Acceso sin abrir | `SIN ABRIR` | Tinta |
+| Acceso en curso | `QUEDAN 3 H 20 MIN` | Tinta |
+| Acceso consumido | `VISTO 13 AGO 2026` | Tenue |
+
+El contraste entre tinta y tenue **acompaña** al texto; nunca lo sustituye. Alguien que no distinga los dos grises lee exactamente la misma información.
+
+---
+
 ## Tarea 1: Esqueleto, lenguaje visual y cliente de API
 
 **Archivos:**
@@ -90,60 +137,116 @@ cd web && npm i -D jest ts-jest @types/jest
 `web/app/globals.css`:
 
 ```css
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500&display=swap');
+
 :root {
-  --fondo: #ffffff;
-  --tinta: #000000;
-  --tenue: #767676;          /* contraste 4.54:1 sobre blanco — cumple AA */
-  --linea: #e5e5e5;
-  --fuente: 'Helvetica Neue', Helvetica, Arial, sans-serif;
-  --texto: 0.8125rem;
-  --titulo: 1rem;
-  --espacio: 1.5rem;
+  /* Dos tonos y dos grises. No hay más colores en el proyecto. */
+  --fondo: #0a0a0a;
+  --tinta: #ededed;   /* 16.9:1 sobre el fondo — AAA sin la halación del blanco puro */
+  --tenue: #8a8a8a;   /* 5.4:1 sobre el fondo — AA para texto secundario */
+  --linea: #242424;
+
+  --fuente: 'Inter', -apple-system, 'Helvetica Neue', Arial, sans-serif;
+
+  --etiqueta: 0.75rem;
+  --cuerpo: 1rem;
+  --titulo: clamp(2.5rem, 9vw, 7rem);
+
+  --tracking-etiqueta: 0.16em;
+  --tracking-titulo: -0.03em;
+
+  --u: 8px;                /* toda medida es múltiplo de esto */
+  --margen: calc(var(--u) * 3);
+  --respiro: calc(var(--u) * 12);
 }
 
 * { margin: 0; padding: 0; box-sizing: border-box; }
+
+html { color-scheme: dark; }
 
 body {
   background: var(--fondo);
   color: var(--tinta);
   font-family: var(--fuente);
-  font-size: var(--texto);
-  line-height: 1.5;
+  font-size: var(--cuerpo);
+  font-weight: 400;
+  line-height: 1.6;
   -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
 }
 
 a { color: inherit; text-decoration: none; }
-a:hover { text-decoration: underline; }
+a:hover { text-decoration: underline; text-underline-offset: 0.3em; }
 
 /* El foco es obligatorio y visible: la navegación por teclado no se negocia. */
-:focus-visible { outline: 2px solid var(--tinta); outline-offset: 2px; }
+:focus-visible { outline: 1px solid var(--tinta); outline-offset: 4px; }
 
+/* Inversión, no relleno de color: el botón es el negativo de la página. */
 button {
   font: inherit;
+  font-size: var(--etiqueta);
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-etiqueta);
   background: var(--tinta);
   color: var(--fondo);
-  border: 0;
-  padding: 0.875rem var(--espacio);
+  border: 1px solid var(--tinta);
+  border-radius: 0;
+  padding: calc(var(--u) * 2) calc(var(--u) * 3);
+  min-height: 44px;              /* área táctil mínima */
   cursor: pointer;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
 }
-button:disabled { background: var(--tenue); cursor: not-allowed; }
+button:hover { background: var(--fondo); color: var(--tinta); }
+button:disabled {
+  background: transparent;
+  color: var(--tenue);
+  border-color: var(--linea);
+  cursor: not-allowed;
+}
 
 input, textarea, select {
   font: inherit;
+  font-size: var(--cuerpo);      /* 16px evita el zoom automático de iOS */
   width: 100%;
-  padding: 0.75rem;
+  min-height: 44px;
+  padding: calc(var(--u) * 1.5);
   border: 1px solid var(--linea);
-  background: var(--fondo);
+  border-radius: 0;
+  background: transparent;
   color: var(--tinta);
 }
+input:focus, textarea:focus { border-color: var(--tinta); }
 
-.mayusculas { text-transform: uppercase; letter-spacing: 0.08em; }
+label { font-size: var(--etiqueta); color: var(--tenue); }
+
+h1, h2 { font-weight: 400; letter-spacing: var(--tracking-titulo); line-height: 1.05; }
+
+::selection { background: var(--tinta); color: var(--fondo); }
+
+.mayusculas {
+  font-size: var(--etiqueta);
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-etiqueta);
+}
 .tenue { color: var(--tenue); }
+
+.titulo { font-size: var(--titulo); }
+
+/* Única animación del sitio: el contenido aparece, no aterriza. */
+.aparece { animation: aparecer 400ms ease-out both; }
+
+@keyframes aparecer { from { opacity: 0; } to { opacity: 1; } }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
 ```
 
-Una sola paleta, cuatro colores, sin dark mode: la tienda es blanca y punto. No hay `border-radius` ni `box-shadow` en ninguna parte del proyecto.
+Cuatro valores de color, tres tamaños de texto, una animación. No existe `border-radius`, `box-shadow` ni un solo color de acento en todo el proyecto. Si algo no es etiqueta, cuerpo o título, no debería existir.
 
 - [ ] **Paso 3: Marco de la aplicación**
 
@@ -153,6 +256,7 @@ Una sola paleta, cuatro colores, sin dark mode: la tienda es blanca y punto. No 
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import './globals.css';
+import estilos from './layout.module.css';
 
 export const metadata: Metadata = {
   title: 'Toryteler',
@@ -163,19 +267,32 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="es">
       <body>
-        <header style={{ padding: '1.5rem', display: 'flex', justifyContent: 'space-between' }}>
+        <header className={estilos.cabecera}>
           <Link href="/" className="mayusculas">Toryteler</Link>
-          <nav className="mayusculas" style={{ display: 'flex', gap: '1.5rem' }}>
+          <nav className="mayusculas">
             <Link href="/cuenta">Cuenta</Link>
           </nav>
         </header>
-        <main>{children}</main>
-        <footer style={{ padding: '4rem 1.5rem 1.5rem' }} className="tenue mayusculas">
-          Medellín, Colombia
-        </footer>
+        <main className="aparece">{children}</main>
+        <footer className={`${estilos.pie} tenue mayusculas`}>Medellín, Colombia</footer>
       </body>
     </html>
   );
+}
+```
+
+`web/app/layout.module.css`:
+
+```css
+.cabecera {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--margen);
+}
+
+.pie {
+  padding: var(--respiro) var(--margen) var(--margen);
 }
 ```
 
@@ -337,7 +454,13 @@ Esperado: PASA — 4 pruebas.
 - [ ] **Paso 8: Verificación manual**
 
 Ejecutar: `cd web && npm run dev -- -p 3001` y abrir `http://localhost:3001`.
-Esperado: página en blanco con la marca arriba a la izquierda, «Cuenta» a la derecha y «Medellín, Colombia» abajo. Al navegar con Tab, cada enlace muestra un contorno negro visible.
+
+Esperado:
+1. Pantalla casi negra (`#0A0A0A`), con «TORYTELER» arriba a la izquierda en letra pequeña muy espaciada, «CUENTA» a la derecha y «MEDELLÍN, COLOMBIA» abajo en gris.
+2. Al navegar con Tab, cada enlace muestra un contorno claro de 1 px separado del texto.
+3. Seleccionar texto con el cursor lo muestra invertido: fondo claro, letra oscura.
+4. En las herramientas del navegador, verificar que ningún elemento tiene `border-radius` ni `box-shadow`.
+5. Con «reducir movimiento» activado en el sistema, el contenido aparece de inmediato, sin desvanecido.
 
 - [ ] **Paso 9: Commit**
 
@@ -469,21 +592,21 @@ export default async function Catalogo() {
   list-style: none;
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-  gap: 4rem 1.5rem;
-  padding: 1.5rem;
+  gap: var(--respiro) var(--margen);
+  padding: var(--margen);
 }
 
 .pie {
   display: flex;
   flex-direction: column;
-  gap: 0.25rem;
-  padding-top: 0.75rem;
+  gap: calc(var(--u) * 0.5);
+  padding-top: var(--margen);
 }
 
-.vacio { padding: 6rem 1.5rem; }
+.vacio { padding: var(--respiro) var(--margen); }
 
 @media (max-width: 640px) {
-  .rejilla { grid-template-columns: 1fr; gap: 3rem; }
+  .rejilla { grid-template-columns: 1fr; gap: calc(var(--u) * 8); }
 }
 ```
 
@@ -534,7 +657,7 @@ export default async function Pieza({ params }: { params: Promise<{ slug: string
       </div>
 
       <div className={estilos.ficha}>
-        <h1 className="mayusculas">{pieza.title}</h1>
+        <h1 className="titulo">{pieza.title}</h1>
         <Precio cop={pieza.priceCop} />
         <EstadoPieza available={pieza.available} soldAt={pieza.soldAt} />
 
