@@ -52,12 +52,12 @@ lee de `web/lib/mock-data.ts`. 14 pruebas de lógica pura.
 `/checkout/resultado`
 
 Crean un pedido, descuentan inventario, firman y cobran: maquetarlas sería
-escribir código para tirarlo. **Ya se pueden construir**: la API tiene los
-servicios que necesitan.
+escribir código para tirarlo. **Ya se pueden construir**: la API expone todos
+los endpoints que necesitan.
 
 ---
 
-## API — 8 de 12 tareas, 76 pruebas de integración
+## API — las 12 tareas, 142 pruebas de integración
 
 Plan: `docs/superpowers/plans/2026-08-13-api-nucleo.md`. NestJS + Postgres +
 TypeORM, pruebas contra un Postgres real en Docker.
@@ -72,36 +72,44 @@ TypeORM, pruebas contra un Postgres real en Docker.
 | 6 | Crear pedido | hecha |
 | 7 | Contrato en PDF, firma y acta de evidencias | hecha |
 | 8 | Pagos con `PaymentGateway` intercambiable + Wompi | hecha |
-| 9 | Reconciliación de pagos y expiración de pedidos | **falta** |
-| 10 | Visionado: abrir ventana y firmar acceso al video | **falta** |
-| 11 | Endpoints de lectura pública y de cuenta | **falta** |
-| 12 | Administración del artista con guard de rol | **falta** |
+| 9 | Reconciliación de pagos y expiración de pedidos | hecha |
+| 10 | Visionado: abrir ventana y firmar acceso al video | hecha |
+| 11 | Endpoints de lectura pública y de cuenta | hecha |
+| 12 | Administración del artista con guard de rol | hecha |
 
-### Lo que falta además de esas cuatro tareas
+### Endpoints que expone
 
-**La API no expone ni un endpoint todavía.** Existen los servicios, las
-migraciones y las pruebas, pero no hay controladores ni módulos cableados en
-`app.module.ts`, que solo carga configuración y TypeORM. El cableado va con las
-tareas 11 y 12.
+**Públicos:** `GET /pieces` · `GET /pieces/:slug` · `GET /drops` ·
+`GET /drops/:slug` · `POST /auth/magic-link` · `POST /auth/redeem` ·
+`POST /payments/webhook`
 
-Tampoco está el proxy `/api/*` del front hacia la API, ni el borrado de
-`web/lib/mock-data.ts` y `web/app/api/mock-playback/`.
+**Con sesión:** `POST /orders` · `POST /orders/:id/contract` ·
+`POST /contracts/:id/sign` · `POST /orders/:id/pay` ·
+`POST /entitlements/:id/play` · `GET /me/orders` · `GET /me/entitlements` ·
+`GET /me/entitlements/:id`
+
+**Solo el artista** (`SessionGuard` + `AdminGuard`): `POST|PATCH /admin/pieces`
+· `POST|PATCH /admin/drops` · `PATCH /admin/{pieces,drops}/:id/listed` ·
+`GET /admin/orders` · `POST /admin/orders/:id/ship` · `GET /admin/contracts`
+
+La sesión viaja como `Authorization: Bearer`, que es lo que manda el front. El
+guard también acepta una cookie `session`, pero **no hay `cookie-parser`
+montado**, así que ese camino no funciona todavía.
 
 ---
 
 ## Lo siguiente que hay que hacer
 
-1. **Arrancar Docker Desktop** y levantar el Postgres de pruebas:
+Ya no queda API pendiente: lo que falta es unir las dos mitades.
+
+1. **Arrancar Docker Desktop** y levantar el Postgres:
    `docker compose -f docker-compose.test.yml up -d`
-2. Tarea 9: reconciliación. Un cron cada 10 minutos que busca pedidos `pending`
-   con más de su plazo, pregunta a la pasarela y liquida o expira devolviendo
-   inventario. Es el único proceso periódico del sistema.
-3. Tarea 10: `POST /entitlements/:id/play` — abre la ventana con un `UPDATE`
-   condicional y devuelve una URL firmada de Cloudflare Stream.
-4. Tareas 11 y 12: endpoints de lectura y administración, y el cableado de
-   controladores y módulos.
-5. Conectar: `API_URL` en el front, borrar los simulados, construir las 5
-   pantallas del checkout.
+2. Construir las 5 pantallas del checkout. Todos los endpoints que necesitan
+   existen.
+3. Conectar: definir `API_URL` en el front, borrar `web/lib/mock-data.ts` y
+   `web/app/api/mock-playback/`.
+4. Desplegar la API y crear el usuario artista (`users.is_admin = true`), sin
+   el cual `/studio` no tiene a nadie que lo abra.
 
 ---
 
@@ -153,6 +161,13 @@ Tampoco está el proxy `/api/*` del front hacia la API, ni el borrado de
   rompe `position: sticky`. Usar `clip`.
 - **`animation-fill-mode: both`** deja un transform permanente que descentra
   cualquier modal dentro. Usar `backwards`.
+- **Las dos vías de liquidación tienen que producir la misma clave.** Wompi
+  llama `VOIDED` a lo que aquí es `DECLINED`; con la palabra cruda como clave,
+  un webhook tardío liquidaba dos veces y devolvía al inventario una unidad que
+  nadie había devuelto. Todo pasa por `PaymentGateway.eventIdFor()`.
+- **Un tipo usado en una firma decorada se importa con `import type`**, o
+  `isolatedModules` + `emitDecoratorMetadata` rompen la compilación.
+- **`inet::text` devuelve `190.0.0.1/32`.** Para el valor sin máscara, `host()`.
 
 ---
 
@@ -165,7 +180,7 @@ npx jest                                            # 14 pruebas
 
 # API
 docker compose -f docker-compose.test.yml up -d     # desde la raíz
-cd api && npm install && npx jest                   # 76 pruebas
+cd api && npm install && npx jest                   # 142 pruebas
 npm run build                                       # comprobación de tipos
 ```
 
