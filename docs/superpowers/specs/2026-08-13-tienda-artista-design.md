@@ -42,7 +42,7 @@ Fuera (fases posteriores):
 |---|---|---|
 | Tenencia | Single-tenant, un artista | Elimina payouts multiparte, KYC de vendedores y responsabilidad de marketplace |
 | Plataforma | In-house, no Shopify | Shopify resuelve logística (que aquí es de bajo volumen) y no resuelve el contenido efímero ni la firma en checkout; integrarlo dejaría dos sistemas y dos identidades de usuario |
-| Backend | NestJS + Postgres + TypeORM | Proceso persistente para PDF, webhooks y crons; stack conocido del equipo |
+| Backend | NestJS + Postgres + TypeORM | Proceso persistente para PDF, webhooks y la reconciliación de pagos; stack conocido del equipo |
 | Frontend | Next.js (App Router) consumiendo la API | SSR para catálogo y procedencia: primer render y previews sociales |
 | Deploy | API en Railway/Render, web en Vercel | Proporcional al tamaño; Postgres administrado y cron incluidos |
 | Imágenes | Cloudinary | Transformaciones y `f_auto`/`q_auto` sin montar pipeline |
@@ -276,7 +276,21 @@ Al iniciar el checkout la pieza pasa a `reserved`, para que nadie más la compre
 | PSE / Bancolombia | 45 minutos |
 | Nequi | 20 minutos |
 
-Cron cada minuto: las piezas `reserved` con `reserved_until < now()` vuelven a `available` y su pedido pasa a `expired`. Una compra abandonada no congela una pieza para siempre.
+**La reserva expira de forma perezosa, sin job de fondo.** No existe evento externo que anuncie "pasaron 15 minutos", y no hace falta uno: una reserva vencida se ignora en el momento en que alguien la consulta. La condición de disponibilidad es parte de la propia consulta de compra:
+
+```sql
+UPDATE pieces
+SET status = 'reserved', reserved_until = now() + ($2 * interval '1 minute')
+WHERE id = $1
+  AND (status = 'available'
+       OR (status = 'reserved' AND reserved_until < now()));  -- vencida = disponible
+```
+
+Es el mismo principio de un lock con TTL: la llave no se borra, se ignora al leerla. La pieza se recicla sin latencia y sin proceso periódico, y el catálogo aplica la misma condición para mostrar el estado correcto.
+
+El pedido abandonado se marca `expired` de forma perezosa también, en la reconciliación de pagos. Igual la ventana de visionado: `now() < expires_at` se evalúa en cada acceso, así que tampoco necesita job.
+
+**El sistema tiene un solo proceso periódico:** la reconciliación de pagos `pending` contra la API de Wompi (§12), que es la red de seguridad ante un webhook perdido.
 
 **Pago aprobado que llega después de que la reserva venció.** Una reserva vencida no anula un pago real. Al procesar el webhook se resuelve por estado actual de la pieza:
 
@@ -432,7 +446,7 @@ Pruebas de integración contra un Postgres real, sin mocks, sobre los tres invar
 5. Doble `POST /orders` con la misma `Idempotency-Key` → un solo pedido.
 6. Dos `play` concurrentes sobre el mismo entitlement → una sola ventana abierta.
 7. Acceso tras `expires_at` → 403.
-8. Reserva vencida liberada por el cron → la pieza vuelve a estar disponible.
+8. Reserva vencida → el siguiente comprador la toma en la misma consulta, sin proceso de fondo.
 
 La UI, el catálogo y el panel no llevan pruebas automatizadas en fase 1. Ese es el único código donde un bug cuesta dinero y credibilidad; el resto se verifica manualmente.
 
