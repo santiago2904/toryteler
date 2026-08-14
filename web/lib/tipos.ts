@@ -8,6 +8,8 @@ export interface PieceSummary {
   title: string;
   priceCop: number;
   images: string[];
+  /** Unidades disponibles. 1 es una pieza irrepetible; más de 1, una edición. */
+  stock: number;
   available: boolean;
 }
 

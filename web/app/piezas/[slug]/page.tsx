@@ -52,7 +52,7 @@ export default async function Pieza({ params }: { params: Promise<{ slug: string
 
         <div className={estilos.datos}>
           <Precio cop={pieza.priceCop} />
-          <EstadoPieza available={pieza.available} soldAt={pieza.soldAt} />
+          <EstadoPieza stock={pieza.stock} soldAt={pieza.soldAt} />
         </div>
 
         {pieza.description && <p className={estilos.parrafo}>{pieza.description}</p>}
@@ -81,7 +81,9 @@ export default async function Pieza({ params }: { params: Promise<{ slug: string
             />
           </div>
         ) : (
-          <p className="mayusculas tenue">Esta pieza ya encontró dueño.</p>
+          <p className="mayusculas tenue">
+            {pieza.stock === 0 && pieza.soldAt ? 'Esta pieza ya encontró dueño.' : 'No está a la venta.'}
+          </p>
         )}
       </div>
     </article>

@@ -25,31 +25,17 @@
   > * { min-height: 44px; display: inline-flex; align-items: center; }
 }
 
-.formularios {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr);
-  gap: var(--respiro);
-  padding-top: var(--margen);
-
-  @include bp.desde(bp.$tableta) {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: calc(var(--u) * 8);
-  }
-}
 
 .formulario {
   display: grid;
   gap: calc(var(--u) * 0.75);
   align-content: start;
+  max-width: 32rem;
+  padding-top: var(--margen);
 
   h1 { margin-bottom: var(--u); }
 }
 
-.guia {
-  // El texto cambia al escribir el precio; reservar el alto evita que el
-  // formulario dé un salto en cuanto aparece.
-  min-height: 3rem;
-}
 
 .grupo {
   border: 1px solid var(--linea);
@@ -112,3 +98,57 @@
   padding-top: var(--u);
   max-width: 20rem;
 }
+
+/* Listado de lo publicado */
+
+.publicado {
+  display: flex;
+  flex-direction: column;
+  gap: var(--respiro);
+  padding-top: var(--margen);
+}
+
+.acciones {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--margen);
+}
+
+.botones {
+  display: flex;
+  gap: var(--u);
+
+  a:hover { text-decoration: none; }
+}
+
+.grupoLista {
+  display: flex;
+  flex-direction: column;
+  gap: var(--u);
+}
+
+.articulo {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: var(--margen);
+  align-items: center;
+  padding: var(--margen) 0;
+  border-bottom: 1px solid var(--linea);
+}
+
+.gestion {
+  display: flex;
+  gap: var(--margen);
+  align-items: center;
+}
+
+.guardar {
+  display: flex;
+  flex-direction: column;
+  gap: var(--u);
+  align-items: flex-start;
+  padding-top: var(--margen);
+}
+

@@ -52,7 +52,7 @@ export default function CarritoPagina() {
                 {linea.title}
               </Link>
               <span className="tenue mayusculas">
-                {linea.kind === 'piece' ? 'Pieza única' : 'Video'}
+                {linea.kind === 'piece' ? 'Pieza' : 'Video'}
               </span>
               <span>{formatearPrecio(linea.priceCop)}</span>
             </div>

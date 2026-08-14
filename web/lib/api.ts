@@ -47,8 +47,8 @@ async function simular<T>(path: string): Promise<T> {
   const { PIEZAS, DROPS, PEDIDOS, ACCESOS } = await import('./simulacion');
 
   if (path === '/pieces') {
-    return PIEZAS.map(({ slug, title, priceCop, images, available }) => ({
-      slug, title, priceCop, images, available,
+    return PIEZAS.map(({ slug, title, priceCop, images, stock, available }) => ({
+      slug, title, priceCop, images, stock, available,
     })) as T;
   }
 
