@@ -1,0 +1,231 @@
+import { ConfigService } from '@nestjs/config';
+import { createHash } from 'crypto';
+import { DataSource } from 'typeorm';
+import { testDb, truncateAll } from '../setup/db';
+import { PaymentsService } from '../../src/payments/payments.service';
+import { WompiGateway } from '../../src/payments/wompi/wompi.gateway';
+import { PiecesService } from '../../src/pieces/pieces.service';
+import { DropsService } from '../../src/drops/drops.service';
+import { MailService } from '../../src/mail/mail.service';
+
+const EVENTS_SECRET = 'test_events_secret';
+const INTEGRITY_SECRET = 'test_integrity_secret';
+
+const CONFIG = {
+  get: (k: string) =>
+    ({
+      WOMPI_PUBLIC_KEY: 'pub_test',
+      WOMPI_PRIVATE_KEY: 'prv_test',
+      WOMPI_EVENTS_SECRET: EVENTS_SECRET,
+      WOMPI_INTEGRITY_SECRET: INTEGRITY_SECRET,
+      WOMPI_CHECKOUT_URL: 'https://checkout.wompi.co/p/',
+      WOMPI_BASE_URL: 'https://sandbox.wompi.co/v1',
+    } as Record<string, string>)[k],
+} as ConfigService;
+
+class FakeMail {
+  sent: string[] = [];
+  async send(_to: string, _s: string, _h: string, key?: string) { this.sent.push(key ?? 'sin-clave'); }
+}
+
+/** Builds a webhook exactly as Wompi does, uppercase checksum included. */
+function wompiEvent(reference: string, txId: string, status: string, cents: number) {
+  const properties = ['transaction.id', 'transaction.status', 'transaction.amount_in_cents'];
+  const timestamp = 1755000000;
+  const concatenated = `${txId}${status}${cents}`;
+  const checksum = createHash('sha256')
+    .update(`${concatenated}${timestamp}${EVENTS_SECRET}`)
+    .digest('hex')
+    .toUpperCase();
+
+  return {
+    event: 'transaction.updated',
+    data: { transaction: { id: txId, reference, status, amount_in_cents: cents } },
+    signature: { properties, checksum },
+    timestamp,
+  };
+}
+
+describe('payment settlement', () => {
+  let ds: DataSource;
+  let payments: PaymentsService;
+  let gateway: WompiGateway;
+  let mail: FakeMail;
+
+  beforeAll(async () => {
+    ds = await testDb();
+    mail = new FakeMail();
+    gateway = new WompiGateway(CONFIG);
+    payments = new PaymentsService(
+      ds, gateway, new PiecesService(ds), new DropsService(ds), mail as unknown as MailService,
+    );
+  });
+
+  beforeEach(async () => { await truncateAll(ds); mail.sent = []; });
+  afterAll(async () => { await ds.destroy(); });
+
+  async function pendingOrder(opts: { piece?: boolean; drop?: boolean; dropCapacity?: number } = {}) {
+    const [u] = await ds.query(`INSERT INTO users (email) VALUES ($1) RETURNING id`,
+      [`u-${Math.random().toString(36).slice(2)}@x.co`]);
+    const reference = `ord_${Math.random().toString(36).slice(2)}`;
+    const [o] = await ds.query(
+      `INSERT INTO orders (user_id, total_cop, payment_method, reference)
+       VALUES ($1, 500000, 'CARD', $2) RETURNING id`, [u.id, reference]);
+
+    let pieceId: string | null = null;
+    let dropId: string | null = null;
+
+    if (opts.piece) {
+      const [p] = await ds.query(
+        `INSERT INTO pieces (slug, title, price_cop, stock, status, published_at)
+         VALUES ($1, 'P', 500000, 0, 'available', now()) RETURNING id`,
+        [`p-${Math.random().toString(36).slice(2)}`]);
+      pieceId = p.id;
+      await ds.query(
+        `INSERT INTO order_items (order_id, piece_id, unit_price_cop) VALUES ($1, $2, 500000)`,
+        [o.id, p.id]);
+      await ds.query(
+        `INSERT INTO contracts (order_id, piece_id, pdf_url, document_hash, status, signed_at, evidence)
+         VALUES ($1, $2, 'https://f/x.pdf', 'abc', 'signed_pending_payment', now(), '{}'::jsonb)`,
+        [o.id, p.id]);
+    }
+
+    if (opts.drop) {
+      const [d] = await ds.query(
+        `INSERT INTO drops (slug, title, price_cop, video_asset_id, capacity, status, published_at)
+         VALUES ($1, 'D', 25000, 'vid', $2, 'available', now()) RETURNING id`,
+        [`d-${Math.random().toString(36).slice(2)}`, opts.dropCapacity ?? 50]);
+      dropId = d.id;
+      await ds.query(
+        `INSERT INTO order_items (order_id, drop_id, unit_price_cop) VALUES ($1, $2, 25000)`,
+        [o.id, d.id]);
+    }
+
+    return { orderId: o.id, reference, userId: u.id, pieceId, dropId };
+  }
+
+  const status = async (orderId: string): Promise<string> => {
+    const [o] = await ds.query(`SELECT status FROM orders WHERE id = $1`, [orderId]);
+    return o.status;
+  };
+
+  describe('webhook authenticity', () => {
+    it('rejects a forged checksum', async () => {
+      const ev = wompiEvent('ord_x', 'tx1', 'APPROVED', 50000000);
+      ev.signature.checksum = 'falsa';
+      await expect(payments.handleWebhook(ev)).rejects.toThrow(/INVALID_SIGNATURE/);
+    });
+
+    it('accepts the checksum Wompi actually sends, uppercase', () => {
+      expect(gateway.verifyWebhook(wompiEvent('ord_y', 'tx2', 'APPROVED', 1000))).toBe(true);
+    });
+
+    it('rejects a body that is not an event', async () => {
+      await expect(payments.handleWebhook({ hola: 'mundo' })).rejects.toThrow(/INVALID_SIGNATURE/);
+    });
+
+    it('keys the event by transaction and status, so PENDING then APPROVED both settle', () => {
+      const pending = gateway.parseWebhook(wompiEvent('r', 'tx3', 'PENDING', 1000));
+      const approved = gateway.parseWebhook(wompiEvent('r', 'tx3', 'APPROVED', 1000));
+      expect(pending.providerEventId).not.toBe(approved.providerEventId);
+    });
+  });
+
+  describe('approved', () => {
+    it('marks paid and executes the contract', async () => {
+      const o = await pendingOrder({ piece: true });
+      await payments.handleWebhook(wompiEvent(o.reference, 'tx10', 'APPROVED', 50000000));
+
+      expect(await status(o.orderId)).toBe('paid');
+      const [c] = await ds.query(`SELECT status FROM contracts WHERE order_id = $1`, [o.orderId]);
+      expect(c.status).toBe('executed');
+      expect(mail.sent).toHaveLength(1);
+    });
+
+    it('issues the video seat', async () => {
+      const o = await pendingOrder({ drop: true });
+      await payments.handleWebhook(wompiEvent(o.reference, 'tx11', 'APPROVED', 2500000));
+      const [{ count }] = await ds.query(
+        `SELECT count(*)::int AS count FROM entitlements WHERE drop_id = $1 AND user_id = $2`,
+        [o.dropId, o.userId]);
+      expect(count).toBe(1);
+    });
+
+    it('three deliveries of the same event have one effect', async () => {
+      const o = await pendingOrder({ piece: true, drop: true });
+      const ev = wompiEvent(o.reference, 'tx12', 'APPROVED', 52500000);
+      await payments.handleWebhook(ev);
+      await payments.handleWebhook(ev);
+      await payments.handleWebhook(ev);
+
+      const [{ ent }] = await ds.query(
+        `SELECT count(*)::int AS ent FROM entitlements WHERE drop_id = $1`, [o.dropId]);
+      const [{ evs }] = await ds.query(`SELECT count(*)::int AS evs FROM payment_events`);
+      expect(ent).toBe(1);
+      expect(evs).toBe(1);
+      expect(mail.sent).toHaveLength(1);
+    });
+
+    it('refunds when the seat ran out before the payment confirmed', async () => {
+      const o = await pendingOrder({ drop: true, dropCapacity: 1 });
+      // Someone else took the only seat in the meantime.
+      const [other] = await ds.query(`INSERT INTO users (email) VALUES ('otro@x.co') RETURNING id`);
+      await ds.query(
+        `INSERT INTO entitlements (user_id, drop_id, order_id) VALUES ($1, $2, $3)`,
+        [other.id, o.dropId, o.orderId]);
+
+      await payments.handleWebhook(wompiEvent(o.reference, 'tx13', 'APPROVED', 2500000));
+      expect(await status(o.orderId)).toBe('refunded');
+    });
+
+    it('takes the unit again when the order had expired and stock remains', async () => {
+      const o = await pendingOrder({ piece: true });
+      // Expiry gave the unit back.
+      await ds.query(`UPDATE orders SET status = 'expired' WHERE id = $1`, [o.orderId]);
+      await ds.query(`UPDATE pieces SET stock = 1 WHERE id = $1`, [o.pieceId]);
+
+      await payments.handleWebhook(wompiEvent(o.reference, 'tx14', 'APPROVED', 50000000));
+      expect(await status(o.orderId)).toBe('paid');
+      const [p] = await ds.query(`SELECT stock FROM pieces WHERE id = $1`, [o.pieceId]);
+      expect(p.stock).toBe(0);
+    });
+
+    it('refunds when it expired and the piece is gone', async () => {
+      const o = await pendingOrder({ piece: true });
+      await ds.query(`UPDATE orders SET status = 'expired' WHERE id = $1`, [o.orderId]);
+      // stock stays at 0: someone else bought it.
+
+      await payments.handleWebhook(wompiEvent(o.reference, 'tx15', 'APPROVED', 50000000));
+      expect(await status(o.orderId)).toBe('refunded');
+      const [c] = await ds.query(`SELECT status FROM contracts WHERE order_id = $1`, [o.orderId]);
+      expect(c.status).toBe('void');
+    });
+  });
+
+  describe('declined', () => {
+    it('gives the unit back and voids the contract', async () => {
+      const o = await pendingOrder({ piece: true });
+      await payments.handleWebhook(wompiEvent(o.reference, 'tx20', 'DECLINED', 50000000));
+
+      expect(await status(o.orderId)).toBe('failed');
+      const [p] = await ds.query(`SELECT stock FROM pieces WHERE id = $1`, [o.pieceId]);
+      expect(p.stock).toBe(1);
+      const [c] = await ds.query(`SELECT status FROM contracts WHERE order_id = $1`, [o.orderId]);
+      expect(c.status).toBe('void');
+      expect(mail.sent).toHaveLength(0);
+    });
+  });
+
+  describe('checkout url', () => {
+    it('signs the integrity with the amount in cents', () => {
+      const url = gateway.buildCheckoutUrl({
+        reference: 'ord_abc', amountCop: 25000,
+        customerEmail: 'a@b.co', redirectUrl: 'https://web/ok',
+      });
+      const expected = createHash('sha256')
+        .update(`ord_abc2500000COP${INTEGRITY_SECRET}`).digest('hex');
+      expect(url).toContain(`signature%3Aintegrity=${expected}`);
+      expect(url).toContain('amount-in-cents=2500000');
+    });
+  });
+});
