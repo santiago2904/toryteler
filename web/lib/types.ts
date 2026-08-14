@@ -123,3 +123,19 @@ export interface AdminDropDetail {
   remaining: number | null;
   soldOut: boolean;
 }
+
+/** A sale as the studio shows it. Mirrors AdminOrder in the API. */
+export interface AdminOrder {
+  id: string;
+  reference: string;
+  status: string;
+  totalCop: number;
+  createdAt: string;
+  shippedAt: string | null;
+  buyer: { email: string; fullName: string | null };
+  shippingAddress: Record<string, string> | null;
+  tracking: { carrier: string; number: string } | null;
+  contract: { id: string; status: string } | null;
+  items: OrderItem[];
+  needsShipping: boolean;
+}

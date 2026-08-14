@@ -95,6 +95,17 @@ export async function setListed(
   });
 }
 
+/** Records the shipment of a paid order. */
+export async function markShipped(
+  orderId: string,
+  tracking: { carrier: string; number: string },
+): Promise<Result<null>> {
+  return attempt(async () => {
+    await apiSend(`/admin/orders/${orderId}/ship`, 'POST', tracking);
+    return null;
+  });
+}
+
 export interface UploadTicket {
   cloudName: string;
   apiKey: string;

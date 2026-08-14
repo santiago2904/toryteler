@@ -28,6 +28,29 @@ export interface AdminDrop {
   sold: number;
 }
 
+export interface AdminOrderItem {
+  kind: 'piece' | 'drop';
+  slug: string;
+  title: string;
+  image: string | null;
+}
+
+/** A sale as the artist needs to see it: enough to pack it and to answer for it. */
+export interface AdminOrder {
+  id: string;
+  reference: string;
+  status: string;
+  totalCop: number;
+  createdAt: Date;
+  shippedAt: Date | null;
+  buyer: { email: string; fullName: string | null };
+  shippingAddress: Record<string, string> | null;
+  tracking: { carrier: string; number: string } | null;
+  contract: { id: string; status: string } | null;
+  items: AdminOrderItem[];
+  needsShipping: boolean;
+}
+
 export interface NewPiece {
   title: string;
   description?: string | null;
@@ -289,19 +312,73 @@ export class AdminService {
     };
   }
 
-  /** Everything sold, newest first, with who bought it and where it goes. */
-  async orders(limit = 200) {
-    return returnedRows(
+  /**
+   * Everything sold, newest first, with who bought it and where it goes.
+   *
+   * This is the screen the artist works from, so it carries what packing a box
+   * needs — address, phone, what is in it — and the contract, which is the
+   * other thing worth opening from here.
+   */
+  async orders(limit = 200): Promise<AdminOrder[]> {
+    const orders = returnedRows<{
+      id: string; reference: string; status: string; total_cop: number;
+      created_at: Date; shipped_at: Date | null;
+      tracking_carrier: string | null; tracking_number: string | null;
+      shipping_address: Record<string, string> | null;
+      email: string; full_name: string | null;
+      contract_id: string | null; contract_status: string | null;
+    }>(
       await this.ds.query(
         `SELECT o.id, o.reference, o.status, o.total_cop, o.created_at, o.shipped_at,
                 o.tracking_carrier, o.tracking_number, o.shipping_address,
-                u.email, u.full_name
-           FROM orders o JOIN users u ON u.id = o.user_id
+                u.email, u.full_name,
+                c.id AS contract_id, c.status AS contract_status
+           FROM orders o
+           JOIN users u ON u.id = o.user_id
+           LEFT JOIN contracts c ON c.order_id = o.id
           ORDER BY o.created_at DESC
           LIMIT $1`,
         [limit],
       ),
     );
+    if (orders.length === 0) return [];
+
+    const items = returnedRows<{
+      order_id: string; kind: 'piece' | 'drop'; slug: string; title: string; image: string | null;
+    }>(
+      await this.ds.query(
+        `SELECT i.order_id,
+                CASE WHEN i.piece_id IS NOT NULL THEN 'piece' ELSE 'drop' END AS kind,
+                COALESCE(p.slug, d.slug)   AS slug,
+                COALESCE(p.title, d.title) AS title,
+                COALESCE(p.images ->> 0, d.poster_image) AS image
+           FROM order_items i
+           LEFT JOIN pieces p ON p.id = i.piece_id
+           LEFT JOIN drops  d ON d.id = i.drop_id
+          WHERE i.order_id = ANY($1)`,
+        [orders.map((o) => o.id)],
+      ),
+    );
+
+    return orders.map((o) => ({
+      id: o.id,
+      reference: o.reference,
+      status: o.status,
+      totalCop: o.total_cop,
+      createdAt: o.created_at,
+      shippedAt: o.shipped_at,
+      buyer: { email: o.email, fullName: o.full_name },
+      shippingAddress: o.shipping_address,
+      tracking: o.tracking_number && o.tracking_carrier
+        ? { carrier: o.tracking_carrier, number: o.tracking_number }
+        : null,
+      contract: o.contract_id ? { id: o.contract_id, status: o.contract_status! } : null,
+      items: items
+        .filter((i) => i.order_id === o.id)
+        .map(({ kind, slug, title, image }) => ({ kind, slug, title, image })),
+      // What decides whether a box has to be packed at all.
+      needsShipping: items.some((i) => i.order_id === o.id && i.kind === 'piece'),
+    }));
   }
 
   /** Signed contracts. The PDF link is authenticated: it carries an ID number. */

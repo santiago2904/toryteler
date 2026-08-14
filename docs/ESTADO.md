@@ -268,6 +268,10 @@ cd web && npm install && npm run dev -- -p 3001
 npx jest                                            # 14 pruebas
 ```
 
+Si una prueba falla sola y al repetir pasa, casi siempre es que se lanzó
+`npx jest` a la vez que arrancaba otro proceso pesado —el servidor de la API o
+el del front—. Vuelve a correrla antes de buscar la causa en el código.
+
 Las pruebas usan su propia base y lo hacen ellas solas: `api/test/setup/env.ts`
 fuerza `DATABASE_URL` a la de pruebas pase lo que pase en `.env`. Antes
 compartían base con el desarrollo y correr la suite borraba en silencio lo

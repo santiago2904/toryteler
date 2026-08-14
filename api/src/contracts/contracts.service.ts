@@ -125,9 +125,10 @@ export class ContractsService {
   /**
    * The stored PDF, only for the buyer it belongs to.
    *
-   * Scoped by user rather than trusted to an unguessable URL: the file names a
-   * person and carries their ID number, and a link that never expires is a
-   * link that eventually gets forwarded.
+   * Scoped by session rather than trusted to an unguessable URL: the file
+   * names a person and carries their ID number, and a link that never expires
+   * is a link that eventually gets forwarded. Both parties can open it — the
+   * buyer and the artist — and nobody else.
    */
   async document(contractId: string, userId: string): Promise<Buffer> {
     const row = firstRow<{ pdf_url: string }>(
@@ -135,7 +136,13 @@ export class ContractsService {
         `SELECT c.pdf_url
            FROM contracts c
            JOIN orders o ON o.id = c.order_id
-          WHERE c.id = $1 AND o.user_id = $2`,
+          WHERE c.id = $1
+            AND (
+              o.user_id = $2
+              -- The artist too: they are the seller named in the document, and
+              -- the one who has to answer for it if it is ever disputed.
+              OR EXISTS (SELECT 1 FROM users u WHERE u.id = $2 AND u.is_admin)
+            )`,
         [contractId, userId],
       ),
     );

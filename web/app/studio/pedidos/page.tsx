@@ -1,13 +1,17 @@
 import type { Metadata } from 'next';
 import { apiGet } from '@/lib/api';
-import { OrderSummary } from '@/lib/types';
+import { AdminOrder } from '@/lib/types';
 import { ProductImage } from '@/components/ProductImage';
+import { ShipOrder } from '@/components/ShipOrder';
 import { formatDate, formatPrice } from '@/lib/format';
 import styles from '../studio.module.scss';
 
 export const metadata: Metadata = { title: 'Pedidos — Studio' };
 
-const ORDER_STATUS: Record<OrderSummary['status'], string> = {
+/** Whatever is happening with the orders is happening right now. */
+export const dynamic = 'force-dynamic';
+
+const ORDER_STATUS: Record<string, string> = {
   pending: 'Confirmando pago',
   paid: 'Pagado',
   failed: 'Pago fallido',
@@ -16,17 +20,20 @@ const ORDER_STATUS: Record<OrderSummary['status'], string> = {
 };
 
 export default async function OrdersPage() {
-  // lazy: with no API yet, this lists the same mock orders as the account
-  // page. The real admin endpoint also carries address and email.
-  const orders = await apiGet<OrderSummary[]>('/me/orders', true);
+  // Every order, not the artist's own: this is the shop's ledger. It also
+  // carries the address and the contract, which is what packing one needs.
+  const orders = await apiGet<AdminOrder[]>('/admin/orders', true);
 
-  const toShip = orders.filter((p) => p.status === 'paid' && !p.tracking);
+  const toShip = orders.filter((o) => o.status === 'paid' && o.needsShipping && !o.tracking);
 
   return (
     <div className={styles.orders}>
       <h1 className="label muted">
-        OrdersPage · {toShip.length} por despachar
+        {orders.length} pedidos
+        {toShip.length > 0 && ` · ${toShip.length} por despachar`}
       </h1>
+
+      {orders.length === 0 && <p className="muted">Todavía no hay pedidos.</p>}
 
       <ul className={styles.orderList}>
         {orders.map((order) => (
@@ -44,28 +51,42 @@ export default async function OrdersPage() {
               <span className="muted">{order.items.map((i) => i.title).join(' · ')}</span>
               <span>{formatPrice(order.totalCop)}</span>
               <span className="label muted">
-                {ORDER_STATUS[order.status]} · {formatDate(order.createdAt)}
+                {ORDER_STATUS[order.status] ?? order.status} · {formatDate(order.createdAt)}
               </span>
+
+              <span className="label muted">
+                {order.buyer.fullName ?? 'Sin nombre'} · {order.buyer.email}
+              </span>
+
+              {order.shippingAddress && (
+                <span className="muted">
+                  {[order.shippingAddress.line1, order.shippingAddress.city, order.shippingAddress.phone]
+                    .filter(Boolean)
+                    .join(' · ')}
+                </span>
+              )}
+
+              {order.contract && (
+                <a
+                  href={`/contratos/${order.contract.id}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="label"
+                >
+                  Ver contrato
+                  {order.contract.status === 'signed_pending_payment' && ' · firmado, sin pagar'}
+                  {order.contract.status === 'void' && ' · anulado'}
+                </a>
+              )}
 
               {order.tracking ? (
                 <span className="label muted">
                   Enviado · {order.tracking.carrier} {order.tracking.number}
                 </span>
+              ) : order.status === 'paid' && order.needsShipping ? (
+                <ShipOrder orderId={order.id} />
               ) : order.status === 'paid' ? (
-                <form className={styles.shipping}>
-                  <label htmlFor={`transportadora-${order.id}`}>Transportadora</label>
-                  <select id={`transportadora-${order.id}`} defaultValue="Servientrega">
-                    <option>Servientrega</option>
-                    <option>Coordinadora</option>
-                    <option>Interrapidísimo</option>
-                    <option>TCC</option>
-                  </select>
-
-                  <label htmlFor={`guia-${order.id}`}>Número de guía</label>
-                  <input id={`guia-${order.id}`} inputMode="numeric" />
-
-                  <button type="submit" disabled>Marcar enviado</button>
-                </form>
+                <span className="label muted">Nada que enviar: solo video</span>
               ) : null}
             </div>
           </li>
