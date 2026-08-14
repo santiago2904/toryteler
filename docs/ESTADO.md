@@ -169,6 +169,12 @@ montado**, así que ese camino no funciona todavía.
   rol a alguien surte efecto en su siguiente clic, no cuando venza su sesión.
 - **Quien no es el artista recibe 404 en `/studio`, no 403.** La segunda
   respuesta le cuenta que hay un panel que vale la pena forzar.
+- **Hay una sola puerta de entrada.** No existe un acceso aparte para el
+  artista: la diferencia la hace la cuenta, no el formulario, y se nota después
+  de entrar —el artista aterriza en el studio, el resto en su cuenta—. El enlace
+  al panel vive en `/cuenta` y no en la cabecera: ponerlo ahí obligaría a leer
+  la sesión en todas las páginas y volvería la tienda entera dinámica por un
+  enlace que ve una sola persona.
 - **Nada fuera de `api/src/payments/wompi/` conoce Wompi.** `PaymentGateway`
   normaliza estado, referencia e id de evento.
 

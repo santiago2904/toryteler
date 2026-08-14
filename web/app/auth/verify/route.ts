@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { apiGet } from '@/lib/api';
 import { redeemLink } from '@/lib/checkout-actions';
 import { takeDestination } from '@/lib/session';
+import { Profile } from '@/lib/types';
 
 /**
  * Where the emailed link lands.
@@ -18,5 +20,26 @@ export async function GET(request: NextRequest) {
   const result = await redeemLink(token);
   if (!result.ok) return NextResponse.redirect(new URL('/entrar?error=1', origin));
 
-  return NextResponse.redirect(new URL(await takeDestination(), origin));
+  return NextResponse.redirect(new URL(await landing(), origin));
+}
+
+/**
+ * Where to go now.
+ *
+ * A destination saved before signing in wins: it is what the person was trying
+ * to do. Failing that, the artist goes to the studio and everyone else to their
+ * account — there is one sign-in door for both, so the difference has to show
+ * up after walking through it, not before.
+ */
+async function landing(): Promise<string> {
+  const saved = await takeDestination();
+  if (saved !== '/cuenta') return saved;
+
+  try {
+    const profile = await apiGet<Profile>('/me', true);
+    return profile.isAdmin ? '/studio' : '/cuenta';
+  } catch {
+    // Whoever they are, the session is valid: the account page is never wrong.
+    return '/cuenta';
+  }
 }

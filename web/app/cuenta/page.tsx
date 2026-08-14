@@ -1,8 +1,9 @@
 import Link from 'next/link';
 import type { Metadata } from 'next';
 import { apiGet } from '@/lib/api';
-import { EntitlementSummary, OrderSummary } from '@/lib/types';
+import { EntitlementSummary, OrderSummary, Profile } from '@/lib/types';
 import { ProductImage } from '@/components/ProductImage';
+import { SignOutButton } from '@/components/SignOutButton';
 import { formatDate, formatPrice, timeLeft } from '@/lib/format';
 import styles from './page.module.scss';
 
@@ -27,13 +28,35 @@ function entitlementText(entitlement: EntitlementSummary): string {
 }
 
 export default async function AccountPage() {
-  const [orders, entitlements] = await Promise.all([
+  const [profile, orders, entitlements] = await Promise.all([
+    apiGet<Profile>('/me', true),
     apiGet<OrderSummary[]>('/me/orders', true),
     apiGet<EntitlementSummary[]>('/me/entitlements', true),
   ]);
 
   return (
     <div className={styles.account}>
+      <div className={styles.who}>
+        <span className="label muted">{profile.email}</span>
+        <SignOutButton />
+      </div>
+
+      {/*
+        The only way into the studio from the site, and it is here rather than in
+        the header on purpose: putting it in the header means reading the session
+        on every page, which would turn the whole shop — the storefront included
+        — into something rendered on demand for a link one person needs.
+      */}
+      {profile.isAdmin && (
+        <section className={styles.studio}>
+          <div>
+            <p className="label">Entraste como el artista</p>
+            <p className="muted">Desde el studio publicas piezas y videos, y ves los pedidos.</p>
+          </div>
+          <Link href="/studio" className="label">Abrir el studio →</Link>
+        </section>
+      )}
+
       <section className={styles.section}>
         <h1 className="label muted">Pedidos</h1>
         {orders.length === 0 ? (

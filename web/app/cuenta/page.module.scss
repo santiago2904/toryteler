@@ -75,3 +75,25 @@
     gap: var(--gutter);
   }
 }
+
+/* The way into the studio. Framed rather than shouted: it is a door, not an
+   announcement, and only one person ever sees it. */
+.studio {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--gutter);
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: var(--gutter);
+  border: 1px solid var(--line);
+}
+
+/* Who you are and how to stop being them. */
+.who {
+  display: flex;
+  gap: var(--gutter);
+  align-items: baseline;
+  justify-content: space-between;
+  width: 100%;
+}

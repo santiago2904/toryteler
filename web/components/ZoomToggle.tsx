@@ -1,5 +1,6 @@
 'use client';
 
+import { usePathname } from 'next/navigation';
 import { useEffect, useState } from 'react';
 
 type DocumentWithViewTransition = Document & {
@@ -19,11 +20,20 @@ type DocumentWithViewTransition = Document & {
  * sit in the header and the grid on another page with no props or context.
  */
 export function ZoomToggle() {
+  const pathname = usePathname();
   const [zoomedIn, setZoomedIn] = useState(false);
 
   useEffect(() => {
     setZoomedIn(document.documentElement.dataset.zoom === 'in');
   }, []);
+
+  /**
+   * Only where there is a grid to zoom, which is the storefront and nowhere
+   * else. In the studio, the cart or an account it was a control that changed
+   * nothing visible — and a button that does nothing teaches people to
+   * distrust the others.
+   */
+  if (pathname !== '/') return null;
 
   function toggle() {
     const next = !zoomedIn;
