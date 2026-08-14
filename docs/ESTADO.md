@@ -14,8 +14,8 @@ carrito:
 
 - **Piezas físicas**: bocetos, pruebas de portada, objetos del artista. La
   mayoría irrepetibles (una unidad), pero puede haber ediciones de varias. Cada
-  compra incluye una nota personal escrita a mano por el artista y un contrato
-  de compraventa firmado electrónicamente antes de pagar.
+  compra incluye una nota personal del artista y un contrato de compraventa
+  firmado electrónicamente antes de pagar.
 - **Videos efímeros**: máster de una maqueta, una historia contada a cámara. Se
   venden con aforo limitado y **se ven una sola vez**: al darle play se abre una
   ventana de 24 o 48 horas y, cuando se cierra, no vuelve a abrirse.
@@ -25,17 +25,16 @@ la referencia es la sobriedad de yeezy.com.
 
 ## Dónde está
 
-- Repo: https://github.com/santiago2904/toryteler
-- Front desplegado en Vercel, con *Root Directory* = `web`. Cada push a `main`
+- Repo: https://github.com/santiago2904/toryteler — monorepo `web/` + `api/`
+- Front desplegado en Vercel, *Root Directory* = `web`. Cada push a `main`
   actualiza producción.
 - **`API_URL` no está definida en Vercel a propósito**: sin ella el front corre
   con datos simulados, que es lo que se quiere para enseñarlo.
+- La API no está desplegada todavía.
 
 ---
 
-## Estado: front hecho, API sin empezar
-
-### Front — 13 pantallas funcionando con datos simulados
+## Front — 13 pantallas, con datos simulados
 
 **Tienda:** `/` · `/piezas/[slug]` · `/drops/[slug]` · `/artista` · `/cuenta` ·
 `/carrito` · `/ver/[id]`
@@ -44,129 +43,162 @@ la referencia es la sobriedad de yeezy.com.
 `/studio/pieza/[slug]` · `/studio/video/[slug]` · `/studio/pedidos`
 
 Lo único que funciona de verdad es el carrito (vive en el navegador), el cálculo
-de comisión y la ventana de visionado simulada. Todo lo demás lee de
-`web/lib/mock-data.ts`.
+de comisión, la ventana de visionado simulada y el reproductor. Todo lo demás
+lee de `web/lib/mock-data.ts`. 14 pruebas de lógica pura.
 
 ### Faltan 5 pantallas, todas del flujo de compra
 
 `/entrar` · `/checkout` · `/checkout/contrato` · `/checkout/pagar` ·
 `/checkout/resultado`
 
-No se pueden maquetar de forma útil: crean un pedido, descuentan inventario,
-firman un contrato y cobran. Simularlas es escribir código para tirarlo.
+Crean un pedido, descuentan inventario, firman y cobran: maquetarlas sería
+escribir código para tirarlo. **Ya se pueden construir**: la API tiene los
+servicios que necesitan.
 
-### API — nada construido
+---
 
-El plan está en `docs/superpowers/plans/2026-08-13-api-nucleo.md`: 12 tareas,
-NestJS + Postgres + TypeORM. **Es el siguiente paso** y desbloquea las 5
-pantallas restantes.
+## API — 8 de 12 tareas, 76 pruebas de integración
+
+Plan: `docs/superpowers/plans/2026-08-13-api-nucleo.md`. NestJS + Postgres +
+TypeORM, pruebas contra un Postgres real en Docker.
+
+| # | Tarea | Estado |
+|---|---|---|
+| 1 | Esqueleto, Postgres de pruebas, `users` y `pieces` | hecha |
+| 2 | Inventario: `take()` / `release()` | hecha |
+| 3 | Aforo de videos con bloqueo de fila | hecha |
+| 4 | Idempotencia de escritura | hecha |
+| 5 | Magic link, sesión y OTP | hecha |
+| 6 | Crear pedido | hecha |
+| 7 | Contrato en PDF, firma y acta de evidencias | hecha |
+| 8 | Pagos con `PaymentGateway` intercambiable + Wompi | hecha |
+| 9 | Reconciliación de pagos y expiración de pedidos | **falta** |
+| 10 | Visionado: abrir ventana y firmar acceso al video | **falta** |
+| 11 | Endpoints de lectura pública y de cuenta | **falta** |
+| 12 | Administración del artista con guard de rol | **falta** |
+
+### Lo que falta además de esas cuatro tareas
+
+**La API no expone ni un endpoint todavía.** Existen los servicios, las
+migraciones y las pruebas, pero no hay controladores ni módulos cableados en
+`app.module.ts`, que solo carga configuración y TypeORM. El cableado va con las
+tareas 11 y 12.
+
+Tampoco está el proxy `/api/*` del front hacia la API, ni el borrado de
+`web/lib/mock-data.ts` y `web/app/api/mock-playback/`.
 
 ---
 
 ## Lo siguiente que hay que hacer
 
-1. **Arrancar Docker Desktop.** La tarea 1 de la API levanta un Postgres de
-   pruebas con `docker compose`, y sin el demonio corriendo no empieza.
-2. Ejecutar el plan de la API tarea por tarea. Prueba primero solo en el núcleo
-   —tareas 2, 3, 4, 7, 8 y 10—; el resto se implementa directo.
-3. Al terminar la API: definir `API_URL` en el front, borrar
-   `web/lib/mock-data.ts` y el endpoint `web/app/api/mock-playback/`, y
-   construir las 5 pantallas del checkout.
+1. **Arrancar Docker Desktop** y levantar el Postgres de pruebas:
+   `docker compose -f docker-compose.test.yml up -d`
+2. Tarea 9: reconciliación. Un cron cada 10 minutos que busca pedidos `pending`
+   con más de su plazo, pregunta a la pasarela y liquida o expira devolviendo
+   inventario. Es el único proceso periódico del sistema.
+3. Tarea 10: `POST /entitlements/:id/play` — abre la ventana con un `UPDATE`
+   condicional y devuelve una URL firmada de Cloudflare Stream.
+4. Tareas 11 y 12: endpoints de lectura y administración, y el cableado de
+   controladores y módulos.
+5. Conectar: `API_URL` en el front, borrar los simulados, construir las 5
+   pantallas del checkout.
 
 ---
 
 ## Decisiones que no se reabren
 
-Están razonadas en el spec; aquí solo el resumen para no volver a discutirlas.
-
 | Decisión | Por qué |
 |---|---|
-| In-house, no Shopify | Shopify no resuelve el contenido efímero ni la firma en checkout, y dejaría dos sistemas con dos identidades de usuario |
-| Un solo artista | Sin payouts multiparte, sin KYC de vendedores, sin responsabilidad de marketplace |
-| Monorepo `web/` + `api/` | Una persona sola: un clon, los tipos a la vista, un commit para cambios que tocan ambos lados |
-| Código en inglés, producto en español | Convención habitual; las URLs las lee y comparte el público colombiano |
-| El precio mínimo no se impone | El gesto artístico manda sobre el margen. El panel informa de la comisión, no la restringe |
+| In-house, no Shopify | No resuelve el contenido efímero ni la firma en checkout, y dejaría dos sistemas con dos identidades |
+| Un solo artista | Sin payouts multiparte, sin KYC de vendedores |
+| Monorepo `web/` + `api/` | Una persona sola: un clon, los tipos a la vista |
+| Código en inglés, producto en español | Las URLs las lee el público colombiano |
+| El precio mínimo no se impone | El gesto artístico manda sobre el margen; el panel informa, no restringe |
+| Prueba primero solo en el núcleo | Invariantes, idempotencia, firma y pagos. El resto va directo |
 | Sin subastas, sin Q&A, sin reventa | Fuera de la fase 1 |
 
 ### Reglas técnicas que sostienen el sistema
 
-- **Todo estado peligroso vive en Postgres, protegido por constraints.** Nunca
-  en memoria de la aplicación. Cualquier "leer, verificar, escribir" en
-  TypeScript vende de más tarde o temprano.
+- **Todo estado peligroso vive en Postgres, protegido por constraints.** Un
+  «leer, verificar, escribir» en TypeScript vende de más tarde o temprano.
 - **El inventario se descuenta con un `UPDATE` condicional** (`stock = stock - 1
-  WHERE stock > 0`). No hay estado `reserved`; el plazo vive en la antigüedad
-  del pedido. La devolución del stock ocurre en la reconciliación de pagos.
-- **Todo endpoint que mueva dinero o entregue acceso es reintentable** sin
-  consecuencias. Idempotencia en cuatro puntos: clave de idempotencia,
-  webhooks, transiciones condicionales y claves naturales para PDF y correos.
-- **Se firma antes de pagar.** Firmando después existiría un instante con dinero
-  cobrado y sin contrato.
-- **La URL del video se entrega solo al abrir la ventana**, como respuesta de
-  `POST /entitlements/:id/play`. Nunca dentro de la página: aunque el
-  reproductor no se dibuje, cualquier dato que reciba la página acaba en su
-  código fuente.
-- **Despublicar retira de la tienda y nada más.** Quien ya compró conserva su
-  pedido y su acceso. La capacidad de un video sube libremente pero nunca baja
-  de lo ya vendido.
-- **Los precios se releen siempre de la base de datos.** Lo que manda el
-  navegador son identificadores, nunca importes.
-- **Un solo proceso periódico** en todo el sistema: la reconciliación de pagos
-  contra Wompi, que además devuelve el inventario abandonado.
+  WHERE stock > 0`). No hay estado `reserved`. La devolución ocurre en la
+  liquidación del pago y en la reconciliación.
+- **El aforo se serializa bloqueando la fila del video** antes de contar. Sin el
+  bloqueo, el límite es una sugerencia.
+- **Todo endpoint que mueva dinero o entregue acceso es reintentable.**
+- **Se firma antes de pagar**: al revés existiría un instante con dinero cobrado
+  y sin contrato.
+- **Los precios se releen de la base.** El navegador manda identificadores.
+- **La URL del video se entrega solo al abrir la ventana.** Nunca en la página:
+  aunque el reproductor no se dibuje, lo que recibe la página acaba en su código
+  fuente.
+- **Despublicar retira de la tienda y nada más.** Quien compró conserva su
+  acceso. La capacidad sube pero nunca baja de lo vendido.
+- **Nada fuera de `api/src/payments/wompi/` conoce Wompi.** `PaymentGateway`
+  normaliza estado, referencia e id de evento.
+
+### Trampas ya descubiertas, con su solución en el código
+
+- **TypeORM 1.x** devuelve `[filas, afectadas]` en `UPDATE`/`DELETE`, y **nada
+  en un `INSERT ... ON CONFLICT` sin `RETURNING`**. Todo pasa por
+  `api/src/database/rows.ts`. Las pruebas negativas pasan igual, así que el
+  fallo es silencioso.
+- **Wompi:** checksum del webhook en MAYÚSCULAS, firma de integridad sobre
+  centavos, y evento identificado por transacción **y** estado. Detalles en
+  `docs/wompi/README.md`.
+- **`<dialog>`**: cualquier `display` en su regla base anula el `display: none`
+  del navegador y pinta todos los diálogos a la vez.
+- **`overflow-x: hidden` en `body`** convierte el body en contenedor de scroll y
+  rompe `position: sticky`. Usar `clip`.
+- **`animation-fill-mode: both`** deja un transform permanente que descentra
+  cualquier modal dentro. Usar `backwards`.
 
 ---
 
-## Cómo correr el front
+## Cómo correr
 
 ```bash
-cd web
-npm install
-npm run dev -- -p 3001     # http://localhost:3001
-npx jest                   # 14 pruebas de lógica pura
-npm run build              # comprobación de tipos incluida
+# Front
+cd web && npm install && npm run dev -- -p 3001    # http://localhost:3001
+npx jest                                            # 14 pruebas
+
+# API
+docker compose -f docker-compose.test.yml up -d     # desde la raíz
+cd api && npm install && npx jest                   # 76 pruebas
+npm run build                                       # comprobación de tipos
 ```
 
-`web/.env.local` solo necesita el nombre de la cuenta de Cloudinary, que es
-público y ya va como valor por defecto en el código.
-
-### Lenguaje visual
-
-Vive en `web/app/globals.scss` y está descrito en el spec §11. Dos temas —claro
-por defecto, oscuro si el sistema lo pide— con cuatro colores cada uno, Inter
-en dos pesos, radio de borde 0 y cero sombras en todo el proyecto. Los colores
-son custom properties nativas: **nunca variables de SCSS**, o el cambio de tema
-dejaría de funcionar.
+`api/.env` se copia de `api/.env.example`; con las credenciales de ejemplo, el
+correo y la subida de PDF se simulan en consola en vez de fallar.
 
 ---
 
 ## Deuda declarada y avisos
 
-- **`/studio` no tiene control de acceso** y está público en Vercel. Hoy no
-  guarda nada, pero el guard de rol tiene que existir antes del primer endpoint
-  real (tarea 12 del plan de la API).
+- **`/studio` no tiene control de acceso** y está público en Vercel. El guard de
+  rol es la tarea 12.
 - **`/cuenta` no tiene sesión**: muestra los pedidos simulados a cualquiera.
-- **Las imágenes de ejemplo son portadas de discos reales** (Pink Floyd,
-  Rihanna, Rolling Stones) atribuidas a un artista ficticio. Sirven para
-  maquetar; **no pueden quedarse** en una tienda pública. Sustituirlas antes de
-  cualquier lanzamiento.
-- **Los videos de ejemplo están en HEVC** y pesan decenas de megas. Cloudinary
-  los transcodifica al vuelo a H.264 en la URL; los originales no se tocan.
-- **El texto del contrato necesita revisión de un abogado** antes de publicar.
-  El sistema ya versiona ese texto (`consent_text_version`).
-- **La cuenta comercial de Wompi tarda semanas.** Todo el desarrollo va contra
-  el sandbox; el trámite bloquea el lanzamiento, no el trabajo.
-- **Deduplicación de correos en memoria** en el plan de la API: basta con una
-  instancia, hay que moverla a tabla si escala horizontalmente.
+- **Las imágenes de ejemplo son portadas de discos reales** atribuidas a un
+  artista ficticio. **No pueden quedarse** en una tienda pública.
+- **El texto del contrato necesita revisión de un abogado.** Está versionado
+  (`consent_text_version`), así que cambiarlo no afecta a lo ya firmado.
+- **La cuenta comercial de Wompi tarda semanas.** Todo va contra el sandbox.
+- **Deduplicación de correos en memoria**: basta con una instancia.
+- **Wompi soporta ocho métodos de pago**; `orders` solo admite tres porque el
+  plazo depende del método. Ampliarlo es añadirlo al `CHECK` y decidir su plazo.
+- **La cuenta activa de `gh` se revierte a la del trabajo** entre sesiones y el
+  push da 403. Comprobar con `gh api user --jq .login`, no con `auth status`,
+  que puede mentir. Arreglo: `gh auth switch --user santiago2904`.
 
 ---
 
 ## Cómo se ha trabajado
 
-Ciclo de Superpowers: brainstorming → spec → plan → ejecución. Los tres
-documentos de `docs/superpowers/` se mantienen al día; cuando el código y un
-plan difieren, se anota en el plan y manda el código.
+Ciclo de Superpowers: brainstorming → spec → plan → ejecución. Los documentos de
+`docs/superpowers/` se mantienen al día; cuando el código y un plan difieren, se
+anota en el plan y manda el código.
 
-Commits en español, formato convencional (`feat(web):`, `fix(api):`), con el
-motivo de la decisión en el cuerpo cuando no es obvio.
-
-Los atajos deliberados se marcan con un comentario `lazy:` que dice hasta dónde
-llega y cuál es el camino de salida.
+Commits en español, formato convencional, con el motivo de la decisión en el
+cuerpo cuando no es obvio. Los atajos deliberados llevan un comentario `lazy:`
+que dice hasta dónde llegan y cuál es el camino de salida.
