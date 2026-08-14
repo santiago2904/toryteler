@@ -69,6 +69,9 @@ async function explain(res: Response): Promise<string> {
   if (/Invalid api_key|Unknown API key/i.test(message)) {
     return 'la tienda no tiene configuradas las credenciales de Cloudinary.';
   }
+  if (/cloud_name/i.test(message)) {
+    return 'el nombre de la nube de Cloudinary está mal escrito en la configuración.';
+  }
   if (/Invalid Signature/i.test(message)) {
     return 'la firma no coincide. Es un fallo nuestro, no tuyo.';
   }
