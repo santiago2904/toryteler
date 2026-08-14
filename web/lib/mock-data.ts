@@ -266,3 +266,16 @@ export const ENTITLEMENTS: EntitlementSummary[] = [
     state: 'consumed',
   },
 ];
+
+/**
+ * Video files for the mock. In production this never lives in a public type:
+ * the URL arrives signed and short-lived after the window is opened, so having
+ * it here would mean anyone could watch without paying.
+ *
+ * lazy: goes away with the rest of this module.
+ */
+export const MOCK_VIDEO_URLS: Record<string, string> = {
+  'ojitos-verdes-maqueta': 'https://res.cloudinary.com/dtiuqixet/video/upload/v1786687587/sangre.mp4',
+  'casa-42-maqueta': 'https://res.cloudinary.com/dtiuqixet/video/upload/v1786687585/que-donar.mp4',
+  'como-conoci-a-gabi': 'https://res.cloudinary.com/dtiuqixet/video/upload/v1786687587/sangre.mp4',
+};

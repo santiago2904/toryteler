@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { ProductImage } from '@/components/ProductImage';
 import { formatDate, timeLeft } from '@/lib/format';
 import styles from './EphemeralPlayer.module.scss';
@@ -10,6 +10,8 @@ interface Props {
   entitlementId: string;
   title: string;
   posterImage: string | null;
+  posterUrl: string | null;
+  dropSlug: string;
   windowHours: number;
   viewerEmail: string;
   /** From the API. The mock lets the window be opened here to see the states. */
@@ -22,7 +24,8 @@ interface Props {
 const MOCK_KEY = (id: string) => `mock-play:${id}`;
 
 export function EphemeralPlayer({
-  entitlementId, title, posterImage, windowHours, viewerEmail, firstPlayedAt, expiresAt,
+  entitlementId, title, posterImage, posterUrl, dropSlug, windowHours, viewerEmail,
+  firstPlayedAt, expiresAt,
 }: Props) {
   // The real state comes from the server, so the right screen renders on the
   // first paint. Only the simulated opening lives in the browser, and that
@@ -30,13 +33,28 @@ export function EphemeralPlayer({
   const [openedAt, setOpenedAt] = useState<number | null>(
     firstPlayedAt ? new Date(firstPlayedAt).getTime() : null,
   );
+  const [videoUrl, setVideoUrl] = useState<string | null>(null);
   const [, forceTick] = useState(0);
+
+  // The URL is requested, never handed over up front: a page rendered for
+  // someone who has not opened their window must not contain it.
+  const requestPlayback = useCallback(async () => {
+    const res = await fetch(`/api/mock-playback/${dropSlug}`, { method: 'POST' });
+    if (!res.ok) return;
+    const { videoUrl: url } = await res.json();
+    setVideoUrl(url);
+  }, [dropSlug]);
 
   useEffect(() => {
     if (firstPlayedAt) return;
     const stored = localStorage.getItem(MOCK_KEY(entitlementId));
     if (stored) setOpenedAt(Number(stored));
   }, [entitlementId, firstPlayedAt]);
+
+  // Already inside the window on arrival: ask for the video straight away.
+  useEffect(() => {
+    if (openedAt !== null && videoUrl === null) void requestPlayback();
+  }, [openedAt, videoUrl, requestPlayback]);
 
   // The countdown has to move on its own: a static number reads as decoration.
   useEffect(() => {
@@ -45,10 +63,11 @@ export function EphemeralPlayer({
     return () => clearInterval(id);
   }, [openedAt]);
 
-  function play() {
+  async function play() {
     const now = Date.now();
     localStorage.setItem(MOCK_KEY(entitlementId), String(now));
     setOpenedAt(now);
+    await requestPlayback();
   }
 
   const closesAt = expiresAt
@@ -83,7 +102,7 @@ export function EphemeralPlayer({
           salir y volver las veces que quieras, desde el teléfono o el computador.
         </p>
         <p>Cuando la ventana se cierre, este video no vuelve a abrirse. Ocurre una sola vez.</p>
-        <button type="button" onClick={play}>Entiendo, reproducir</button>
+        <button type="button" onClick={() => void play()}>Entiendo, reproducir</button>
       </section>
     );
   }
@@ -91,12 +110,29 @@ export function EphemeralPlayer({
   return (
     <section className={styles.player}>
       <div className={styles.frame}>
-        {posterImage && <ProductImage publicId={posterImage} alt={title} fit="contain" priority />}
-
-        {/* lazy: real playback needs a signed Cloudflare Stream token. */}
-        <div className={styles.placeholder}>
-          <span className="label">Aquí va el video</span>
-        </div>
+        {videoUrl ? (
+          <video
+            src={videoUrl}
+            poster={posterUrl ?? undefined}
+            controls
+            autoPlay
+            playsInline
+            // Neither of these stops anything: they remove the obvious download
+            // button. Screen recording is impossible to prevent and we say so.
+            controlsList="nodownload noplaybackrate"
+            disablePictureInPicture
+            className={styles.video}
+          />
+        ) : (
+          <>
+            {posterImage && (
+              <ProductImage publicId={posterImage} alt={title} fit="contain" priority />
+            )}
+            <div className={styles.placeholder}>
+              <span className="label">Cargando…</span>
+            </div>
+          </>
+        )}
 
         {/* Watermark: it does not stop a screen recording, it makes sharing one
             traceable. It is presented as exactly that. */}
