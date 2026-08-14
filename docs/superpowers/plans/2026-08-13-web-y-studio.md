@@ -6,7 +6,7 @@
 
 **Arquitectura:** Una sola app Next.js (App Router). Las páginas de catálogo y procedencia se renderizan en el servidor para que carguen instantáneas y compartan bien en redes. La sesión es una cookie `httpOnly` first-party: el navegador nunca habla directo con la API, sino con Route Handlers de Next que reenvían la petición añadiendo la cookie. Eso evita CORS con credenciales, `SameSite=None` y toda la fragilidad de cookies entre dominios.
 
-**Tech Stack:** Next.js 15 (App Router), React 19, TypeScript, CSS Modules, Cloudinary (`next/image`), Cloudflare Stream Player.
+**Tech Stack:** Next.js 15 (App Router), React 19, TypeScript, SCSS Modules, Cloudinary (`next/image`), Cloudflare Stream Player.
 
 **Spec:** `docs/superpowers/specs/2026-08-13-tienda-artista-design.md`
 **Plan previo:** `docs/superpowers/plans/2026-08-13-api-nucleo.md` — este plan consume sus endpoints y tipos.
@@ -15,7 +15,9 @@
 
 - Node 20 LTS. TypeScript `strict`. App Router, no Pages Router.
 - **Idioma: español únicamente.** Todo el texto de interfaz, errores y correos en español, con acentuación correcta.
-- **CSS Modules**, sin framework de utilidades. La paleta y la tipografía se definen una sola vez como variables CSS en `app/globals.css` y nadie declara colores fuera de ahí.
+- **SCSS Modules**, sin framework de utilidades. SCSS aporta únicamente mixins de breakpoints, partials y anidamiento; **no** se usan variables SCSS para colores ni medidas.
+- **La paleta y las medidas son custom properties nativas** declaradas una sola vez en `app/globals.scss`. Viven en runtime, se inspeccionan en DevTools y dejan abierta la puerta a un tema claro. Un `$color` de SCSS se evapora al compilar y cierra esa puerta — está prohibido.
+- **Anidamiento de máximo dos niveles.** El anidamiento profundo es cómo el CSS minimalista se vuelve ilegible y cómo nacen selectores imposibles de sobrescribir.
 - **Radio de borde: 0 en todo el proyecto.** Sin `box-shadow`, sin gradientes, sin translucidez. La profundidad se construye con líneas de 1 px y con inversión de color, nunca con sombra.
 - Una sola familia tipográfica (Inter Variable), dos pesos. Navegación de máximo tres entradas.
 - **El estado se comunica con palabras, no con color:** `AGOTADO`, `VISTO 13 AGO 2026`, `QUEDAN 12`.
@@ -34,11 +36,11 @@
 web/
   app/
     layout.tsx                       marco: tipografía, navegación, pie
-    globals.css                      variables de color y tipografía — única fuente
+    globals.scss                      variables de color y tipografía — única fuente
     page.tsx                         catálogo
-    page.module.css
+    page.module.scss
     piezas/[slug]/page.tsx           detalle y procedencia de la pieza
-    piezas/[slug]/page.module.css
+    piezas/[slug]/page.module.scss
     drops/[slug]/page.tsx            detalle del drop
     checkout/page.tsx                datos del comprador
     checkout/contrato/page.tsx       lectura, consentimiento y firma OTP
@@ -56,6 +58,8 @@ web/
     EstadoPieza.tsx                  AGOTADO / DISPONIBLE / RESERVADA
     Imagen.tsx                       envoltorio de next/image con Cloudinary
     ReproductorEfimero.tsx           player + marca de agua + cuenta regresiva
+  styles/
+    _breakpoints.scss                mixins de punto de quiebre — único partial
   lib/
     api.ts                           cliente tipado del servidor
     tipos.ts                         tipos compartidos con la API
@@ -65,7 +69,7 @@ web/
   .env.local.example
 ```
 
-Cada página vive con su `.module.css` al lado: lo que cambia junto, junto. Los componentes compartidos son cuatro, y existen porque los usan al menos dos páginas.
+Cada página vive con su `.module.scss` al lado: lo que cambia junto, junto. Los componentes compartidos son cuatro, y existen porque los usan al menos dos páginas.
 
 ---
 
@@ -118,7 +122,7 @@ El contraste entre tinta y tenue **acompaña** al texto; nunca lo sustituye. Alg
 
 **Archivos:**
 - Crear: `web/` completo vía `create-next-app`
-- Crear: `web/app/globals.css`, `web/app/layout.tsx`, `web/lib/tipos.ts`, `web/lib/api.ts`, `web/lib/formato.ts`, `web/lib/formato.test.ts`
+- Crear: `web/app/globals.scss`, `web/app/layout.tsx`, `web/lib/tipos.ts`, `web/lib/api.ts`, `web/lib/formato.ts`, `web/lib/formato.test.ts`
 - Crear: `web/components/Precio.tsx`, `web/.env.local.example`
 
 **Interfaces:**
@@ -129,14 +133,46 @@ El contraste entre tinta y tenue **acompaña** al texto; nunca lo sustituye. Alg
 ```bash
 cd /Users/sapalacioa/Documents/Development/Personal/toryteler
 npx create-next-app@latest web --typescript --app --no-tailwind --no-src-dir --eslint --import-alias "@/*"
-cd web && npm i -D jest ts-jest @types/jest
+cd web && npm i -D sass jest ts-jest @types/jest
+```
+
+Next.js compila `.scss` y `.module.scss` en cuanto `sass` está instalado; no hay configuración que tocar.
+
+`web/styles/_breakpoints.scss` — la única razón por la que este proyecto usa SCSS:
+
+```scss
+// Puntos de quiebre en un solo lugar. Móvil primero: estos son "a partir de".
+$movil-grande: 640px;
+$tableta: 900px;
+
+@mixin desde($ancho) {
+  @media (min-width: $ancho) { @content; }
+}
+
+@mixin hasta($ancho) {
+  @media (max-width: $ancho - 1px) { @content; }
+}
+```
+
+Se usa así, y no se anida más de dos niveles:
+
+```scss
+@use '@/styles/breakpoints' as bp;
+
+.rejilla {
+  grid-template-columns: 1fr;
+
+  @include bp.desde(bp.$movil-grande) {
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  }
+}
 ```
 
 - [ ] **Paso 2: Definir el lenguaje visual, una sola vez**
 
-`web/app/globals.css`:
+`web/app/globals.scss`:
 
-```css
+```scss
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500&display=swap');
 
 :root {
@@ -255,8 +291,8 @@ Cuatro valores de color, tres tamaños de texto, una animación. No existe `bord
 ```tsx
 import type { Metadata } from 'next';
 import Link from 'next/link';
-import './globals.css';
-import estilos from './layout.module.css';
+import './globals.scss';
+import estilos from './layout.module.scss';
 
 export const metadata: Metadata = {
   title: 'Toryteler',
@@ -281,9 +317,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
 }
 ```
 
-`web/app/layout.module.css`:
+`web/app/layout.module.scss`:
 
-```css
+```scss
 .cabecera {
   display: flex;
   justify-content: space-between;
@@ -474,8 +510,8 @@ git commit -m "feat(web): esqueleto Next.js, lenguaje visual y cliente de API"
 ## Tarea 2: Catálogo y página de pieza
 
 **Archivos:**
-- Crear: `web/app/page.tsx`, `web/app/page.module.css`
-- Crear: `web/app/piezas/[slug]/page.tsx`, `web/app/piezas/[slug]/page.module.css`
+- Crear: `web/app/page.tsx`, `web/app/page.module.scss`
+- Crear: `web/app/piezas/[slug]/page.tsx`, `web/app/piezas/[slug]/page.module.scss`
 - Crear: `web/components/Imagen.tsx`, `web/components/EstadoPieza.tsx`
 - Modificar: `web/next.config.ts`
 
@@ -553,7 +589,7 @@ import { PieceSummary } from '@/lib/tipos';
 import { Imagen } from '@/components/Imagen';
 import { Precio } from '@/components/Precio';
 import { EstadoPieza } from '@/components/EstadoPieza';
-import estilos from './page.module.css';
+import estilos from './page.module.scss';
 
 export const revalidate = 30;
 
@@ -585,15 +621,23 @@ export default async function Catalogo() {
 }
 ```
 
-`web/app/page.module.css`:
+`web/app/page.module.scss`:
 
-```css
+```scss
+```scss
+@use '@/styles/breakpoints' as bp;
+
 .rejilla {
   list-style: none;
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-  gap: var(--respiro) var(--margen);
+  grid-template-columns: 1fr;          // móvil primero: una columna
+  gap: calc(var(--u) * 8);
   padding: var(--margen);
+
+  @include bp.desde(bp.$movil-grande) {
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: var(--respiro) var(--margen);
+  }
 }
 
 .pie {
@@ -604,10 +648,6 @@ export default async function Catalogo() {
 }
 
 .vacio { padding: var(--respiro) var(--margen); }
-
-@media (max-width: 640px) {
-  .rejilla { grid-template-columns: 1fr; gap: calc(var(--u) * 8); }
-}
 ```
 
 - [ ] **Paso 4: Página de pieza con procedencia**
@@ -623,7 +663,7 @@ import { PieceDetail } from '@/lib/tipos';
 import { Imagen } from '@/components/Imagen';
 import { Precio } from '@/components/Precio';
 import { EstadoPieza } from '@/components/EstadoPieza';
-import estilos from './page.module.css';
+import estilos from './page.module.scss';
 
 async function cargar(slug: string): Promise<PieceDetail | null> {
   try { return await apiGet<PieceDetail>(`/pieces/${slug}`); }
@@ -687,41 +727,46 @@ export default async function Pieza({ params }: { params: Promise<{ slug: string
 }
 ```
 
-`web/app/piezas/[slug]/page.module.css`:
+`web/app/piezas/[slug]/page.module.scss`:
 
-```css
+```scss
+@use '@/styles/breakpoints' as bp;
+
 .pieza {
   display: grid;
-  grid-template-columns: 1fr 22rem;
-  gap: 3rem;
-  padding: 1.5rem;
+  grid-template-columns: 1fr;           // móvil primero: ficha bajo las imágenes
+  gap: var(--respiro);
+  padding: var(--margen);
   align-items: start;
+
+  @include bp.desde(bp.$tableta) {
+    grid-template-columns: 1fr 22rem;
+    gap: calc(var(--u) * 6);
+  }
 }
 
-.imagenes { display: flex; flex-direction: column; gap: 1.5rem; }
+.imagenes { display: flex; flex-direction: column; gap: var(--margen); }
 
 .ficha {
-  position: sticky;
-  top: 1.5rem;
   display: flex;
   flex-direction: column;
-  gap: 0.75rem;
+  gap: calc(var(--u) * 1.5);
+
+  @include bp.desde(bp.$tableta) {
+    position: sticky;
+    top: var(--margen);
+  }
 }
 
 .parrafo { max-width: 34ch; }
 
 .procedencia {
   border-top: 1px solid var(--linea);
-  padding-top: 1rem;
-  margin-top: 1rem;
+  padding-top: var(--margen);
+  margin-top: var(--margen);
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
-}
-
-@media (max-width: 900px) {
-  .pieza { grid-template-columns: 1fr; }
-  .ficha { position: static; }
+  gap: var(--u);
 }
 ```
 
@@ -906,7 +951,7 @@ git commit -m "feat(web): sesión por magic link con cookie first-party y proxy 
 ## Tarea 4: Checkout — datos del comprador
 
 **Archivos:**
-- Crear: `web/app/checkout/page.tsx`, `web/app/checkout/checkout.module.css`
+- Crear: `web/app/checkout/page.tsx`, `web/app/checkout/checkout.module.scss`
 
 **Interfaces:**
 - Consume: `POST /orders` (con `Idempotency-Key`), `GET /pieces/:slug`, `GET /drops/:slug`.
@@ -921,7 +966,7 @@ git commit -m "feat(web): sesión por magic link con cookie first-party y proxy 
 
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useState } from 'react';
-import estilos from './checkout.module.css';
+import estilos from './checkout.module.scss';
 
 const METODOS = [
   { valor: 'PSE', etiqueta: 'PSE' },
@@ -1016,9 +1061,9 @@ export default function Checkout() {
 }
 ```
 
-`web/app/checkout/checkout.module.css`:
+`web/app/checkout/checkout.module.scss`:
 
-```css
+```scss
 .formulario {
   padding: 4rem 1.5rem;
   max-width: 30rem;
@@ -1052,7 +1097,7 @@ git commit -m "feat(web): checkout con datos de envío y clave de idempotencia"
 ## Tarea 5: Contrato, lectura obligatoria y firma
 
 **Archivos:**
-- Crear: `web/app/checkout/contrato/page.tsx`, `web/app/checkout/contrato/contrato.module.css`
+- Crear: `web/app/checkout/contrato/page.tsx`, `web/app/checkout/contrato/contrato.module.scss`
 
 **Interfaces:**
 - Consume: `POST /orders/:id/contract` (prepara y devuelve `{ contractId, pdfUrl, documentHash, otpChallengeId }`) y `POST /orders/:id/sign`.
@@ -1067,7 +1112,7 @@ git commit -m "feat(web): checkout con datos de envío y clave de idempotencia"
 
 import { useEffect, useRef, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import estilos from './contrato.module.css';
+import estilos from './contrato.module.scss';
 
 interface Preparado {
   contractId: string; pdfUrl: string; documentHash: string; otpChallengeId: string;
@@ -1195,9 +1240,9 @@ export default function Contrato() {
 }
 ```
 
-`web/app/checkout/contrato/contrato.module.css`:
+`web/app/checkout/contrato/contrato.module.scss`:
 
-```css
+```scss
 .formulario { padding: 4rem 1.5rem; max-width: 44rem; display: grid; gap: 0.75rem; }
 
 .documento {
@@ -1337,7 +1382,7 @@ git commit -m "feat(web): redirección a Wompi y página de resultado del pedido
 ## Tarea 7: Cuenta — pedidos y accesos
 
 **Archivos:**
-- Crear: `web/app/cuenta/page.tsx`, `web/app/cuenta/cuenta.module.css`
+- Crear: `web/app/cuenta/page.tsx`, `web/app/cuenta/cuenta.module.scss`
 
 **Interfaces:**
 - Consume: `GET /me/orders`, `GET /me/entitlements`.
@@ -1354,7 +1399,7 @@ import { apiGet } from '@/lib/api';
 import { haySesion } from '@/lib/sesion';
 import { EntitlementSummary, OrderSummary } from '@/lib/tipos';
 import { formatearFecha, formatearPrecio, tiempoRestante } from '@/lib/formato';
-import estilos from './cuenta.module.css';
+import estilos from './cuenta.module.scss';
 
 const ESTADO_PEDIDO: Record<string, string> = {
   pending: 'Confirmando pago',
@@ -1417,9 +1462,9 @@ export default async function Cuenta() {
 }
 ```
 
-`web/app/cuenta/cuenta.module.css`:
+`web/app/cuenta/cuenta.module.scss`:
 
-```css
+```scss
 .cuenta { padding: 4rem 1.5rem; display: grid; gap: 4rem; max-width: 48rem; }
 
 .lista { list-style: none; margin-top: 1rem; }
@@ -1453,7 +1498,7 @@ git commit -m "feat(web): cuenta con pedidos y estado de los accesos"
 ## Tarea 8: Visionado efímero
 
 **Archivos:**
-- Crear: `web/app/ver/[entitlementId]/page.tsx`, `web/app/ver/[entitlementId]/ver.module.css`
+- Crear: `web/app/ver/[entitlementId]/page.tsx`, `web/app/ver/[entitlementId]/ver.module.scss`
 - Crear: `web/components/ReproductorEfimero.tsx`
 
 **Interfaces:**
@@ -1518,7 +1563,7 @@ export function ReproductorEfimero({
 import { useState } from 'react';
 import { useParams } from 'next/navigation';
 import { ReproductorEfimero } from '@/components/ReproductorEfimero';
-import estilos from './ver.module.css';
+import estilos from './ver.module.scss';
 
 export default function Ver() {
   const { entitlementId } = useParams<{ entitlementId: string }>();
@@ -1571,9 +1616,9 @@ export default function Ver() {
 }
 ```
 
-`web/app/ver/[entitlementId]/ver.module.css`:
+`web/app/ver/[entitlementId]/ver.module.scss`:
 
-```css
+```scss
 .aviso {
   padding: 6rem 1.5rem;
   max-width: 40ch;
@@ -1629,7 +1674,7 @@ git commit -m "feat(web): visionado efímero con advertencia previa y marca de a
 ## Tarea 9: Studio — publicar piezas y drops
 
 **Archivos:**
-- Crear: `web/app/studio/layout.tsx`, `web/app/studio/page.tsx`, `web/app/studio/studio.module.css`
+- Crear: `web/app/studio/layout.tsx`, `web/app/studio/page.tsx`, `web/app/studio/studio.module.scss`
 
 **Interfaces:**
 - Consume: `POST /admin/pieces`, `PATCH /admin/pieces/:id/publish`, `POST /admin/drops`, `PATCH /admin/drops/:id/publish`, `PATCH /admin/drops/:id/capacity`.
@@ -1672,7 +1717,7 @@ export default async function StudioLayout({ children }: { children: React.React
 'use client';
 
 import { useState } from 'react';
-import estilos from './studio.module.css';
+import estilos from './studio.module.scss';
 
 const COMISION_FIJA = 900;
 const COMISION_PORCENTAJE = 0.0265;
@@ -1785,9 +1830,9 @@ export default function Studio() {
 }
 ```
 
-`web/app/studio/studio.module.css`:
+`web/app/studio/studio.module.scss`:
 
-```css
+```scss
 .studio {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(22rem, 1fr));
@@ -1818,7 +1863,7 @@ git commit -m "feat(web): studio para crear piezas y drops con guía de comisió
 ## Tarea 10: Studio — pedidos y contratos
 
 **Archivos:**
-- Crear: `web/app/studio/pedidos/page.tsx`, `web/app/studio/pedidos/pedidos.module.css`
+- Crear: `web/app/studio/pedidos/page.tsx`, `web/app/studio/pedidos/pedidos.module.scss`
 
 **Interfaces:**
 - Consume: `GET /admin/orders`, `POST /admin/orders/:id/ship`, `GET /admin/contracts`.
@@ -1833,7 +1878,7 @@ git commit -m "feat(web): studio para crear piezas y drops con guía de comisió
 
 import { useEffect, useState } from 'react';
 import { formatearFecha, formatearPrecio } from '@/lib/formato';
-import estilos from './pedidos.module.css';
+import estilos from './pedidos.module.scss';
 
 interface PedidoAdmin {
   id: string; reference: string; status: string; total_cop: number;
@@ -1930,9 +1975,9 @@ export default function Pedidos() {
 }
 ```
 
-`web/app/studio/pedidos/pedidos.module.css`:
+`web/app/studio/pedidos/pedidos.module.scss`:
 
-```css
+```scss
 .pagina { display: grid; gap: 4rem; max-width: 56rem; }
 
 .lista { list-style: none; margin-top: 1rem; }
