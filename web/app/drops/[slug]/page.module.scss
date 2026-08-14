@@ -1,0 +1,68 @@
+@use '../../../styles/breakpoints' as bp;
+
+.drop {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--respiro);
+  padding: var(--margen);
+  max-width: 78rem;
+  margin-inline: auto;
+  align-items: start;
+
+  @include bp.desde(bp.$tableta) {
+    grid-template-columns: minmax(0, 34rem) 22rem;
+    justify-content: center;
+    gap: calc(var(--u) * 8);
+  }
+}
+
+.poster {
+  min-width: 0;
+  max-width: 34rem;
+}
+
+.ficha {
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--u) * 2);
+  min-width: 0;
+
+  @include bp.desde(bp.$tableta) {
+    position: sticky;
+    top: var(--margen);
+  }
+}
+
+.datos {
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--u) * 0.5);
+}
+
+.parrafo {
+  max-width: 34ch;
+}
+
+.condiciones {
+  border-top: 1px solid var(--linea);
+  padding-top: var(--margen);
+  display: flex;
+  flex-direction: column;
+  gap: var(--u);
+}
+
+.lista {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: var(--u);
+  max-width: 34ch;
+}
+
+.accion {
+  margin-top: var(--u);
+
+  &:hover {
+    text-decoration: none;
+  }
+}

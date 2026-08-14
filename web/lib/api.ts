@@ -58,6 +58,8 @@ async function simular<T>(path: string): Promise<T> {
     return pieza as T;
   }
 
+  if (path === '/drops') return DROPS as T;
+
   if (path.startsWith('/drops/')) {
     const drop = DROPS.find((d) => d.slug === decodeURIComponent(path.slice('/drops/'.length)));
     if (!drop) throw new Error('API_404');

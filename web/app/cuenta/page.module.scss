@@ -1,0 +1,37 @@
+@use '../../styles/breakpoints' as bp;
+
+.cuenta {
+  padding: var(--margen);
+  display: grid;
+  gap: var(--respiro);
+  max-width: 56rem;
+  margin-inline: auto;
+}
+
+.seccion {
+  display: flex;
+  flex-direction: column;
+  gap: var(--margen);
+}
+
+.lista {
+  list-style: none;
+}
+
+/* En móvil cada dato en su línea; en pantallas anchas, en una sola fila.
+   Un pedido tiene cinco datos y apretarlos en una línea de teléfono los
+   vuelve ilegibles. */
+.fila {
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--u) * 0.5);
+  padding: var(--margen) 0;
+  border-bottom: 1px solid var(--linea);
+
+  @include bp.desde(bp.$movil-grande) {
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: var(--margen);
+  }
+}

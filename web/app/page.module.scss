@@ -42,6 +42,46 @@
 
 .vacio { padding: var(--respiro) var(--margen); }
 
+/* Franja de videos: pocos elementos, más grandes que las piezas, con una línea
+   que la separa de la rejilla para que se lean como dos cosas distintas. */
+.franja {
+  padding: var(--margen) var(--margen) 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--margen);
+}
+
+.drops {
+  list-style: none;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: calc(var(--u) * 4);
+  padding-bottom: calc(var(--u) * 6);
+  border-bottom: 1px solid var(--linea);
+
+  @include bp.desde(bp.$movil-grande) {
+    grid-template-columns: repeat(auto-fill, minmax(min(20rem, 100%), 1fr));
+  }
+}
+
+.drop {
+  display: grid;
+  grid-template-columns: 7rem minmax(0, 1fr);
+  gap: var(--margen);
+  align-items: center;
+
+  &:hover { text-decoration: none; }
+}
+
+.miniatura { min-width: 0; }
+
+.pieDrop {
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--u) * 0.5);
+  min-width: 0;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .rejilla { transition: none; }
 }
