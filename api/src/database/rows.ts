@@ -2,7 +2,14 @@
  * TypeORM 1.x returns different shapes depending on the statement:
  *
  *   SELECT …                     → [{…}, {…}]
- *   UPDATE … RETURNING stock     → [[{…}], 1]        rows and affected count
+ *   UPDATE … / DELETE …          → [[], 1]           rows and affected count
+ *   UPDATE … RETURNING stock     → [[{…}], 1]
+ *   INSERT … ON CONFLICT         → []                reports nothing at all
+ *   INSERT … RETURNING key       → [[{…}], 1]
+ *
+ * That fourth line is the trap: an INSERT without RETURNING gives no way to
+ * tell an insert from a conflict. **Always add RETURNING to an INSERT whose
+ * outcome you need to branch on.**
  *
  * Reading `.length` on the second shape gives 2 regardless of whether anything
  * was updated, which silently turns "nobody got the unit" into "someone did".
