@@ -1,6 +1,6 @@
 import { notFound } from 'next/navigation';
-import Link from 'next/link';
 import type { Metadata } from 'next';
+import { BotonCarrito } from '@/components/BotonCarrito';
 import { apiGet } from '@/lib/api';
 import { PieceDetail } from '@/lib/tipos';
 import { Imagen } from '@/components/Imagen';
@@ -69,9 +69,17 @@ export default async function Pieza({ params }: { params: Promise<{ slug: string
         </p>
 
         {pieza.available ? (
-          <Link href={`/checkout?pieza=${pieza.slug}`} className={estilos.accion}>
-            <button type="button">Comprar</button>
-          </Link>
+          <div className={estilos.accion}>
+            <BotonCarrito
+              linea={{
+                kind: 'piece',
+                slug: pieza.slug,
+                title: pieza.title,
+                image: pieza.images[0] ?? null,
+                priceCop: pieza.priceCop,
+              }}
+            />
+          </div>
         ) : (
           <p className="mayusculas tenue">Esta pieza ya encontró dueño.</p>
         )}

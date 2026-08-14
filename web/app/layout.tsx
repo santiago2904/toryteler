@@ -3,6 +3,7 @@ import { Inter } from 'next/font/google';
 import Link from 'next/link';
 import { Tema } from '@/components/Tema';
 import { Zoom } from '@/components/Zoom';
+import { Carrito } from '@/components/Carrito';
 import { TransicionPagina } from '@/components/TransicionPagina';
 import './globals.scss';
 import estilos from './layout.module.scss';
@@ -52,6 +53,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             <Link href="/artista">Toryteler</Link>
             <Link href="/cuenta">Cuenta</Link>
             <Tema />
+            <Carrito />
           </div>
         </header>
 

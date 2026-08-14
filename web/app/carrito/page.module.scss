@@ -1,0 +1,45 @@
+@use '../../styles/breakpoints' as bp;
+
+.carrito {
+  padding: var(--margen);
+  max-width: 44rem;
+  margin-inline: auto;
+  min-height: 60vh;
+  display: flex;
+  flex-direction: column;
+  gap: var(--margen);
+  align-items: flex-start;
+}
+
+.lista {
+  list-style: none;
+  width: 100%;
+}
+
+.linea {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: var(--margen);
+  align-items: start;
+  padding: var(--margen) 0;
+  border-bottom: 1px solid var(--linea);
+}
+
+.miniatura {
+  width: 5rem;
+  flex-shrink: 0;
+}
+
+.datos {
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--u) * 0.5);
+  min-width: 0;
+}
+
+.total {
+  display: flex;
+  justify-content: space-between;
+  width: 100%;
+  padding-top: var(--u);
+}

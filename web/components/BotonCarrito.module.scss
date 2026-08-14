@@ -1,0 +1,10 @@
+.dentro {
+  display: flex;
+  flex-direction: column;
+  gap: var(--u);
+  align-items: flex-start;
+}
+
+.enlace:hover {
+  text-decoration: none;
+}

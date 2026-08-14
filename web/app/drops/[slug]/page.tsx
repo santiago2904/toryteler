@@ -1,6 +1,6 @@
 import { notFound } from 'next/navigation';
-import Link from 'next/link';
 import type { Metadata } from 'next';
+import { BotonCarrito } from '@/components/BotonCarrito';
 import { apiGet } from '@/lib/api';
 import { DropDetail } from '@/lib/tipos';
 import { Imagen } from '@/components/Imagen';
@@ -74,9 +74,17 @@ export default async function Drop({ params }: { params: Promise<{ slug: string 
         {drop.soldOut ? (
           <p className="mayusculas tenue">Ya no quedan cupos.</p>
         ) : (
-          <Link href={`/checkout?drop=${drop.slug}`} className={estilos.accion}>
-            <button type="button">Comprar</button>
-          </Link>
+          <div className={estilos.accion}>
+            <BotonCarrito
+              linea={{
+                kind: 'drop',
+                slug: drop.slug,
+                title: drop.title,
+                image: drop.posterImage,
+                priceCop: drop.priceCop,
+              }}
+            />
+          </div>
         )}
       </div>
     </article>
