@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { useState } from 'react';
 import { PayoutHint } from '@/components/PayoutHint';
+import { PriceInput } from '@/components/PriceInput';
 import { PieceDetail } from '@/lib/types';
 import styles from '@/app/studio/studio.module.scss';
 
@@ -33,11 +34,8 @@ export function PieceForm({ piece }: { piece?: PieceDetail }) {
       <label htmlFor="nota">Nota personal para quien la compre</label>
       <textarea id="nota" name="nota" rows={3} />
 
-      <label htmlFor="precio">Precio en pesos</label>
-      <input
-        id="precio" name="precio" type="number" min={1} inputMode="numeric"
-        value={price || ''} onChange={(e) => setPrice(Number(e.target.value))}
-      />
+      <label htmlFor="precio">Precio</label>
+      <PriceInput id="precio" value={price} onChange={setPrice} />
       <PayoutHint price={price} />
 
       <label htmlFor="unidades">Unidades a la venta</label>

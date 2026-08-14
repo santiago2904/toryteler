@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { useState } from 'react';
 import { PayoutHint } from '@/components/PayoutHint';
+import { PriceInput } from '@/components/PriceInput';
 import { DropDetail } from '@/lib/types';
 import styles from '@/app/studio/studio.module.scss';
 
@@ -36,11 +37,8 @@ export function VideoForm({ video }: { video?: DropDetail }) {
         <p className="muted">Ya hay un video cargado. Subir otro lo reemplaza.</p>
       )}
 
-      <label htmlFor="precio">Precio en pesos</label>
-      <input
-        id="precio" name="precio" type="number" min={1} inputMode="numeric"
-        value={price || ''} onChange={(e) => setPrice(Number(e.target.value))}
-      />
+      <label htmlFor="precio">Precio</label>
+      <PriceInput id="precio" value={price} onChange={setPrice} />
       <PayoutHint price={price} />
 
       <fieldset className={styles.group}>

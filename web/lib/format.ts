@@ -18,3 +18,18 @@ export function timeLeft(until: string): string {
   const minutes = Math.floor((ms % 3600_000) / 60_000);
   return hours > 0 ? `${hours} h ${minutes} min` : `${minutes} min`;
 }
+
+/**
+ * Where the caret must land after reformatting an amount, given how many
+ * digits were to its right before. Separators shift as you type, so counting
+ * digits from the end is the only stable reference.
+ */
+export function caretAfterFormat(formatted: string, digitsToTheRight: number): number {
+  let position = formatted.length;
+  let pending = digitsToTheRight;
+  while (position > 0 && pending > 0) {
+    position -= 1;
+    if (/\d/.test(formatted[position])) pending -= 1;
+  }
+  return position;
+}

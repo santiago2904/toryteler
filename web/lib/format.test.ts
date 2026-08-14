@@ -1,4 +1,4 @@
-import { formatPrice, formatDate, timeLeft } from './format';
+import { formatPrice, formatDate, timeLeft, caretAfterFormat } from './format';
 
 describe('format', () => {
   it('formats pesos without decimals and with thousand separators', () => {
@@ -28,6 +28,26 @@ describe('format', () => {
 
     it('reports expired once the moment has passed', () => {
       expect(timeLeft(new Date(NOW - 1000).toISOString())).toBe('vencido');
+    });
+  });
+  describe('caretAfterFormat', () => {
+    it('keeps the caret at the end when nothing follows it', () => {
+      expect(caretAfterFormat('2.400.000', 0)).toBe(9);
+    });
+
+    it('counts digits, not characters, so separators do not drag it', () => {
+      // 2.400.00|0 → one digit to the right
+      expect(caretAfterFormat('2.400.000', 1)).toBe(8);
+      // 2.4|00.000 → five digits to the right
+      expect(caretAfterFormat('2.400.000', 5)).toBe(3);
+    });
+
+    it('stops at the start when asked for more digits than there are', () => {
+      expect(caretAfterFormat('2.400', 99)).toBe(0);
+    });
+
+    it('handles an empty value', () => {
+      expect(caretAfterFormat('', 3)).toBe(0);
     });
   });
 });
