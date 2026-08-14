@@ -1,0 +1,157 @@
+import { INestApplication, ValidationPipe } from '@nestjs/common';
+import { Test } from '@nestjs/testing';
+import request from 'supertest';
+import { DataSource } from 'typeorm';
+import { AppModule } from '../../src/app.module';
+import { AuthService } from '../../src/auth/auth.service';
+import { truncateAll } from '../setup/db';
+
+/**
+ * The API as it is actually served.
+ *
+ * Every other suite builds its services by hand, which proves the logic but
+ * says nothing about whether Nest can assemble them: a missing provider, a
+ * guard applied in the wrong order or a route that was never registered are
+ * all invisible until something boots the module. This is what boots it.
+ */
+describe('http wiring', () => {
+  let app: INestApplication;
+  let ds: DataSource;
+  let auth: AuthService;
+
+  beforeAll(async () => {
+    const moduleRef = await Test.createTestingModule({ imports: [AppModule] }).compile();
+
+    app = moduleRef.createNestApplication();
+    app.useGlobalPipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true }));
+    await app.init();
+
+    ds = moduleRef.get(DataSource);
+    await ds.runMigrations();
+    auth = moduleRef.get(AuthService);
+  });
+
+  beforeEach(async () => { await truncateAll(ds); });
+  afterAll(async () => { await app.close(); });
+
+  /** A real session for a real user, since the guard verifies the signature. */
+  async function session(opts: { admin?: boolean } = {}) {
+    const [u] = await ds.query(
+      `INSERT INTO users (email, is_admin) VALUES ($1, $2) RETURNING id`,
+      [`u-${Math.random().toString(36).slice(2)}@x.co`, opts.admin ?? false],
+    );
+    return { userId: u.id as string, token: auth.signSession(u.id) };
+  }
+
+  describe('public', () => {
+    it('serves the catalogue', async () => {
+      await ds.query(
+        `INSERT INTO pieces (slug, title, price_cop, status, published_at)
+         VALUES ('boceto', 'Boceto', 250000, 'available', now())`,
+      );
+      const res = await request(app.getHttpServer()).get('/pieces').expect(200);
+      expect(res.body).toEqual([
+        expect.objectContaining({ slug: 'boceto', priceCop: 250000, available: true }),
+      ]);
+    });
+
+    it('404s an address that is not published', async () => {
+      await request(app.getHttpServer()).get('/pieces/no-existe').expect(404);
+    });
+
+    it('serves the videos without their asset id', async () => {
+      await ds.query(
+        `INSERT INTO drops (slug, title, price_cop, video_asset_id, status, published_at)
+         VALUES ('maqueta', 'Maqueta', 15000, 'secreto', 'available', now())`,
+      );
+      const res = await request(app.getHttpServer()).get('/drops').expect(200);
+      expect(JSON.stringify(res.body)).not.toContain('secreto');
+    });
+  });
+
+  describe('guards', () => {
+    it('turns away the account endpoints without a session', async () => {
+      await request(app.getHttpServer()).get('/me/orders').expect(401);
+    });
+
+    it('lets a session read its own orders', async () => {
+      const { token } = await session();
+      await request(app.getHttpServer())
+        .get('/me/orders')
+        .set('Authorization', `Bearer ${token}`)
+        .expect(200, []);
+    });
+
+    it('turns away a signed-in stranger from the studio', async () => {
+      const { token } = await session();
+      await request(app.getHttpServer())
+        .get('/admin/orders')
+        .set('Authorization', `Bearer ${token}`)
+        .expect(403);
+    });
+
+    it('lets the artist in', async () => {
+      const { token } = await session({ admin: true });
+      await request(app.getHttpServer())
+        .get('/admin/orders')
+        .set('Authorization', `Bearer ${token}`)
+        .expect(200);
+    });
+
+    it('refuses a forged session token', async () => {
+      await request(app.getHttpServer())
+        .get('/me/orders')
+        .set('Authorization', 'Bearer inventado.por.mi')
+        .expect(401);
+    });
+  });
+
+  describe('validation', () => {
+    it('rejects an address that is not one', async () => {
+      await request(app.getHttpServer())
+        .post('/auth/magic-link')
+        .send({ email: 'no-soy-un-correo' })
+        .expect(400);
+    });
+
+    it('answers the same whether or not the address is known', async () => {
+      const seen = await request(app.getHttpServer())
+        .post('/auth/magic-link')
+        .send({ email: 'alguien@x.co' })
+        .expect(201);
+      const unseen = await request(app.getHttpServer())
+        .post('/auth/magic-link')
+        .send({ email: 'nadie@x.co' })
+        .expect(201);
+      expect(seen.body).toEqual(unseen.body);
+    });
+
+    it('rejects a payment method the shop does not take', async () => {
+      const { token } = await session();
+      await request(app.getHttpServer())
+        .post('/orders')
+        .set('Authorization', `Bearer ${token}`)
+        .set('Idempotency-Key', 'k-1')
+        .send({ pieceSlugs: ['boceto'], dropSlugs: [], paymentMethod: 'EFECTIVO' })
+        .expect(400);
+    });
+
+    it('requires an idempotency key to create an order', async () => {
+      const { token } = await session();
+      await request(app.getHttpServer())
+        .post('/orders')
+        .set('Authorization', `Bearer ${token}`)
+        .send({ pieceSlugs: [], dropSlugs: [], paymentMethod: 'CARD' })
+        .expect(400);
+    });
+  });
+
+  describe('webhook', () => {
+    it('is reachable without a session and rejects an unsigned body', async () => {
+      await request(app.getHttpServer())
+        .post('/payments/webhook')
+        .send({ hola: 'mundo' })
+        .expect(400);
+    });
+  });
+});

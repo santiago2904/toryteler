@@ -4,20 +4,20 @@ import { InjectDataSource } from '@nestjs/typeorm';
 import { DataSource } from 'typeorm';
 import { affectedRows, returnedRows } from '../database/rows';
 import { PiecesService } from '../pieces/pieces.service';
+import { ORDER_DEADLINE_MINUTES, PaymentMethod } from '../orders/order.entity';
 import { PaymentGateway } from './payment-gateway';
 import { PaymentsService } from './payments.service';
 
 /**
- * How long a payment method is given before its order is considered dead.
- * A card either works or fails in seconds; PSE walks the buyer through their
- * bank's own site, which is why it gets three times the room.
+ * Nothing is worth looking at before the shortest deadline has passed, so the
+ * query filters by it and each order is then measured against its own.
  */
-const DEADLINE_MINUTES: Record<string, number> = { CARD: 15, NEQUI: 20, PSE: 45 };
+const EARLIEST_DEADLINE = Math.min(...Object.values(ORDER_DEADLINE_MINUTES));
 
 interface StaleOrder {
   id: string;
   reference: string;
-  payment_method: string;
+  payment_method: PaymentMethod;
   transaction_id: string | null;
   minutes_old: number;
 }
@@ -51,7 +51,7 @@ export class ReconciliationService {
            FROM orders o
           WHERE o.status = 'pending'
             AND o.created_at < now() - make_interval(mins => $1)`,
-        [Math.min(...Object.values(DEADLINE_MINUTES))],
+        [EARLIEST_DEADLINE],
       ),
     );
 
@@ -59,7 +59,7 @@ export class ReconciliationService {
     let expired = 0;
 
     for (const order of stale) {
-      const deadline = DEADLINE_MINUTES[order.payment_method] ?? 15;
+      const deadline = ORDER_DEADLINE_MINUTES[order.payment_method] ?? EARLIEST_DEADLINE;
       if (order.minutes_old < deadline) continue;
 
       // No transaction id means the buyer closed the tab before paying.

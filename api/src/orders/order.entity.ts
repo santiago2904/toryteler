@@ -14,6 +14,8 @@ export const ORDER_DEADLINE_MINUTES: Record<PaymentMethod, number> = {
   NEQUI: 20,
 };
 
+export const PAYMENT_METHODS = Object.keys(ORDER_DEADLINE_MINUTES) as PaymentMethod[];
+
 @Entity('orders')
 export class Order {
   @PrimaryGeneratedColumn('uuid') id!: string;
