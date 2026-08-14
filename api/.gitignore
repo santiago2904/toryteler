@@ -6,6 +6,7 @@
 # variables locales
 .env
 .env.local
+.env.production
 
 # pruebas y herramientas
 /coverage
