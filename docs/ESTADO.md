@@ -193,6 +193,12 @@ puede leer, el recibo sale igual sin adjunto y el texto cambia solo — no prome
 un archivo que no está — con un `log.warn`. En local, sin credenciales de
 Cloudinary, eso es lo que pasa siempre.
 
+El recibo decía «y también queda guardado en tu cuenta» y era mentira: la
+página `/contratos/:id` existía y la API ya autorizaba al comprador, pero
+`/me/orders` no devolvía el contrato, así que `/cuenta` no tenía a dónde
+enlazar. Ahora `OrderSummary` trae `contractId` — solo si está `signed_pending_payment`
+o `executed`, nunca `void` — y la cuenta muestra **Ver el contrato firmado**.
+
 **Firma del artista.** Columna `order_items.wants_signature`, un checkbox por
 pieza en `/checkout` (desmarcado por defecto: la firma se pide, no se opta por
 salir). Viaja al recibo, a `/cuenta` y sobre todo a `/studio/pedidos`, donde

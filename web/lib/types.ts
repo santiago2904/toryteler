@@ -69,6 +69,8 @@ export interface OrderSummary {
   createdAt: string;
   items: OrderItem[];
   tracking: OrderTracking | null;
+  /** Null unless the order carries a contract the buyer signed. */
+  contractId: string | null;
 }
 
 export interface EntitlementSummary {

@@ -26,6 +26,12 @@ export interface OrderSummary {
   createdAt: Date;
   items: OrderItem[];
   tracking: OrderTracking | null;
+  /**
+   * The signed contract, so the buyer has somewhere to read it back. Only sent
+   * once it has been signed: a void one describes a sale that did not happen,
+   * and offering it to open would be offering a document about nothing.
+   */
+  contractId: string | null;
 }
 
 export interface Profile {
@@ -74,6 +80,7 @@ interface OrderRow {
   created_at: Date;
   tracking_carrier: string | null;
   tracking_number: string | null;
+  contract_id: string | null;
 }
 
 interface ItemRow {
@@ -123,8 +130,18 @@ export class AccountService {
   async orders(userId: string): Promise<OrderSummary[]> {
     const orders = returnedRows<OrderRow>(
       await this.ds.query(
-        `SELECT id, reference, status, total_cop, created_at, tracking_carrier, tracking_number
-           FROM orders WHERE user_id = $1 ORDER BY created_at DESC`,
+        `SELECT o.id, o.reference, o.status, o.total_cop, o.created_at,
+                o.tracking_carrier, o.tracking_number,
+                c.id AS contract_id
+           FROM orders o
+           -- Only a contract the buyer actually signed. One still awaiting the
+           -- signature is not theirs to read back, and a void one is a sale
+           -- that did not happen.
+           LEFT JOIN contracts c
+                  ON c.order_id = o.id
+                 AND c.status IN ('signed_pending_payment', 'executed')
+          WHERE o.user_id = $1
+          ORDER BY o.created_at DESC`,
         [userId],
       ),
     );
@@ -154,6 +171,7 @@ export class AccountService {
       status: o.status,
       totalCop: o.total_cop,
       createdAt: o.created_at,
+      contractId: o.contract_id,
       items: items
         .filter((i) => i.order_id === o.id)
         .map(({ kind, slug, title, image, signed }) => ({ kind, slug, title, image, signed })),
