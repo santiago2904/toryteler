@@ -339,8 +339,10 @@ async function giveBuyerHistory(ds: DataSource, buyerId: string): Promise<void> 
   );
   if (count > 0) return; // already has a history
 
+  // Asked signed, so the studio shows what that looks like on a real order.
   const shipped = await createOrder(ds, buyerId, 2400000, {
     pieceSlug: 'boceto-portada-primer-disco',
+    signed: true,
   });
   await ds.query(
     `UPDATE orders SET tracking_carrier = 'servientrega', tracking_number = '99120384',
@@ -364,7 +366,7 @@ async function createOrder(
   ds: DataSource,
   userId: string,
   totalCop: number,
-  items: { pieceSlug?: string; dropSlug?: string },
+  items: { pieceSlug?: string; dropSlug?: string; signed?: boolean },
 ): Promise<string> {
   const [order] = await ds.query(
     `INSERT INTO orders (user_id, total_cop, payment_method, reference, status, paid_at)
@@ -375,9 +377,9 @@ async function createOrder(
 
   if (items.pieceSlug) {
     await ds.query(
-      `INSERT INTO order_items (order_id, piece_id, unit_price_cop)
-       SELECT $1, id, price_cop FROM pieces WHERE slug = $2`,
-      [order.id, items.pieceSlug],
+      `INSERT INTO order_items (order_id, piece_id, unit_price_cop, wants_signature)
+       SELECT $1, id, price_cop, $3 FROM pieces WHERE slug = $2`,
+      [order.id, items.pieceSlug, items.signed ?? false],
     );
   }
   if (items.dropSlug) {

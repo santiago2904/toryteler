@@ -147,11 +147,21 @@ export class PaymentsService {
     // Mail goes out after the transaction commits, with a dedupe key: sending
     // inside would deliver a contract for a transaction that then rolled back.
     if (notify) {
-      await this.mail.send({
-        to: notify.email,
-        ...notify.message,
-        dedupeKey: event.providerEventId,
-      });
+      try {
+        await this.mail.send({
+          to: notify.email,
+          ...notify.message,
+          dedupeKey: event.providerEventId,
+        });
+      } catch (err) {
+        // The payment is already settled and committed. Letting a mail failure
+        // out from here would answer the buyer's return from the gateway with
+        // an error over a purchase that went through — and the receipt can be
+        // resent, while a confirmation screen that says nothing worked cannot
+        // be taken back. It has to be loud, though: nobody would find out
+        // otherwise, which is exactly how a receipt goes missing for weeks.
+        this.log.error(`No se pudo enviar el correo de ${event.reference}: ${String(err)}`);
+      }
     }
   }
 
@@ -198,9 +208,13 @@ export class PaymentsService {
     const user = firstRow<{ email: string }>(
       await m.query(`SELECT email FROM users WHERE id = $1`, [userId]),
     );
-    const bought = returnedRows<{ title: string }>(
+    // The kind travels with the title because the receipt reads differently for
+    // a piece than for a video, and only the order knows which it was.
+    const bought = returnedRows<{ kind: 'piece' | 'drop'; title: string; signed: boolean }>(
       await m.query(
-        `SELECT COALESCE(p.title, d.title) AS title
+        `SELECT CASE WHEN i.piece_id IS NOT NULL THEN 'piece' ELSE 'drop' END AS kind,
+                COALESCE(p.title, d.title) AS title,
+                i.wants_signature AS signed
            FROM order_items i
            LEFT JOIN pieces p ON p.id = i.piece_id
            LEFT JOIN drops d ON d.id = i.drop_id
@@ -212,7 +226,7 @@ export class PaymentsService {
     return {
       email: user!.email,
       message: purchaseConfirmed({
-        items: bought.map((row) => row.title),
+        items: bought.map(({ kind, title, signed }) => ({ kind, title, signed })),
         accountUrl: `${process.env.PUBLIC_WEB_URL}/cuenta`,
       }),
     };

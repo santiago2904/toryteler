@@ -8,6 +8,8 @@ export interface OrderItem {
   slug: string;
   title: string;
   image: string | null;
+  /** The buyer asked for this piece signed. Always false on a video. */
+  signed: boolean;
 }
 
 export interface OrderTracking {
@@ -80,6 +82,7 @@ interface ItemRow {
   slug: string;
   title: string;
   image: string | null;
+  signed: boolean;
 }
 
 interface EntitlementRow {
@@ -135,7 +138,8 @@ export class AccountService {
                 CASE WHEN i.piece_id IS NOT NULL THEN 'piece' ELSE 'drop' END AS kind,
                 COALESCE(p.slug, d.slug)   AS slug,
                 COALESCE(p.title, d.title) AS title,
-                COALESCE(p.images ->> 0, d.poster_image) AS image
+                COALESCE(p.images ->> 0, d.poster_image) AS image,
+                i.wants_signature AS signed
            FROM order_items i
            LEFT JOIN pieces p ON p.id = i.piece_id
            LEFT JOIN drops  d ON d.id = i.drop_id
@@ -152,7 +156,7 @@ export class AccountService {
       createdAt: o.created_at,
       items: items
         .filter((i) => i.order_id === o.id)
-        .map(({ kind, slug, title, image }) => ({ kind, slug, title, image })),
+        .map(({ kind, slug, title, image, signed }) => ({ kind, slug, title, image, signed })),
       tracking: this.tracking(o),
     }));
   }

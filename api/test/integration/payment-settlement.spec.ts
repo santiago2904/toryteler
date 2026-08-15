@@ -166,6 +166,38 @@ describe('payment settlement', () => {
       expect(mail.sent).toHaveLength(1);
     });
 
+    it('stays paid when the mail provider refuses the receipt', async () => {
+      // The transaction has already committed by the time the receipt goes
+      // out. Letting that failure through would answer a buyer coming back
+      // from the gateway with an error over a purchase that went through.
+      const broken = { async send() { throw new Error('RESEND_FAILED_403'); } };
+      const service = new PaymentsService(
+        ds, gateway, new PiecesService(ds), new DropsService(ds),
+        broken as unknown as MailService,
+      );
+      const o = await pendingOrder({ piece: true });
+
+      await expect(
+        service.handleWebhook(wompiEvent(o.reference, 'tx16', 'APPROVED', 50000000)),
+      ).resolves.toBeUndefined();
+      expect(await status(o.orderId)).toBe('paid');
+    });
+
+    it('tells the buyer which pieces go signed', async () => {
+      const o = await pendingOrder({ piece: true });
+      await ds.query(`UPDATE order_items SET wants_signature = true WHERE order_id = $1`, [o.orderId]);
+
+      const receipts: { html?: string }[] = [];
+      const capturing = { async send(m: { html?: string }) { receipts.push(m); } };
+      const service = new PaymentsService(
+        ds, gateway, new PiecesService(ds), new DropsService(ds),
+        capturing as unknown as MailService,
+      );
+
+      await service.handleWebhook(wompiEvent(o.reference, 'tx17', 'APPROVED', 50000000));
+      expect(receipts[0].html).toMatch(/firmada por el artista/i);
+    });
+
     it('refunds when the seat ran out before the payment confirmed', async () => {
       const o = await pendingOrder({ drop: true, dropCapacity: 1 });
       // Someone else took the only seat in the meantime.

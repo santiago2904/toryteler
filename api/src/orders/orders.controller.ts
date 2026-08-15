@@ -32,6 +32,10 @@ class CreateOrderDto {
 
   @IsOptional() @ValidateNested() @Type(() => ShippingAddressDto)
   shippingAddress?: ShippingAddressDto;
+
+  /** Which pieces go signed. Read as a subset of `pieceSlugs`. */
+  @IsOptional() @IsArray() @IsString({ each: true }) @ArrayMaxSize(50)
+  signedPieceSlugs?: string[];
 }
 
 @Controller('orders')

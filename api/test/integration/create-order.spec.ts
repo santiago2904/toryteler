@@ -137,6 +137,49 @@ describe('create order', () => {
     expect(item.unit_price_cop).toBe(400000);
   });
 
+  describe('signature request', () => {
+    it('marks only the pieces the buyer asked to have signed', async () => {
+      const wanted = await newPiece(100000, 1);
+      const plain = await newPiece(100000, 1);
+      const order = await orders.create(await newUser(), {
+        pieceSlugs: [wanted, plain],
+        dropSlugs: [],
+        paymentMethod: 'CARD',
+        shippingAddress: address,
+        signedPieceSlugs: [wanted],
+      });
+
+      const items = await ds.query(
+        `SELECT p.slug, i.wants_signature FROM order_items i
+           JOIN pieces p ON p.id = i.piece_id WHERE i.order_id = $1`, [order.id]);
+      expect(items.find((i: { slug: string }) => i.slug === wanted).wants_signature).toBe(true);
+      expect(items.find((i: { slug: string }) => i.slug === plain).wants_signature).toBe(false);
+    });
+
+    it('asks for nothing when the buyer says nothing', async () => {
+      const order = await orders.create(await newUser(), {
+        pieceSlugs: [await newPiece()], dropSlugs: [], paymentMethod: 'CARD', shippingAddress: address,
+      });
+      const [item] = await ds.query(
+        `SELECT wants_signature FROM order_items WHERE order_id = $1`, [order.id]);
+      expect(item.wants_signature).toBe(false);
+    });
+
+    it('ignores a slug that names nothing being bought', async () => {
+      const slug = await newPiece();
+      const order = await orders.create(await newUser(), {
+        pieceSlugs: [slug],
+        dropSlugs: [],
+        paymentMethod: 'CARD',
+        shippingAddress: address,
+        signedPieceSlugs: ['una-pieza-que-no-esta-en-el-carrito'],
+      });
+      const [item] = await ds.query(
+        `SELECT wants_signature FROM order_items WHERE order_id = $1`, [order.id]);
+      expect(item.wants_signature).toBe(false);
+    });
+  });
+
   it('one unit goes to a single order under simultaneous checkouts', async () => {
     const slug = await newPiece(100000, 1);
     const buyers = await Promise.all(Array.from({ length: 8 }, () => newUser()));

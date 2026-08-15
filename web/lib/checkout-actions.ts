@@ -92,6 +92,8 @@ export interface CreateOrderInput {
   dropSlugs: string[];
   paymentMethod: 'CARD' | 'PSE' | 'NEQUI';
   shippingAddress?: { line1: string; city: string; phone: string };
+  /** Which pieces go signed by the artist. A subset of `pieceSlugs`. */
+  signedPieceSlugs?: string[];
   /**
    * Minted by the browser and reused on every retry of the same attempt. It is
    * what stops a lost response from taking the units twice.

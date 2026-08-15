@@ -11,6 +11,12 @@ export interface CreateOrderInput {
   dropSlugs: string[];
   paymentMethod: PaymentMethod;
   shippingAddress?: { line1: string; city: string; phone: string };
+  /**
+   * Which of the pieces the buyer wants signed by the artist. A subset of
+   * `pieceSlugs`; anything else in it is ignored rather than rejected, because
+   * a slug that names nothing being bought asks for nothing.
+   */
+  signedPieceSlugs?: string[];
 }
 
 export interface CreatedOrder {
@@ -97,10 +103,12 @@ export class OrdersService {
         );
         if (!order) throw new Error('ORDER_INSERT_FAILED');
 
+        const signed = new Set(input.signedPieceSlugs ?? []);
         for (const piece of pieces) {
           await m.query(
-            `INSERT INTO order_items (order_id, piece_id, unit_price_cop) VALUES ($1, $2, $3)`,
-            [order.id, piece.id, piece.price_cop],
+            `INSERT INTO order_items (order_id, piece_id, unit_price_cop, wants_signature)
+             VALUES ($1, $2, $3, $4)`,
+            [order.id, piece.id, piece.price_cop, signed.has(piece.slug)],
           );
         }
         for (const drop of drops) {
