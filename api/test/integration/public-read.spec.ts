@@ -192,6 +192,56 @@ describe('public and account reads', () => {
       );
     });
 
+    /**
+     * The receipt tells the buyer the contract is in their account. Without
+     * this the account has nowhere to link to and that sentence is a lie.
+     */
+    describe('the contract of an order', () => {
+      const orderWithContract = async (contractStatus: string): Promise<string> => {
+        const userId = await buyer();
+        const [p] = await ds.query(
+          `INSERT INTO pieces (slug, title, price_cop, status, published_at)
+           VALUES ($1, 'P', 250000, 'available', now()) RETURNING id`,
+          [`p-${Math.random().toString(36).slice(2)}`],
+        );
+        const [o] = await ds.query(
+          `INSERT INTO orders (user_id, total_cop, payment_method, reference, status)
+           VALUES ($1, 250000, 'CARD', $2, 'paid') RETURNING id`,
+          [userId, `ord_${Math.random().toString(36).slice(2)}`],
+        );
+        await ds.query(
+          // signed_at is not optional here: the table refuses a contract past
+          // 'draft' without it, which is the point of that constraint.
+          `INSERT INTO contracts (order_id, piece_id, pdf_url, document_hash, status, signed_at, evidence)
+           VALUES ($1, $2, 'contracts/x.pdf', 'abc', $3, now(), '{}'::jsonb)`,
+          [o.id, p.id, contractStatus],
+        );
+        return userId;
+      };
+
+      it('is offered once it is signed', async () => {
+        const [order] = await account.orders(await orderWithContract('executed'));
+        expect(order.contractId).not.toBeNull();
+      });
+
+      it('is not offered when it was voided', async () => {
+        // A void contract describes a sale that did not happen.
+        const [order] = await account.orders(await orderWithContract('void'));
+        expect(order.contractId).toBeNull();
+      });
+
+      it('is null on an order that never had one', async () => {
+        const userId = await buyer();
+        await ds.query(
+          `INSERT INTO orders (user_id, total_cop, payment_method, reference, status)
+           VALUES ($1, 15000, 'CARD', 'ord_solo_video', 'paid')`,
+          [userId],
+        );
+        const [order] = await account.orders(userId);
+        expect(order.contractId).toBeNull();
+      });
+    });
+
     it('turns a known carrier into a link and an unknown one into plain text', async () => {
       const userId = await buyer();
       await ds.query(

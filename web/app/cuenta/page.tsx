@@ -89,6 +89,22 @@ export default async function AccountPage() {
                     {ORDER_STATUS[order.status]} · {formatDate(order.createdAt)}
                   </span>
 
+                  {/*
+                    The receipt tells the buyer their contract is here, so it
+                    has to be here. It opens in its own tab because it is a
+                    document to keep, not a page to browse.
+                  */}
+                  {order.contractId && (
+                    <a
+                      href={`/contratos/${order.contractId}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="label"
+                    >
+                      Ver el contrato firmado
+                    </a>
+                  )}
+
                   {order.tracking && (
                     <span className="label">
                       {order.tracking.url ? (

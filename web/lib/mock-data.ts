@@ -205,6 +205,7 @@ export const ORDERS: OrderSummary[] = [
         signed: true,
       },
     ],
+    contractId: 'dddddddd-0000-0000-0000-00000000000a',
     tracking: {
       number: '99120384',
       carrier: 'Servientrega',
@@ -234,6 +235,7 @@ export const ORDERS: OrderSummary[] = [
         signed: false,
       },
     ],
+    contractId: 'dddddddd-0000-0000-0000-00000000000b',
     tracking: null,
   },
 ];
