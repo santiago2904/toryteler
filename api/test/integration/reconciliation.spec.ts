@@ -9,6 +9,7 @@ import { WompiGateway } from '../../src/payments/wompi/wompi.gateway';
 import { PiecesService } from '../../src/pieces/pieces.service';
 import { DropsService } from '../../src/drops/drops.service';
 import { MailService } from '../../src/mail/mail.service';
+import { DocumentStore } from '../../src/storage/document-store';
 
 const EVENTS_SECRET = 'test_events_secret';
 
@@ -61,6 +62,7 @@ describe('payment reconciliation', () => {
       new PiecesService(ds),
       new DropsService(ds),
       new FakeMail() as unknown as MailService,
+      { async readPdf() { return Buffer.from('%PDF'); } } as unknown as DocumentStore,
     );
   });
 

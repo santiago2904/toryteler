@@ -79,6 +79,17 @@ export default async function OrdersPage() {
                 </a>
               )}
 
+              {/*
+                The one thing on this screen that has to happen before the box
+                is closed, so it sits right above the button that closes it.
+              */}
+              {order.items.some((i) => i.signed) && (
+                <span className={styles.signature}>
+                  Firmar antes de empacar ·{' '}
+                  {order.items.filter((i) => i.signed).map((i) => i.title).join(' · ')}
+                </span>
+              )}
+
               {order.tracking ? (
                 <span className="label muted">
                   Enviado · {order.tracking.carrier} {order.tracking.number}

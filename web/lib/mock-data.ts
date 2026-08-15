@@ -202,6 +202,7 @@ export const ORDERS: OrderSummary[] = [
         slug: 'boceto-portada-primer-disco',
         title: 'Boceto de portada — primer disco',
         image: 'v1786679539/800w-KKOAYz5esa4.jpg',
+        signed: true,
       },
     ],
     tracking: {
@@ -223,12 +224,14 @@ export const ORDERS: OrderSummary[] = [
         slug: 'prueba-de-color',
         title: 'Prueba de color',
         image: 'v1786679537/3YV2PTJAVFGCVJK5IC6RJYY6EA.jpg',
+        signed: false,
       },
       {
         kind: 'drop',
         slug: 'ojitos-verdes-maqueta',
         title: 'Ojitos verdes — máster de maqueta',
         image: 'v1786679539/800w-KKOAYz5esa4.jpg',
+        signed: false,
       },
     ],
     tracking: null,

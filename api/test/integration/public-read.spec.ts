@@ -186,8 +186,8 @@ describe('public and account reads', () => {
       expect(order.totalCop).toBe(265000);
       expect(order.items).toEqual(
         expect.arrayContaining([
-          { kind: 'piece', slug: 'boceto', title: 'Boceto', image: 'cover.jpg' },
-          { kind: 'drop', slug: 'maqueta', title: 'Maqueta', image: 'poster.jpg' },
+          { kind: 'piece', slug: 'boceto', title: 'Boceto', image: 'cover.jpg', signed: false },
+          { kind: 'drop', slug: 'maqueta', title: 'Maqueta', image: 'poster.jpg', signed: false },
         ]),
       );
     });

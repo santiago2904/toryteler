@@ -135,30 +135,98 @@ export function signingCode(code: string, minutes: number): Message {
   };
 }
 
-export function purchaseConfirmed(options: { items: string[]; accountUrl: string }): Message {
-  const list = options.items
-    .map((item) => `<li style="margin:0 0 6px 0;">${item}</li>`)
+export interface PurchasedItem {
+  kind: 'piece' | 'drop';
+  title: string;
+  /** Only meaningful on a piece: the buyer asked for it signed. */
+  signed?: boolean;
+}
+
+/**
+ * The receipt, which says something different depending on what was bought.
+ *
+ * A piece and a video are opposite kinds of purchase — one arrives in a box
+ * weeks later, the other is waiting right now and burns on first play — and a
+ * message that hedges over both ("si incluye…") leaves the buyer to work out
+ * which half is theirs. So the body is assembled from what the order actually
+ * contains, and an order with both gets both, the piece first.
+ */
+export function purchaseConfirmed(options: {
+  items: PurchasedItem[];
+  accountUrl: string;
+  /**
+   * Whether the signed contract really travels with this message. It is a
+   * parameter and not an assumption because reading the document can fail, and
+   * the receipt still goes out — pointing at an attachment that is not there
+   * is worse than not mentioning one.
+   */
+  contractAttached?: boolean;
+}): Message {
+  const pieces = options.items.filter((i) => i.kind === 'piece');
+  const drops = options.items.filter((i) => i.kind === 'drop');
+  const signed = pieces.filter((i) => i.signed);
+
+  const list = (items: PurchasedItem[]): string =>
+    items
+      .map(
+        (item) =>
+          `<li style="margin:0 0 6px 0;">${item.title}${
+            item.signed ? `<span style="color:${MUTED};"> · firmada por el artista</span>` : ''
+          }</li>`,
+      )
+      .join('\n');
+
+  const section = (heading: string, items: PurchasedItem[], note: string): string => `
+<div style="margin:0 0 24px 0;">
+  <div style="font:500 11px/1 -apple-system,Helvetica,Arial,sans-serif;letter-spacing:0.18em;text-transform:uppercase;color:${MUTED};margin:0 0 12px 0;">
+    ${heading}
+  </div>
+  <ul style="margin:0 0 12px 0;padding-left:20px;">${list(items)}</ul>
+  <p style="margin:0;color:${MUTED};font-size:13px;">${note}</p>
+</div>`;
+
+  const contractNote = options.contractAttached
+    ? 'El contrato firmado va adjunto a este correo y también queda guardado en tu cuenta.'
+    : 'El contrato firmado queda guardado en tu cuenta.';
+  const shippingNote = signed.length
+    ? 'Toryteler la firma a mano antes de empacarla, así que sale unos días después, y te escribimos con la guía cuando salga.'
+    : 'Te escribimos con la guía cuando salga el envío.';
+  const pieceNote = `${contractNote} ${shippingNote}`;
+
+  const dropNote =
+    'Se ve una sola vez: la ventana empieza cuando le des play, no ahora. Búscalo en tu cuenta cuando tengas el rato.';
+
+  const body = [
+    `<p style="margin:0 0 24px 0;">Recibimos tu pago. Esto es lo que compraste:</p>`,
+    pieces.length ? section(pieces.length > 1 ? 'Piezas' : 'La pieza', pieces, pieceNote) : '',
+    drops.length ? section(drops.length > 1 ? 'Videos' : 'El video', drops, dropNote) : '',
+    button(options.accountUrl, drops.length && !pieces.length ? 'Ver mi video' : 'Ver mi compra'),
+  ]
+    .filter(Boolean)
     .join('\n');
 
+  // The subject is the one line that shows up before anything is opened, so it
+  // says which of the two arrived rather than repeating the same sentence.
+  const subject = !pieces.length
+    ? drops.length > 1
+      ? 'Tus videos ya están en tu cuenta'
+      : 'Tu video ya está en tu cuenta'
+    : 'Tu compra quedó confirmada';
+
   return {
-    subject: 'Tu compra quedó confirmada',
-    html: frame({
-      preheader: 'Recibimos el pago. Esto es lo que compraste.',
-      body: `
-<p style="margin:0 0 16px 0;">Recibimos tu pago. Esto es lo que compraste:</p>
-<ul style="margin:0 0 20px 0;padding-left:20px;">${list}</ul>
-<p style="margin:0 0 16px 0;color:${MUTED};font-size:13px;">
-  Si incluye una pieza física, el contrato firmado queda guardado en tu cuenta y te
-  escribimos cuando salga el envío. Si incluye un video, recuerda que se ve una sola vez:
-  al darle play empieza tu ventana.
-</p>
-${button(options.accountUrl, 'Ver mi compra')}`,
-    }),
+    subject,
+    html: frame({ preheader: 'Recibimos el pago. Esto es lo que compraste.', body }),
     text: [
       'Recibimos tu pago. Esto es lo que compraste:',
-      ...options.items.map((item) => `- ${item}`),
+      ...(pieces.length
+        ? [
+            '',
+            ...pieces.map((i) => `- ${i.title}${i.signed ? ' (firmada por el artista)' : ''}`),
+            pieceNote,
+          ]
+        : []),
+      ...(drops.length ? ['', ...drops.map((i) => `- ${i.title}`), dropNote] : []),
       '',
-      'Un video se ve una sola vez: al darle play empieza tu ventana.',
       options.accountUrl,
     ].join('\n'),
   };

@@ -92,6 +92,13 @@
   min-width: 0;
 }
 
+/* An instruction, not a status: it has to survive a screen full of grey text. */
+.signature {
+  border-left: 2px solid var(--ink);
+  padding-left: var(--unit);
+  font-size: 0.875rem;
+}
+
 .shipping {
   display: grid;
   gap: calc(var(--unit) * 0.5);

@@ -55,7 +55,8 @@
   border: 0;
 }
 
-.radio {
+.radio,
+.check {
   display: flex;
   align-items: center;
   gap: var(--unit);

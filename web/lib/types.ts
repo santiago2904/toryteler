@@ -46,6 +46,8 @@ export interface OrderItem {
   slug: string;
   title: string;
   image: string | null;
+  /** The buyer asked for this piece signed. Always false on a video. */
+  signed: boolean;
 }
 
 /**

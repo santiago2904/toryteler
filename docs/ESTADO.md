@@ -166,6 +166,44 @@ deja de usar `lib/mock-data.ts` y pasa a ser la tienda real.
 
 ---
 
+## Correo de compra y firma del artista
+
+Rama `feature/correo-compra-y-firma`.
+
+**El recibo dice cosas distintas según lo que se compró.** Antes era un párrafo
+que decía «si incluye una pieza… si incluye un video…» y dejaba al comprador
+averiguar cuál mitad era la suya. Ahora `purchaseConfirmed()` arma el cuerpo con
+lo que el pedido trae de verdad: la pieza habla de contrato y envío, el video
+avisa que la ventana empieza al darle play y no al comprar, y un pedido con
+ambos lleva las dos secciones, la pieza primero. El asunto también cambia —
+«Tu video ya está en tu cuenta» cuando no hay nada que enviar.
+
+**El correo ya no puede tumbar la confirmación de un pago.** Se envía después
+del commit, así que un rechazo de Resend dejaba el pedido pagado y la respuesta
+en error, sobre una compra que sí ocurrió. Ahora va en `try/catch` con
+`log.error`: el recibo se puede reenviar, la pantalla de confirmación no se
+puede desdecir. Si un recibo no llega, **el motivo está en los logs de la API**.
+
+**El contrato firmado va adjunto al recibo.** Se lee de Cloudinary en el momento
+del envío —`readPdf()` firma un enlace de cinco minutos que nunca llega a un
+navegador— y viaja como `contrato-ord_abc123.pdf`. Se lee **después** del commit,
+nunca dentro: buscar un archivo por red mientras se sostiene el bloqueo del
+pedido es como una liquidación termina esperando la caída de otro. Si no se
+puede leer, el recibo sale igual sin adjunto y el texto cambia solo — no promete
+un archivo que no está — con un `log.warn`. En local, sin credenciales de
+Cloudinary, eso es lo que pasa siempre.
+
+**Firma del artista.** Columna `order_items.wants_signature`, un checkbox por
+pieza en `/checkout` (desmarcado por defecto: la firma se pide, no se opta por
+salir). Viaja al recibo, a `/cuenta` y sobre todo a `/studio/pedidos`, donde
+sale como «Firmar antes de empacar» justo encima del botón de despacho — si el
+artista no lo ve ahí, la firma no ocurre.
+
+Queda **fuera del contrato** a propósito: el autógrafo es un detalle de entrega,
+y los bytes del PDF tienen que reproducirse para que su hash verifique.
+
+---
+
 ## Lo siguiente que hay que hacer
 
 1. **Verificar un dominio en Resend.** Hoy los correos salen desde

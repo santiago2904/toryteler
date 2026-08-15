@@ -19,6 +19,8 @@ export default function CheckoutPage() {
   const [lines, setLines] = useState<CartLine[] | null>(null);
   const [method, setMethod] = useState<'CARD' | 'PSE' | 'NEQUI'>('CARD');
   const [address, setAddress] = useState({ line1: '', city: '', phone: '' });
+  /** Slugs of the pieces the buyer wants signed. Empty is the default. */
+  const [signed, setSigned] = useState<string[]>([]);
   const [working, setWorking] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -67,6 +69,7 @@ export default function CheckoutPage() {
       dropSlugs: drops.map((l) => l.slug),
       paymentMethod: method,
       shippingAddress: needsAddress ? address : undefined,
+      signedPieceSlugs: signed,
       idempotencyKey,
     });
 
@@ -126,6 +129,37 @@ export default function CheckoutPage() {
             </label>
           ))}
         </fieldset>
+
+        {/*
+          One checkbox per piece rather than one for the order: an order can
+          carry two pieces and only one of them be wanted signed. Unchecked by
+          default — a signature is something asked for, not something opted out
+          of, and the artist has to be able to trust the flag.
+        */}
+        {pieces.length > 0 && (
+          <fieldset className={styles.fieldset}>
+            <legend className="label muted">Firma del artista</legend>
+            {pieces.map((piece) => (
+              <label key={piece.slug} className={styles.check}>
+                <input
+                  type="checkbox"
+                  checked={signed.includes(piece.slug)}
+                  onChange={(e) =>
+                    setSigned((current) =>
+                      e.target.checked
+                        ? [...current, piece.slug]
+                        : current.filter((slug) => slug !== piece.slug),
+                    )
+                  }
+                />
+                Quiero «{piece.title}» firmada a mano
+              </label>
+            ))}
+            <p className="muted">
+              Sin costo. Firmarla toma unos días más antes de que salga el envío.
+            </p>
+          </fieldset>
+        )}
 
         {needsAddress && (
           <fieldset className={styles.fieldset}>
