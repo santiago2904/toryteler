@@ -2,10 +2,16 @@ import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Message } from './templates';
 
+export interface Attachment {
+  filename: string;
+  content: Buffer;
+}
+
 export interface Outgoing extends Message {
   to: string;
   /** What keeps a retried webhook from sending the same receipt three times. */
   dedupeKey?: string;
+  attachments?: Attachment[];
 }
 
 export interface Mailer {
@@ -32,7 +38,10 @@ export class MailService implements Mailer {
     // goes to the console — magic links and signing codes only travel by
     // mail, so without it the flow cannot be walked by hand.
     if (key.endsWith('xxx')) {
-      this.log.log(`[correo simulado] ${message.to} · ${message.subject}\n${message.text}`);
+      const files = message.attachments?.length
+        ? `\n[adjuntos] ${message.attachments.map((a) => a.filename).join(', ')}`
+        : '';
+      this.log.log(`[correo simulado] ${message.to} · ${message.subject}${files}\n${message.text}`);
       if (message.dedupeKey) this.sent.add(message.dedupeKey);
       return;
     }
@@ -57,6 +66,17 @@ export class MailService implements Mailer {
         // mailbox included — because nobody has to prove they own the place
         // replies go to, only the place mail comes from.
         ...(replyTo ? { reply_to: replyTo } : {}),
+        // Resend takes the bytes base64-encoded, under `content`. A Buffer
+        // serialises to `{"type":"Buffer","data":[…]}` through JSON.stringify,
+        // which it accepts and then delivers as an unreadable file.
+        ...(message.attachments?.length
+          ? {
+              attachments: message.attachments.map((a) => ({
+                filename: a.filename,
+                content: a.content.toString('base64'),
+              })),
+            }
+          : {}),
       }),
     });
 

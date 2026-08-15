@@ -184,6 +184,15 @@ en error, sobre una compra que sí ocurrió. Ahora va en `try/catch` con
 `log.error`: el recibo se puede reenviar, la pantalla de confirmación no se
 puede desdecir. Si un recibo no llega, **el motivo está en los logs de la API**.
 
+**El contrato firmado va adjunto al recibo.** Se lee de Cloudinary en el momento
+del envío —`readPdf()` firma un enlace de cinco minutos que nunca llega a un
+navegador— y viaja como `contrato-ord_abc123.pdf`. Se lee **después** del commit,
+nunca dentro: buscar un archivo por red mientras se sostiene el bloqueo del
+pedido es como una liquidación termina esperando la caída de otro. Si no se
+puede leer, el recibo sale igual sin adjunto y el texto cambia solo — no promete
+un archivo que no está — con un `log.warn`. En local, sin credenciales de
+Cloudinary, eso es lo que pasa siempre.
+
 **Firma del artista.** Columna `order_items.wants_signature`, un checkbox por
 pieza en `/checkout` (desmarcado por defecto: la firma se pide, no se opta por
 salir). Viaja al recibo, a `/cuenta` y sobre todo a `/studio/pedidos`, donde

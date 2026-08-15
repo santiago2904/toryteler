@@ -3,15 +3,34 @@ import { InjectDataSource } from '@nestjs/typeorm';
 import { DataSource, EntityManager } from 'typeorm';
 import { DropsService } from '../drops/drops.service';
 import { PiecesService } from '../pieces/pieces.service';
-import { MailService } from '../mail/mail.service';
-import { Message, purchaseConfirmed, refunded } from '../mail/templates';
+import { MailService, Attachment } from '../mail/mail.service';
+import { Message, PurchasedItem, purchaseConfirmed, refunded } from '../mail/templates';
+import { DocumentStore } from '../storage/document-store';
 import { affectedRows, firstRow, returnedRows } from '../database/rows';
 import { PaymentEvent, PaymentGateway } from './payment-gateway';
 
-interface Notification {
-  email: string;
-  message: Message;
-}
+/**
+ * What has to be told to the buyer once the transaction commits.
+ *
+ * A receipt is not a finished message yet: it says the contract is attached,
+ * and whether it really is depends on reading a file that can fail. So it
+ * travels as its parts and is written once the outcome is known. A refund has
+ * nothing pending and travels written.
+ */
+type Notification =
+  | {
+      kind: 'receipt';
+      email: string;
+      items: PurchasedItem[];
+      /**
+       * Where the signed contract lives, when the order has one. It is read
+       * after the transaction commits, never inside it: fetching a file over
+       * the network while holding a lock on the order is how a settlement ends
+       * up waiting on somebody else's outage.
+       */
+      contract: string | null;
+    }
+  | { kind: 'message'; email: string; message: Message };
 
 @Injectable()
 export class PaymentsService {
@@ -23,6 +42,7 @@ export class PaymentsService {
     private readonly pieces: PiecesService,
     private readonly drops: DropsService,
     private readonly mail: MailService,
+    private readonly documents: DocumentStore,
   ) {}
 
   /** Where the buyer is sent to pay. */
@@ -148,9 +168,24 @@ export class PaymentsService {
     // inside would deliver a contract for a transaction that then rolled back.
     if (notify) {
       try {
+        const attachments =
+          notify.kind === 'receipt' && notify.contract
+            ? await this.attachContract(notify.contract, event.reference)
+            : [];
+
+        const message =
+          notify.kind === 'receipt'
+            ? purchaseConfirmed({
+                items: notify.items,
+                accountUrl: `${process.env.PUBLIC_WEB_URL}/cuenta`,
+                contractAttached: attachments.length > 0,
+              })
+            : notify.message;
+
         await this.mail.send({
           to: notify.email,
-          ...notify.message,
+          ...message,
+          attachments,
           dedupeKey: event.providerEventId,
         });
       } catch (err) {
@@ -162,6 +197,29 @@ export class PaymentsService {
         // otherwise, which is exactly how a receipt goes missing for weeks.
         this.log.error(`No se pudo enviar el correo de ${event.reference}: ${String(err)}`);
       }
+    }
+  }
+
+  /**
+   * The signed contract, ready to travel with the receipt.
+   *
+   * Returns nothing rather than throwing when the document cannot be read: the
+   * buyer's receipt matters more than the attachment, the contract is in their
+   * account either way, and the message adapts to say so. What must not happen
+   * is silence — a receipt that quietly stops carrying the contract would go
+   * unnoticed for as long as nobody complains.
+   */
+  private async attachContract(reference: string, orderReference: string): Promise<Attachment[]> {
+    try {
+      return [
+        {
+          filename: `contrato-${orderReference}.pdf`,
+          content: await this.documents.readPdf(reference),
+        },
+      ];
+    } catch (err) {
+      this.log.warn(`Contrato no adjuntado en ${orderReference}: ${String(err)}`);
+      return [];
     }
   }
 
@@ -223,12 +281,20 @@ export class PaymentsService {
       ),
     );
 
+    // Only an executed contract travels: one still awaiting payment, or void,
+    // describes a sale that did not happen.
+    const contract = firstRow<{ pdf_url: string }>(
+      await m.query(
+        `SELECT pdf_url FROM contracts WHERE order_id = $1 AND status = 'executed'`,
+        [orderId],
+      ),
+    );
+
     return {
+      kind: 'receipt',
       email: user!.email,
-      message: purchaseConfirmed({
-        items: bought.map(({ kind, title, signed }) => ({ kind, title, signed })),
-        accountUrl: `${process.env.PUBLIC_WEB_URL}/cuenta`,
-      }),
+      items: bought.map(({ kind, title, signed }) => ({ kind, title, signed })),
+      contract: contract?.pdf_url ?? null,
     };
   }
 
@@ -277,6 +343,7 @@ export class PaymentsService {
       await m.query(`SELECT email FROM users WHERE id = $1`, [userId]),
     );
     return {
+      kind: 'message',
       email: user!.email,
       message: refunded(reason, `${process.env.PUBLIC_WEB_URL}/cuenta`),
     };

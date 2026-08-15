@@ -151,7 +151,17 @@ export interface PurchasedItem {
  * which half is theirs. So the body is assembled from what the order actually
  * contains, and an order with both gets both, the piece first.
  */
-export function purchaseConfirmed(options: { items: PurchasedItem[]; accountUrl: string }): Message {
+export function purchaseConfirmed(options: {
+  items: PurchasedItem[];
+  accountUrl: string;
+  /**
+   * Whether the signed contract really travels with this message. It is a
+   * parameter and not an assumption because reading the document can fail, and
+   * the receipt still goes out — pointing at an attachment that is not there
+   * is worse than not mentioning one.
+   */
+  contractAttached?: boolean;
+}): Message {
   const pieces = options.items.filter((i) => i.kind === 'piece');
   const drops = options.items.filter((i) => i.kind === 'drop');
   const signed = pieces.filter((i) => i.signed);
@@ -175,9 +185,13 @@ export function purchaseConfirmed(options: { items: PurchasedItem[]; accountUrl:
   <p style="margin:0;color:${MUTED};font-size:13px;">${note}</p>
 </div>`;
 
-  const pieceNote = signed.length
-    ? 'El contrato firmado queda guardado en tu cuenta. Toryteler la firma a mano antes de empacarla, así que sale unos días después, y te escribimos con la guía cuando salga.'
-    : 'El contrato firmado queda guardado en tu cuenta. Te escribimos con la guía cuando salga el envío.';
+  const contractNote = options.contractAttached
+    ? 'El contrato firmado va adjunto a este correo y también queda guardado en tu cuenta.'
+    : 'El contrato firmado queda guardado en tu cuenta.';
+  const shippingNote = signed.length
+    ? 'Toryteler la firma a mano antes de empacarla, así que sale unos días después, y te escribimos con la guía cuando salga.'
+    : 'Te escribimos con la guía cuando salga el envío.';
+  const pieceNote = `${contractNote} ${shippingNote}`;
 
   const dropNote =
     'Se ve una sola vez: la ventana empieza cuando le des play, no ahora. Búscalo en tu cuenta cuando tengas el rato.';

@@ -7,6 +7,7 @@ import { WompiGateway } from '../../src/payments/wompi/wompi.gateway';
 import { PiecesService } from '../../src/pieces/pieces.service';
 import { DropsService } from '../../src/drops/drops.service';
 import { MailService } from '../../src/mail/mail.service';
+import { DocumentStore } from '../../src/storage/document-store';
 
 const EVENTS_SECRET = 'test_events_secret';
 const INTEGRITY_SECRET = 'test_integrity_secret';
@@ -23,9 +24,22 @@ const CONFIG = {
     } as Record<string, string>)[k],
 } as ConfigService;
 
+/** Stands in for Cloudinary: the bytes of a contract that was really stored. */
+class FakeDocs {
+  readable = true;
+  async readPdf(): Promise<Buffer> {
+    if (!this.readable) throw new Error('DOCUMENT_FETCH_FAILED_404');
+    return Buffer.from('%PDF-1.7 contrato firmado');
+  }
+}
+
 class FakeMail {
   sent: string[] = [];
-  async send(message: { dedupeKey?: string }) { this.sent.push(message.dedupeKey ?? 'sin-clave'); }
+  last: { html?: string; attachments?: { filename: string }[] } | null = null;
+  async send(message: { dedupeKey?: string; html?: string; attachments?: { filename: string }[] }) {
+    this.sent.push(message.dedupeKey ?? 'sin-clave');
+    this.last = message;
+  }
 }
 
 /** Builds a webhook exactly as Wompi does, uppercase checksum included. */
@@ -51,17 +65,25 @@ describe('payment settlement', () => {
   let payments: PaymentsService;
   let gateway: WompiGateway;
   let mail: FakeMail;
+  let docs: FakeDocs;
 
   beforeAll(async () => {
     ds = await testDb();
     mail = new FakeMail();
+    docs = new FakeDocs();
     gateway = new WompiGateway(CONFIG);
     payments = new PaymentsService(
       ds, gateway, new PiecesService(ds), new DropsService(ds), mail as unknown as MailService,
+      docs as unknown as DocumentStore,
     );
   });
 
-  beforeEach(async () => { await truncateAll(ds); mail.sent = []; });
+  beforeEach(async () => {
+    await truncateAll(ds);
+    mail.sent = [];
+    mail.last = null;
+    docs.readable = true;
+  });
   afterAll(async () => { await ds.destroy(); });
 
   async function pendingOrder(opts: { piece?: boolean; drop?: boolean; dropCapacity?: number } = {}) {
@@ -166,6 +188,37 @@ describe('payment settlement', () => {
       expect(mail.sent).toHaveLength(1);
     });
 
+    describe('the signed contract travels with the receipt', () => {
+      it('goes attached, named after the order', async () => {
+        const o = await pendingOrder({ piece: true });
+        await payments.handleWebhook(wompiEvent(o.reference, 'tx40', 'APPROVED', 50000000));
+
+        expect(mail.last?.attachments).toHaveLength(1);
+        expect(mail.last?.attachments?.[0].filename).toBe(`contrato-${o.reference}.pdf`);
+        expect(mail.last?.html).toMatch(/va adjunto a este correo/i);
+      });
+
+      it('still sends the receipt when the document cannot be read', async () => {
+        // Losing the attachment must not cost the buyer the confirmation, and
+        // the message has to stop claiming an attachment that is not there.
+        docs.readable = false;
+        const o = await pendingOrder({ piece: true });
+        await payments.handleWebhook(wompiEvent(o.reference, 'tx41', 'APPROVED', 50000000));
+
+        expect(await status(o.orderId)).toBe('paid');
+        expect(mail.sent).toHaveLength(1);
+        expect(mail.last?.attachments).toHaveLength(0);
+        expect(mail.last?.html).not.toMatch(/adjunto/i);
+        expect(mail.last?.html).toMatch(/queda guardado en tu cuenta/i);
+      });
+
+      it('attaches nothing when the order is only a video', async () => {
+        const o = await pendingOrder({ drop: true });
+        await payments.handleWebhook(wompiEvent(o.reference, 'tx42', 'APPROVED', 2500000));
+        expect(mail.last?.attachments).toHaveLength(0);
+      });
+    });
+
     it('stays paid when the mail provider refuses the receipt', async () => {
       // The transaction has already committed by the time the receipt goes
       // out. Letting that failure through would answer a buyer coming back
@@ -173,7 +226,7 @@ describe('payment settlement', () => {
       const broken = { async send() { throw new Error('RESEND_FAILED_403'); } };
       const service = new PaymentsService(
         ds, gateway, new PiecesService(ds), new DropsService(ds),
-        broken as unknown as MailService,
+        broken as unknown as MailService, docs as unknown as DocumentStore,
       );
       const o = await pendingOrder({ piece: true });
 
@@ -191,7 +244,7 @@ describe('payment settlement', () => {
       const capturing = { async send(m: { html?: string }) { receipts.push(m); } };
       const service = new PaymentsService(
         ds, gateway, new PiecesService(ds), new DropsService(ds),
-        capturing as unknown as MailService,
+        capturing as unknown as MailService, docs as unknown as DocumentStore,
       );
 
       await service.handleWebhook(wompiEvent(o.reference, 'tx17', 'APPROVED', 50000000));
@@ -244,6 +297,7 @@ describe('payment settlement', () => {
       } as unknown as WompiGateway;
       return new PaymentsService(
         ds, remote, new PiecesService(ds), new DropsService(ds), mail as unknown as MailService,
+        docs as unknown as DocumentStore,
       );
     }
 
