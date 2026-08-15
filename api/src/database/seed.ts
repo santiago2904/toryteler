@@ -428,10 +428,20 @@ async function grant(
 }
 
 async function main(): Promise<void> {
-  if (process.env.NODE_ENV === 'production') {
+  const forced = process.argv.includes('--force');
+
+  // Producción sigue rechazándolo por defecto, y --force es la puerta: hay que
+  // escribirlo, así que nadie lo hace sin querer desde un despliegue.
+  if (process.env.NODE_ENV === 'production' && !forced) {
     throw new Error(
-      'SEED_REFUSED_IN_PRODUCTION: los datos de ejemplo usan portadas de discos reales',
+      'SEED_REFUSED_IN_PRODUCTION: los datos de ejemplo usan portadas de discos ' +
+        'reales atribuidas a un artista que no existe. Si aun así los quieres ' +
+        'para probar, repite el comando con --force.',
     );
+  }
+  if (process.env.NODE_ENV === 'production') {
+    console.log('\n  ⚠  Sembrando en PRODUCCIÓN con portadas de discos reales.');
+    console.log('     Bórralas antes de que la tienda sea pública.\n');
   }
 
   const fresh = process.argv.includes('--fresh');
