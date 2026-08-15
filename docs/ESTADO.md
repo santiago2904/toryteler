@@ -117,13 +117,58 @@ montado**, así que ese camino no funciona todavía.
 
 ---
 
+## Despliegue
+
+La API vive en **Railway** (*Root Directory* = `api`) con un Postgres del mismo
+proyecto. El front, en Vercel (*Root Directory* = `web`).
+
+Variables: `api/.env.production` en local tiene el bloque listo para pegar en el
+editor Raw de Railway. Está en `.gitignore`.
+
+Cuatro cosas que costaron un ciclo de build cada una:
+
+- **`DATABASE_URL` se referencia, no se copia:** `${{Postgres.DATABASE_URL}}`.
+  Pegar la URL local hace que el contenedor busque Postgres en su propio
+  `127.0.0.1` y el error, `ECONNREFUSED`, no lo insinúa.
+- **`DATABASE_SSL=true`.** Un Postgres gestionado presenta un certificado que el
+  contenedor no puede verificar; rechazarlo es no conectar nunca.
+- **Node 22.** Nixpacks elegía 18 y TypeORM 1.1 exige 22.13. Se fija en
+  `engines` y `.nvmrc`.
+- **`@nestjs/cli`, `typescript` y los `@types` están en `dependencies`.** Railway
+  construye con `NODE_ENV=production`, así que `npm ci` omite las
+  devDependencies y el build falla con `nest: not found` y luego con seis
+  errores de tipos. Para reproducirlo antes de subir: copiar el proyecto a otra
+  carpeta, `NODE_ENV=production npm ci` y `npx nest build`.
+
+Las migraciones corren solas al arrancar (`start:prod`).
+
+**El seed no corre en producción salvo con `--force`.** Desde `api/`, con la URL
+pública de la base —la interna, `*.railway.internal`, solo resuelve dentro de
+Railway—:
+
+```bash
+DATABASE_URL="<DATABASE_PUBLIC_URL, la de proxy.rlwy.net>" DATABASE_SSL=true \
+  npm run seed -- --force
+```
+
+Nunca `seed:fresh` en producción: vacía las tablas, cuenta de artista incluida.
+
+Si no se siembra, hay que crear el artista a mano; no hay forma de darse ese rol
+desde la interfaz, y así debe seguir:
+
+```sql
+INSERT INTO users (email, is_admin) VALUES ('tory@toryteler.co', true);
+```
+
+En Vercel: `API_URL` apuntando a Railway y `NEXT_PUBLIC_CLOUDINARY_CLOUD`, y
+**redesplegar** — Next las lee al compilar. Con `API_URL` definida el despliegue
+deja de usar `lib/mock-data.ts` y pasa a ser la tienda real.
+
+---
+
 ## Lo siguiente que hay que hacer
 
-1. **Conectar el `/studio`** a los endpoints de `/admin`, incluida la subida de
-   imágenes y video a Cloudinary.
-2. **Desplegar la API** y crear el usuario artista (`UPDATE users SET is_admin
-   = true`), sin el cual `/studio` no tiene a nadie que lo abra.
-3. **Verificar un dominio en Resend.** Hoy los correos salen desde
+1. **Verificar un dominio en Resend.** Hoy los correos salen desde
    `onboarding@resend.dev`, que solo entrega a la dirección dueña de la cuenta:
    ningún comprador recibiría su enlace de acceso. Es lo único que falta para
    poder vender.
