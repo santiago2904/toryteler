@@ -143,3 +143,9 @@ export interface AdminOrder {
   items: OrderItem[];
   needsShipping: boolean;
 }
+
+/** Someone who can open the studio. */
+export interface TeamMember {
+  id: string;
+  email: string;
+}

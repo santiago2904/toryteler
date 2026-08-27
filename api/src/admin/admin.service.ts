@@ -1,7 +1,15 @@
-import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException, ConflictException, Injectable, Logger, NotFoundException,
+} from '@nestjs/common';
 import { InjectDataSource } from '@nestjs/typeorm';
 import { DataSource } from 'typeorm';
+import { AuthService } from '../auth/auth.service';
 import { affectedRows, firstRow, returnedRows } from '../database/rows';
+
+export interface TeamMember {
+  id: string;
+  email: string;
+}
 
 /** The catalogue as the artist sees it, drafts included. */
 export interface AdminPiece {
@@ -95,7 +103,12 @@ const DROP_FIELDS: Record<string, string> = {
 
 @Injectable()
 export class AdminService {
-  constructor(@InjectDataSource() private readonly ds: DataSource) {}
+  private readonly log = new Logger(AdminService.name);
+
+  constructor(
+    @InjectDataSource() private readonly ds: DataSource,
+    private readonly auth: AuthService,
+  ) {}
 
   /**
    * Creates a piece as a draft. The artist never types an address: it is built
@@ -398,6 +411,57 @@ export class AdminService {
         [limit],
       ),
     );
+  }
+
+  /** Who can open the studio, right now. */
+  async listTeam(): Promise<TeamMember[]> {
+    return returnedRows<TeamMember>(
+      await this.ds.query(`SELECT id, email FROM users WHERE is_admin ORDER BY email`),
+    );
+  }
+
+  /**
+   * Gives someone the artist's role. The same `upsertUserByEmail` a magic
+   * link uses — there is still no "register" step, admin or otherwise.
+   *
+   * A magic link goes out right away: the point of adding someone is that
+   * they can get in, not that they have to separately ask for a way in. A
+   * bounced invite does not undo the promotion — it already happened — so a
+   * failure here only gets logged, the same way a receipt that fails to send
+   * does not undo a payment.
+   */
+  async addToTeam(email: string): Promise<TeamMember> {
+    const userId = await this.auth.upsertUserByEmail(email);
+    await this.ds.query(`UPDATE users SET is_admin = true WHERE id = $1`, [userId]);
+
+    try {
+      await this.auth.requestMagicLink(email);
+    } catch (err) {
+      this.log.warn(`No se pudo enviar el enlace de acceso a ${email}: ${String(err)}`);
+    }
+
+    return { id: userId, email };
+  }
+
+  /**
+   * Takes it away. Two things it must never do: let someone remove their own
+   * access by mistake — the only way back in then would be the SQL escape
+   * hatch this screen exists to avoid — and empty the studio of everyone who
+   * could open it. The admin list is locked for the length of the check so
+   * two removals racing each other cannot both leave zero.
+   */
+  async removeFromTeam(id: string, requesterId: string): Promise<void> {
+    if (id === requesterId) throw new BadRequestException('CANNOT_REMOVE_SELF');
+
+    await this.ds.transaction(async (m) => {
+      const admins = returnedRows<{ id: string }>(
+        await m.query(`SELECT id FROM users WHERE is_admin FOR UPDATE`),
+      );
+      if (!admins.some((a) => a.id === id)) throw new NotFoundException('NOT_ADMIN');
+      if (admins.length <= 1) throw new BadRequestException('LAST_ADMIN');
+
+      await m.query(`UPDATE users SET is_admin = false WHERE id = $1`, [id]);
+    });
   }
 
   private async setListed(
