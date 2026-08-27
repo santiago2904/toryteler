@@ -180,6 +180,66 @@ describe('create order', () => {
     });
   });
 
+  describe('buying a video already owned', () => {
+    /** An entitlement as if it had come from a real, settled order. */
+    const grantEntitlement = async (
+      userId: string,
+      dropId: string,
+      window: { firstPlayedAt: Date | null; expiresAt: Date | null },
+    ) => {
+      const [o] = await ds.query(
+        `INSERT INTO orders (user_id, total_cop, payment_method, reference)
+         VALUES ($1, 25000, 'CARD', $2) RETURNING id`,
+        [userId, `ord_${Math.random().toString(36).slice(2)}`],
+      );
+      await ds.query(
+        `INSERT INTO entitlements (user_id, drop_id, order_id, first_played_at, expires_at)
+         VALUES ($1, $2, $3, $4, $5)`,
+        [userId, dropId, o.id, window.firstPlayedAt, window.expiresAt],
+      );
+    };
+
+    it('refuses a second order while the window is still open', async () => {
+      const userId = await newUser();
+      const slug = await newDrop();
+      const dropId = (await ds.query(`SELECT id FROM drops WHERE slug = $1`, [slug]))[0].id;
+      await grantEntitlement(userId, dropId, {
+        firstPlayedAt: new Date(),
+        expiresAt: new Date(Date.now() + 3_600_000),
+      });
+
+      await expect(orders.create(userId, {
+        pieceSlugs: [], dropSlugs: [slug], paymentMethod: 'CARD',
+      })).rejects.toThrow(/ALREADY_OWNED/);
+    });
+
+    it('refuses a second order before the first has ever been opened', async () => {
+      const userId = await newUser();
+      const slug = await newDrop();
+      const dropId = (await ds.query(`SELECT id FROM drops WHERE slug = $1`, [slug]))[0].id;
+      await grantEntitlement(userId, dropId, { firstPlayedAt: null, expiresAt: null });
+
+      await expect(orders.create(userId, {
+        pieceSlugs: [], dropSlugs: [slug], paymentMethod: 'CARD',
+      })).rejects.toThrow(/ALREADY_OWNED/);
+    });
+
+    it('allows a second order once the window has closed', async () => {
+      const userId = await newUser();
+      const slug = await newDrop();
+      const dropId = (await ds.query(`SELECT id FROM drops WHERE slug = $1`, [slug]))[0].id;
+      await grantEntitlement(userId, dropId, {
+        firstPlayedAt: new Date(Date.now() - 90_000_000),
+        expiresAt: new Date(Date.now() - 3_600_000),
+      });
+
+      const order = await orders.create(userId, {
+        pieceSlugs: [], dropSlugs: [slug], paymentMethod: 'CARD',
+      });
+      expect(order.totalCop).toBe(25000);
+    });
+  });
+
   it('one unit goes to a single order under simultaneous checkouts', async () => {
     const slug = await newPiece(100000, 1);
     const buyers = await Promise.all(Array.from({ length: 8 }, () => newUser()));

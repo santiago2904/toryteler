@@ -58,11 +58,15 @@ describe('drop capacity', () => {
     expect(await svc.seatsLeft(dropId)).toBeNull();
   });
 
-  it('the same person does not get two seats for the same video', async () => {
+  it('retrying the same order\'s settlement grants nothing extra', async () => {
     const dropId = await newDrop(50);
     const b = await newBuyer();
-    await grant(dropId, b);
-    await expect(grant(dropId, b)).rejects.toThrow(/ALREADY_OWNED/);
+    const first = await grant(dropId, b);
+    const second = await grant(dropId, b); // same order, as a webhook retry would be
+    expect(second).toBe(first);
+    const [{ count }] = await ds.query(
+      `SELECT count(*)::int AS count FROM entitlements WHERE drop_id = $1`, [dropId]);
+    expect(count).toBe(1);
   });
 
   it('rejects once full', async () => {

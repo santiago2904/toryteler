@@ -253,11 +253,17 @@ describe('payment settlement', () => {
 
     it('refunds when the seat ran out before the payment confirmed', async () => {
       const o = await pendingOrder({ drop: true, dropCapacity: 1 });
-      // Someone else took the only seat in the meantime.
+      // Someone else took the only seat in the meantime, under their own order —
+      // an entitlement's order_id names who paid for it.
       const [other] = await ds.query(`INSERT INTO users (email) VALUES ('otro@x.co') RETURNING id`);
+      const [otherOrder] = await ds.query(
+        `INSERT INTO orders (user_id, total_cop, payment_method, reference)
+         VALUES ($1, 25000, 'CARD', 'ord_otro_asiento') RETURNING id`,
+        [other.id],
+      );
       await ds.query(
         `INSERT INTO entitlements (user_id, drop_id, order_id) VALUES ($1, $2, $3)`,
-        [other.id, o.dropId, o.orderId]);
+        [other.id, o.dropId, otherOrder.id]);
 
       await payments.handleWebhook(wompiEvent(o.reference, 'tx13', 'APPROVED', 2500000));
       expect(await status(o.orderId)).toBe('refunded');

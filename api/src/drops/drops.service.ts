@@ -51,6 +51,12 @@ export class DropsService {
    * A plain "count then insert" would let two simultaneous buyers both read
    * capacity - 1 and both get in. The lock is not an optimisation; without it
    * the limit is a suggestion.
+   *
+   * Buying the same drop twice while an earlier access is still usable is
+   * refused earlier, at `OrdersService.create()` — by the time money reaches
+   * here that check already passed, so a conflict on `(order_id, drop_id)`
+   * only ever means this exact order's settlement is being retried (a
+   * webhook arriving twice), and a retry is success, not an error.
    */
   async grantEntitlement(
     m: EntityManager,
@@ -64,6 +70,14 @@ export class DropsService {
     if (!drop) throw new NotFoundException('DROP_NOT_FOUND');
     if (drop.status !== 'available') throw new ConflictException('DROP_NOT_AVAILABLE');
 
+    const already = firstRow<{ id: string }>(
+      await m.query(
+        `SELECT id FROM entitlements WHERE order_id = $1 AND drop_id = $2`,
+        [orderId, dropId],
+      ),
+    );
+    if (already) return already.id;
+
     if (drop.capacity !== null) {
       const granted = firstRow<{ count: number }>(
         await m.query(`SELECT count(*)::int AS count FROM entitlements WHERE drop_id = $1`, [dropId]),
@@ -75,13 +89,23 @@ export class DropsService {
       await m.query(
         `INSERT INTO entitlements (user_id, drop_id, order_id)
          VALUES ($1, $2, $3)
-         ON CONFLICT (user_id, drop_id) DO NOTHING
+         ON CONFLICT (order_id, drop_id) DO NOTHING
          RETURNING id`,
         [userId, dropId, orderId],
       ),
     );
-    if (rows.length === 0) throw new ConflictException('ALREADY_OWNED');
-    return rows[0].id;
+    if (rows.length > 0) return rows[0].id;
+
+    // Lost a race against another settlement of this exact order — the drop's
+    // row lock above already makes this unreachable in practice, but the
+    // fallback costs one query and keeps the method correct on its own.
+    const raced = firstRow<{ id: string }>(
+      await m.query(
+        `SELECT id FROM entitlements WHERE order_id = $1 AND drop_id = $2`,
+        [orderId, dropId],
+      ),
+    );
+    return raced!.id;
   }
 
   /** Seats left, or null when the drop has no limit. */
