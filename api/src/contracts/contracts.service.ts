@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectDataSource } from '@nestjs/typeorm';
 import { createHash } from 'crypto';
 import { DataSource } from 'typeorm';
@@ -130,10 +130,10 @@ export class ContractsService {
    * is a link that eventually gets forwarded. Both parties can open it — the
    * buyer and the artist — and nobody else.
    */
-  async document(contractId: string, userId: string): Promise<Buffer> {
-    const row = firstRow<{ pdf_url: string }>(
+  async document(contractId: string, userId: string, scope: string = 'account'): Promise<Buffer> {
+    const row = firstRow<{ pdf_url: string; order_id: string }>(
       await this.ds.query(
-        `SELECT c.pdf_url
+        `SELECT c.pdf_url, c.order_id
            FROM contracts c
            JOIN orders o ON o.id = c.order_id
           WHERE c.id = $1
@@ -146,19 +146,24 @@ export class ContractsService {
         [contractId, userId],
       ),
     );
-    if (!row) throw new NotFoundException('CONTRACT_NOT_FOUND');
+    // A guest's checkout-scoped token only ever proves the order it was
+    // minted for — never the rest of the account it happens to share a user
+    // row with.
+    if (!row || (scope !== 'account' && scope !== row.order_id)) {
+      throw new NotFoundException('CONTRACT_NOT_FOUND');
+    }
     return this.store.readPdf(row.pdf_url);
   }
 
-  async sign(contractId: string, input: SignInput): Promise<void> {
+  async sign(contractId: string, input: SignInput, scope: string = 'account'): Promise<void> {
     if (!input.scrolledToEnd) throw new BadRequestException('DOCUMENT_NOT_READ');
 
     const contract = firstRow<{
-      id: string; document_hash: string; full_name: string | null;
+      id: string; order_id: string; document_hash: string; full_name: string | null;
       document_id: string | null; email: string;
     }>(
       await this.ds.query(
-        `SELECT c.id, c.document_hash, u.full_name, u.document_id, u.email
+        `SELECT c.id, c.order_id, c.document_hash, u.full_name, u.document_id, u.email
            FROM contracts c
            JOIN orders o ON o.id = c.order_id
            JOIN users u ON u.id = o.user_id
@@ -167,6 +172,9 @@ export class ContractsService {
       ),
     );
     if (!contract) throw new NotFoundException('CONTRACT_NOT_SIGNABLE');
+    if (scope !== 'account' && scope !== contract.order_id) {
+      throw new ForbiddenException('ORDER_SCOPE_MISMATCH');
+    }
 
     if (!(await this.otp.verify(input.otpChallengeId, input.code))) {
       throw new BadRequestException('INVALID_OTP');

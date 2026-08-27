@@ -9,6 +9,8 @@ import { affectedRows, firstRow, returnedRows } from '../database/rows';
 
 const LINK_MINUTES = 20;
 const SESSION_DAYS = 30;
+/** Long enough to fill an address, read a contract and pay; not a day more. */
+const CHECKOUT_SCOPE_MINUTES = 120;
 
 @Injectable()
 export class AuthService {
@@ -19,14 +21,14 @@ export class AuthService {
   ) {}
 
   /**
-   * Sends a link and, if needed, creates the account on the way. There is no
-   * "register" step: an email address is all the identity the store needs
-   * until someone signs a contract.
+   * Finds the account for this email or creates it. There is no "register"
+   * step: an email address is all the identity the store needs until someone
+   * signs a contract.
    *
-   * The response never says whether the address existed — that would turn this
-   * endpoint into a way to find out who has bought here.
+   * Shared by the magic link request and by guest checkout — both are just
+   * "here is an email, give me the account behind it".
    */
-  async requestMagicLink(email: string): Promise<void> {
+  async upsertUserByEmail(email: string): Promise<string> {
     const user = firstRow<{ id: string }>(
       await this.ds.query(
         `INSERT INTO users (email) VALUES ($1)
@@ -36,12 +38,21 @@ export class AuthService {
       ),
     );
     if (!user) throw new Error('USER_UPSERT_FAILED');
+    return user.id;
+  }
+
+  /**
+   * Sends a link. The response never says whether the address existed — that
+   * would turn this endpoint into a way to find out who has bought here.
+   */
+  async requestMagicLink(email: string): Promise<void> {
+    const userId = await this.upsertUserByEmail(email);
 
     const token = randomBytes(32).toString('hex');
     await this.ds.query(
       `INSERT INTO magic_links (user_id, token, expires_at)
        VALUES ($1, $2, now() + make_interval(mins => $3))`,
-      [user.id, token, LINK_MINUTES],
+      [userId, token, LINK_MINUTES],
     );
 
     const url = `${this.config.get<string>('PUBLIC_WEB_URL')}/auth/verify?token=${token}`;
@@ -67,14 +78,29 @@ export class AuthService {
     return { userId, sessionToken: this.signSession(userId) };
   }
 
-  signSession(userId: string): string {
-    const expiresAt = Date.now() + SESSION_DAYS * 86_400_000;
-    const payload = Buffer.from(JSON.stringify({ sub: userId, exp: expiresAt })).toString('base64url');
+  /**
+   * `scope` is `'account'` for a real login (magic link redeemed — the email
+   * was proved) or an order id for a guest who just typed an email at
+   * checkout without proving anything. A checkout-scoped token only ever
+   * unlocks the order it names: `SessionGuard` accepts either, but `/me/*`
+   * and `/admin/*` require `'account'` explicitly, so typing a stranger's
+   * email at checkout never opens their account, only creates an order under
+   * it.
+   *
+   * Checkout scope expires fast — it only needs to outlive one checkout, not
+   * a browsing session.
+   */
+  signSession(userId: string, scope: string = 'account'): string {
+    const days = scope === 'account' ? SESSION_DAYS : CHECKOUT_SCOPE_MINUTES / 1440;
+    const expiresAt = Date.now() + days * 86_400_000;
+    const payload = Buffer.from(JSON.stringify({ sub: userId, scope, exp: expiresAt })).toString(
+      'base64url',
+    );
     return `${payload}.${this.sign(payload)}`;
   }
 
-  /** Returns the user id, or null for anything that does not verify. */
-  verifySession(value: string): string | null {
+  /** Returns the identity behind the token, or null for anything that does not verify. */
+  verifySession(value: string): { userId: string; scope: string } | null {
     const [payload, signature] = value.split('.');
     if (!payload || !signature) return null;
 
@@ -86,9 +112,12 @@ export class AuthService {
     if (a.length !== b.length || !timingSafeEqual(a, b)) return null;
 
     try {
-      const { sub, exp } = JSON.parse(Buffer.from(payload, 'base64url').toString());
+      const { sub, exp, scope } = JSON.parse(Buffer.from(payload, 'base64url').toString());
       if (typeof exp !== 'number' || exp < Date.now()) return null;
-      return typeof sub === 'string' ? sub : null;
+      if (typeof sub !== 'string') return null;
+      // Tokens signed before scope existed have none: treat them as a real
+      // account session rather than invalidate every session in flight.
+      return { userId: sub, scope: typeof scope === 'string' ? scope : 'account' };
     } catch {
       return null;
     }

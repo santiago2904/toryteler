@@ -87,7 +87,18 @@ describe('auth', () => {
   describe('session', () => {
     it('accepts what it signed', () => {
       const t = auth.signSession('11111111-1111-1111-1111-111111111111');
-      expect(auth.verifySession(t)).toBe('11111111-1111-1111-1111-111111111111');
+      expect(auth.verifySession(t)).toEqual({
+        userId: '11111111-1111-1111-1111-111111111111',
+        scope: 'account',
+      });
+    });
+
+    it('scopes a checkout session to its order, not the whole account', () => {
+      const t = auth.signSession('11111111-1111-1111-1111-111111111111', 'order-abc');
+      expect(auth.verifySession(t)).toEqual({
+        userId: '11111111-1111-1111-1111-111111111111',
+        scope: 'order-abc',
+      });
     });
 
     it('rejects a tampered payload', () => {

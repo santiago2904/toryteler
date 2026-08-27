@@ -2,7 +2,7 @@ import {
   Body, Controller, Get, Param, ParseUUIDPipe, Patch, Post, Query, Res, UseGuards,
 } from '@nestjs/common';
 import type { Response } from 'express';
-import { AdminGuard, SessionGuard } from '../auth/session.guard';
+import { AccountGuard, AdminGuard } from '../auth/session.guard';
 import { UploadSignatureService } from '../storage/upload-signature.service';
 import { DocumentStore } from '../storage/document-store';
 import { VideoUploadService } from '../storage/video-upload.service';
@@ -15,7 +15,7 @@ import type { NewDrop, NewPiece } from './admin.service';
  * baked into the token, so revoking it takes effect immediately.
  */
 @Controller('admin')
-@UseGuards(SessionGuard, AdminGuard)
+@UseGuards(AccountGuard, AdminGuard)
 export class AdminController {
   constructor(
     private readonly admin: AdminService,

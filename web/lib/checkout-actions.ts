@@ -19,6 +19,7 @@ export type Result<T> = { ok: true; data: T } | { ok: false; error: string };
 /** Turns an API error into something worth reading. */
 const MESSAGES: Record<string, string> = {
   EMPTY_ORDER: 'No hay nada en el carrito.',
+  EMAIL_REQUIRED: 'Escribe tu correo para continuar.',
   PIECE_UNAVAILABLE: 'Alguien se adelantó: una de las piezas ya no está.',
   DROP_SOLD_OUT: 'Se agotaron los cupos de uno de los videos.',
   ALREADY_OWNED: 'Ya tienes uno de estos videos.',
@@ -95,6 +96,13 @@ export interface CreateOrderInput {
   /** Which pieces go signed by the artist. A subset of `pieceSlugs`. */
   signedPieceSlugs?: string[];
   /**
+   * Only sent when there is no session yet. Buying does not require a magic
+   * link first — the order is placed under this email, and proving it is
+   * real happens later where it actually matters (the contract's OTP, for a
+   * piece).
+   */
+  email?: string;
+  /**
    * Minted by the browser and reused on every retry of the same attempt. It is
    * what stops a lost response from taking the units twice.
    */
@@ -105,11 +113,18 @@ export async function createOrder(
   input: CreateOrderInput,
 ): Promise<Result<{ id: string; reference: string; totalCop: number }>> {
   const { idempotencyKey, ...body } = input;
-  return attempt(() =>
-    apiSend<{ id: string; reference: string; totalCop: number }>('/orders', 'POST', body, {
-      idempotencyKey,
-    }),
-  );
+  return attempt(async () => {
+    const order = await apiSend<
+      { id: string; reference: string; totalCop: number; sessionToken?: string }
+    >('/orders', 'POST', body, { idempotencyKey });
+
+    // Present only for a guest: the API just found or created their account
+    // and scoped this token to this one order, so the rest of checkout
+    // (contract, pay) can go on without asking them to sign in.
+    if (order.sessionToken) await setSession(order.sessionToken);
+
+    return order;
+  });
 }
 
 export interface PreparedContract {

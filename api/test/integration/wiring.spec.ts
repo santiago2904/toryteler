@@ -140,6 +140,66 @@ describe('http wiring', () => {
     });
   });
 
+  describe('guest checkout', () => {
+    it('creates an order from just an email, no session needed', async () => {
+      await ds.query(
+        `INSERT INTO drops (slug, title, price_cop, video_asset_id, capacity, status, published_at)
+         VALUES ('video', 'Video', 25000, 'vid', 50, 'available', now())`,
+      );
+
+      const res = await request(app.getHttpServer())
+        .post('/orders')
+        .set('Idempotency-Key', 'guest-1')
+        .send({ pieceSlugs: [], dropSlugs: ['video'], paymentMethod: 'CARD', email: 'invitado@x.co' })
+        .expect(201);
+
+      expect(res.body.sessionToken).toEqual(expect.any(String));
+      const [user] = await ds.query(`SELECT id FROM users WHERE email = 'invitado@x.co'`);
+      expect(user).toBeDefined();
+    });
+
+    it('lets the guest token continue only the order it was minted for', async () => {
+      await ds.query(
+        `INSERT INTO drops (slug, title, price_cop, video_asset_id, capacity, status, published_at)
+         VALUES ('video2', 'Video 2', 25000, 'vid', 50, 'available', now())`,
+      );
+
+      const created = await request(app.getHttpServer())
+        .post('/orders')
+        .set('Idempotency-Key', 'guest-2')
+        .send({ pieceSlugs: [], dropSlugs: ['video2'], paymentMethod: 'CARD', email: 'otro@x.co' })
+        .expect(201);
+      const { id: orderId, sessionToken } = created.body;
+
+      await request(app.getHttpServer())
+        .get(`/orders/${orderId}`)
+        .set('Authorization', `Bearer ${sessionToken}`)
+        .expect(200);
+    });
+
+    it('never lets a checkout-scoped token read an account\'s history, even the right user id', async () => {
+      // A real account with history, reached only through a magic link.
+      const owner = await session();
+      await ds.query(
+        `INSERT INTO orders (user_id, total_cop, payment_method, reference)
+         VALUES ($1, 1000, 'CARD', 'ord_privado')`,
+        [owner.userId],
+      );
+
+      // Same token shape create() would hand a guest who typed this user's
+      // email — right user id, but scoped to one order, never the account.
+      const guestToken = auth.signSession(owner.userId, 'algun-otro-pedido');
+      await request(app.getHttpServer())
+        .get('/me/orders')
+        .set('Authorization', `Bearer ${guestToken}`)
+        .expect(401);
+      await request(app.getHttpServer())
+        .get('/admin/orders')
+        .set('Authorization', `Bearer ${guestToken}`)
+        .expect(401);
+    });
+  });
+
   describe('validation', () => {
     it('rejects an address that is not one', async () => {
       await request(app.getHttpServer())

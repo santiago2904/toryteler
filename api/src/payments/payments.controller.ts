@@ -1,7 +1,16 @@
-import { Body, Controller, HttpCode, Param, ParseUUIDPipe, Post, Req, UseGuards } from '@nestjs/common';
+import {
+  Body, Controller, ForbiddenException, HttpCode, Param, ParseUUIDPipe, Post, Req, UseGuards,
+} from '@nestjs/common';
 import type { Request } from 'express';
 import { SessionGuard } from '../auth/session.guard';
 import { PaymentsService } from './payments.service';
+
+type Authenticated = Request & { user: { id: string; scope: string } };
+
+/** Same rule every checkout endpoint follows: a guest's token only opens its own order. */
+function assertOrderScope(scope: string, orderId: string): void {
+  if (scope !== 'account' && scope !== orderId) throw new ForbiddenException('ORDER_SCOPE_MISMATCH');
+}
 
 @Controller()
 export class PaymentsController {
@@ -10,7 +19,8 @@ export class PaymentsController {
   /** Where to send the buyer. Card details never touch this server. */
   @Post('orders/:id/pay')
   @UseGuards(SessionGuard)
-  start(@Param('id', ParseUUIDPipe) id: string) {
+  start(@Param('id', ParseUUIDPipe) id: string, @Req() req: Authenticated) {
+    assertOrderScope(req.user.scope, id);
     return this.payments.startPayment(id);
   }
 
@@ -26,8 +36,9 @@ export class PaymentsController {
   async confirm(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() body: { transactionId: string },
-    @Req() req: Request & { user: { id: string } },
+    @Req() req: Authenticated,
   ) {
+    assertOrderScope(req.user.scope, id);
     await this.payments.confirm(id, req.user.id, body.transactionId);
     return { ok: true };
   }

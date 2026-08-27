@@ -179,6 +179,56 @@ export class AccountService {
     }));
   }
 
+  /**
+   * One order by id, with its owner attached so the caller can decide whether
+   * this request is allowed to see it. Used by the checkout result page,
+   * which a guest can reach without an account session.
+   */
+  async orderById(orderId: string): Promise<(OrderSummary & { userId: string }) | null> {
+    const order = firstRow<OrderRow & { user_id: string }>(
+      await this.ds.query(
+        `SELECT o.id, o.user_id, o.reference, o.status, o.total_cop, o.created_at,
+                o.tracking_carrier, o.tracking_number,
+                c.id AS contract_id
+           FROM orders o
+           LEFT JOIN contracts c
+                  ON c.order_id = o.id
+                 AND c.status IN ('signed_pending_payment', 'executed')
+          WHERE o.id = $1`,
+        [orderId],
+      ),
+    );
+    if (!order) return null;
+
+    const items = returnedRows<ItemRow>(
+      await this.ds.query(
+        `SELECT i.order_id,
+                CASE WHEN i.piece_id IS NOT NULL THEN 'piece' ELSE 'drop' END AS kind,
+                COALESCE(p.slug, d.slug)   AS slug,
+                COALESCE(p.title, d.title) AS title,
+                COALESCE(p.images ->> 0, d.poster_image) AS image,
+                i.wants_signature AS signed
+           FROM order_items i
+           LEFT JOIN pieces p ON p.id = i.piece_id
+           LEFT JOIN drops  d ON d.id = i.drop_id
+          WHERE i.order_id = $1`,
+        [orderId],
+      ),
+    );
+
+    return {
+      id: order.id,
+      userId: order.user_id,
+      reference: order.reference,
+      status: order.status,
+      totalCop: order.total_cop,
+      createdAt: order.created_at,
+      contractId: order.contract_id,
+      items: items.map(({ kind, slug, title, image, signed }) => ({ kind, slug, title, image, signed })),
+      tracking: this.tracking(order),
+    };
+  }
+
   async entitlements(userId: string): Promise<EntitlementSummary[]> {
     const rows = returnedRows<EntitlementRow>(
       await this.ds.query(

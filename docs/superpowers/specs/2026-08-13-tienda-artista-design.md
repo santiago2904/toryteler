@@ -52,8 +52,37 @@ Fuera (fases posteriores):
 | PDF | `pdf-lib` en el servidor | Contrato generado con datos reales, sin proveedor externo |
 | Correo | Resend | Contrato firmado, acceso al contenido, notas |
 | Sesión | Magic link por correo | Sin contraseñas; la identidad es requisito para la firma y para el aforo |
+| Checkout | Sin sesión previa | Reabierta el 26 de agosto de 2026 — ver «Checkout de invitado» más abajo |
 
 Deliberadamente ausentes: Redis, colas, motor de búsqueda, CDN propio, carrito persistente complejo. Con un catálogo de piezas contadas, buscar es un `WHERE`.
+
+### Checkout de invitado (actualización 2026-08-26)
+
+Pedir un magic link *antes* de comprar mezclaba dos cosas distintas: quién es
+el dueño de este pedido, y quién puede entrar a ver el historial de una
+cuenta. Ya no. `POST /orders` no exige sesión: sin una, pide el correo del
+comprador, encuentra o crea la cuenta (la misma consulta que ya usaba el magic
+link) y el pedido queda a su nombre — sin haber probado que ese correo es
+suyo.
+
+Eso es seguro porque nada que importa depende de esa prueba: la firma de una
+pieza sigue exigiendo su propio código OTP al correo real, y un video sin
+contrato no tiene nada que firmar que dependa de la identidad. Lo que sí
+habría sido inseguro es dejar que ese correo sin probar abriera una **sesión
+de cuenta** — con ella se lee `/me/orders` y, si el correo resulta ser el del
+artista, `/studio`. Por eso el token que se emite en el checkout de invitado
+lleva un `scope` distinto: el id del pedido, no `'account'`. Sirve para seguir
+*ese* pedido (contrato, pago, la página de resultado) y para nada más — `/me/*`
+y `/admin/*` exigen `scope: 'account'` explícitamente, que solo un magic link
+redimido entrega.
+
+El magic link no desaparece: sigue siendo la única puerta a `/cuenta` — ver el
+historial completo, no solo el pedido recién hecho.
+
+Riesgo aceptado a propósito: alguien puede escribir el correo de otra persona
+al comprar. Recibe un recibo que no pidió, o retiene brevemente una unidad
+(se libera sola al vencer el plazo del pedido, §5). No puede leer su cuenta ni
+sus pedidos anteriores.
 
 ### Sobre las comisiones en productos de precio bajo
 

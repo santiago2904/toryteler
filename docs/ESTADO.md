@@ -208,6 +208,19 @@ artista no lo ve ahí, la firma no ocurre.
 Queda **fuera del contrato** a propósito: el autógrafo es un detalle de entrega,
 y los bytes del PDF tienen que reproducirse para que su hash verifique.
 
+**Checkout de invitado.** `/checkout` ya no manda a `/entrar` si no hay sesión:
+el correo se pide ahí mismo, como un campo más del formulario, no como un
+inicio de sesión aparte. `POST /orders` acepta ese correo sin sesión, encuentra
+o crea la cuenta (igual que el magic link) y devuelve un `sessionToken` con
+`scope` igual al id del pedido — no `'account'`. Ese token sirve para seguir
+*ese* pedido (contrato, pago, `/checkout/resultado`, que ahora lee
+`GET /orders/:id` en vez de filtrar `/me/orders`) y nada más: `/me/*` y
+`/admin/*` exigen `scope: 'account'`, que solo entrega un magic link redimido.
+Detalle en `docs/superpowers/specs/2026-08-13-tienda-artista-design.md` bajo
+«Checkout de invitado». Riesgo aceptado: alguien puede comprar a nombre del
+correo de otra persona sin probar que es suyo — recibe un recibo que no pidió,
+nada más; no puede leer su cuenta.
+
 ---
 
 ## Lo siguiente que hay que hacer
