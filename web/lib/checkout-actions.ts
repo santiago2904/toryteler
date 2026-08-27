@@ -32,6 +32,9 @@ const MESSAGES: Record<string, string> = {
   CONTRACT_ALREADY_SIGNED: 'Este contrato ya estaba firmado.',
   INVALID_OR_USED: 'Ese enlace ya se usó o venció. Pide otro.',
   REQUEST_IN_PROGRESS: 'Ya estamos procesando esto. Espera un momento.',
+  // Seen when a guest checkout's cookie points at an older order than the one
+  // on screen — going back to the cart and buying again mints a new one.
+  ORDER_SCOPE_MISMATCH: 'Este pedido no coincide con tu sesión. Empieza de nuevo desde el carrito.',
 };
 
 function explain(error: unknown): string {
@@ -39,6 +42,7 @@ function explain(error: unknown): string {
   const code = Object.keys(MESSAGES).find((key) => raw.includes(key));
   if (code) return MESSAGES[code];
   if (raw.includes('API_401')) return 'Tu sesión venció. Entra otra vez.';
+  if (raw.includes('API_403')) return 'Este pedido no coincide con tu sesión. Empieza de nuevo desde el carrito.';
   // The demo deployment runs on mock data with no API behind it.
   if (raw.includes('API_NOT_CONFIGURED')) {
     return 'La tienda todavía no está conectada: esto es una maqueta.';
