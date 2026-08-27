@@ -300,7 +300,19 @@ SELECT capacity FROM drops WHERE id = $1 FOR UPDATE;
 ```
 Con `capacity IS NULL` se omite el bloqueo: no hay nada que serializar y las compras entran en paralelo.
 
-`UNIQUE (user_id, drop_id)` impide además que la misma persona compre dos veces el mismo drop.
+**Recompra (actualización 2026-08-27):** al principio `UNIQUE (user_id, drop_id)`
+impedía que la misma persona comprara el mismo drop dos veces, punto — incluso
+después de que su ventana se hubiera cerrado. Eso cobraba y reembolsaba
+automáticamente a alguien que solo quería volver a verlo, con el mensaje
+genérico de "alguien se adelantó" sin explicar por qué.
+
+Ahora la unicidad vive en `(order_id, drop_id)` — sigue haciendo idempotente
+un reintento de la misma liquidación, pero ya no bloquea un segundo pedido.
+La regla de negocio se movió a `OrdersService.create()`: rechaza con
+`ALREADY_OWNED` solo si el comprador tiene un entitlement de ese drop **que
+todavía se puede usar** (`first_played_at IS NULL` o `expires_at > now()`).
+Una vez que la ventana se cerró, comprarlo de nuevo cuenta como una venta
+más — incluido el aforo, que sigue contando pedidos, no personas distintas.
 
 ### 5.3 La ventana de visionado se abre una sola vez
 

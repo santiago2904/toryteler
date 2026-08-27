@@ -78,6 +78,14 @@ export class OrdersController {
   async create(@Body() body: CreateOrderDto, @Req() req: MaybeAuthenticated) {
     const { email, ...input } = body;
 
+    // A real account session needs nothing more — every step already
+    // authorizes by ownership. A guest's session, even an existing one, does
+    // not: it only ever unlocks the single order it was minted for, so a
+    // *second* order under the same guest cookie still needs a *new* token,
+    // scoped to that new order — reusing the old one would leave the buyer
+    // holding a cookie that opens the wrong pedido.
+    const hasAccountSession = req.user?.scope === 'account';
+
     let userId = req.user?.id;
     if (!userId) {
       if (!email) throw new BadRequestException('EMAIL_REQUIRED');
@@ -85,7 +93,9 @@ export class OrdersController {
     }
 
     const order = await this.orders.create(userId, input);
-    return req.user ? order : { ...order, sessionToken: this.auth.signSession(userId, order.id) };
+    return hasAccountSession
+      ? order
+      : { ...order, sessionToken: this.auth.signSession(userId, order.id) };
   }
 
   /**

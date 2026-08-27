@@ -158,6 +158,40 @@ describe('http wiring', () => {
       expect(user).toBeDefined();
     });
 
+    it('re-scopes to a second order made with the same guest cookie', async () => {
+      await ds.query(
+        `INSERT INTO drops (slug, title, price_cop, video_asset_id, capacity, status, published_at)
+         VALUES ('video1b', 'Video 1b', 25000, 'vid', 50, 'available', now()),
+                ('video2b', 'Video 2b', 25000, 'vid', 50, 'available', now())`,
+      );
+
+      const first = await request(app.getHttpServer())
+        .post('/orders')
+        .set('Idempotency-Key', 'guest-1b')
+        .send({ pieceSlugs: [], dropSlugs: ['video1b'], paymentMethod: 'CARD', email: 'doscompras@x.co' })
+        .expect(201);
+      const firstToken = first.body.sessionToken;
+
+      // Same browser session, a second order — e.g. they went back to the cart
+      // and checked out again. The API must hand back a token scoped to THIS
+      // order, not silently keep them scoped to the first one.
+      const second = await request(app.getHttpServer())
+        .post('/orders')
+        .set('Idempotency-Key', 'guest-2b')
+        .set('Authorization', `Bearer ${firstToken}`)
+        .send({ pieceSlugs: [], dropSlugs: ['video2b'], paymentMethod: 'CARD' })
+        .expect(201);
+
+      expect(second.body.sessionToken).toEqual(expect.any(String));
+      expect(second.body.sessionToken).not.toBe(firstToken);
+
+      // The token that comes back must actually work for the new order.
+      await request(app.getHttpServer())
+        .post(`/orders/${second.body.id}/pay`)
+        .set('Authorization', `Bearer ${second.body.sessionToken}`)
+        .expect((res) => expect(res.status).not.toBe(403));
+    });
+
     it('lets the guest token continue only the order it was minted for', async () => {
       await ds.query(
         `INSERT INTO drops (slug, title, price_cop, video_asset_id, capacity, status, published_at)

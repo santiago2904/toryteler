@@ -75,6 +75,22 @@ export class OrdersService {
       : [];
     if (drops.length !== input.dropSlugs.length) throw new ConflictException('DROP_UNAVAILABLE');
 
+    if (drops.length > 0) {
+      // Owning one is forever, unless the window on it has already closed —
+      // paying again for something you can still watch would be paying twice
+      // for the same access. A consumed one (or none at all) is the only
+      // thing that lets a second sale through.
+      const stillUsable = firstRow<{ id: string }>(
+        await this.ds.query(
+          `SELECT id FROM entitlements
+            WHERE user_id = $1 AND drop_id = ANY($2)
+              AND (first_played_at IS NULL OR expires_at > now())`,
+          [userId, drops.map((d) => d.id)],
+        ),
+      );
+      if (stillUsable) throw new ConflictException('ALREADY_OWNED');
+    }
+
     const taken: string[] = [];
     try {
       for (const piece of pieces) {

@@ -25,6 +25,7 @@ export default async function StudioLayout({ children }: { children: React.React
       <nav className={`${styles.nav} label`}>
         <Link href="/studio">Publicado</Link>
         <Link href="/studio/pedidos">Pedidos</Link>
+        <Link href="/studio/equipo">Equipo</Link>
       </nav>
 
       {children}

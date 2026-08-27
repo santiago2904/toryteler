@@ -1,8 +1,18 @@
+import { ConfigService } from '@nestjs/config';
 import { DataSource } from 'typeorm';
 import { testDb, truncateAll } from '../setup/db';
 import { AdminService } from '../../src/admin/admin.service';
+import { AuthService } from '../../src/auth/auth.service';
 import { DropsService } from '../../src/drops/drops.service';
 import { PiecesService } from '../../src/pieces/pieces.service';
+
+const CONFIG = {
+  get: (k: string) =>
+    ({ SESSION_SECRET: 'a'.repeat(40), PUBLIC_WEB_URL: 'http://web.test' } as Record<string, string>)[k],
+} as ConfigService;
+
+/** Never actually sends: only `addToTeam`'s own error handling cares that this exists. */
+const NULL_MAIL = { send: async () => {} } as never;
 
 describe('artist administration', () => {
   let ds: DataSource;
@@ -12,7 +22,7 @@ describe('artist administration', () => {
 
   beforeAll(async () => {
     ds = await testDb();
-    admin = new AdminService(ds);
+    admin = new AdminService(ds, new AuthService(ds, NULL_MAIL, CONFIG));
     pieces = new PiecesService(ds);
     drops = new DropsService(ds);
   });

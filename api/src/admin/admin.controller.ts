@@ -1,13 +1,20 @@
 import {
-  Body, Controller, Get, Param, ParseUUIDPipe, Patch, Post, Query, Res, UseGuards,
+  Body, Controller, Delete, Get, Param, ParseUUIDPipe, Patch, Post, Query, Req, Res, UseGuards,
 } from '@nestjs/common';
-import type { Response } from 'express';
+import { IsEmail } from 'class-validator';
+import type { Request, Response } from 'express';
 import { AccountGuard, AdminGuard } from '../auth/session.guard';
 import { UploadSignatureService } from '../storage/upload-signature.service';
 import { DocumentStore } from '../storage/document-store';
 import { VideoUploadService } from '../storage/video-upload.service';
 import { AdminService } from './admin.service';
 import type { NewDrop, NewPiece } from './admin.service';
+
+class AddTeamMemberDto {
+  @IsEmail() email!: string;
+}
+
+type Authenticated = Request & { user: { id: string } };
 
 /**
  * The artist's own endpoints. Two guards in order: the session resolves who is
@@ -142,5 +149,23 @@ export class AdminController {
   @Get('contracts')
   contracts() {
     return this.admin.contracts();
+  }
+
+  /** Who can open the studio, right now. */
+  @Get('team')
+  team() {
+    return this.admin.listTeam();
+  }
+
+  /** Gives the artist's role to whoever owns this email, and mails them a way in. */
+  @Post('team')
+  addToTeam(@Body() body: AddTeamMemberDto) {
+    return this.admin.addToTeam(body.email);
+  }
+
+  @Delete('team/:id')
+  async removeFromTeam(@Param('id', ParseUUIDPipe) id: string, @Req() req: Authenticated) {
+    await this.admin.removeFromTeam(id, req.user.id);
+    return { ok: true };
   }
 }

@@ -16,6 +16,9 @@ const MESSAGES: Record<string, string> = {
   PIECE_NOT_FOUND: 'Esa pieza ya no existe.',
   DROP_NOT_FOUND: 'Ese video ya no existe.',
   ORDER_NOT_PAID: 'Solo se puede marcar como enviado un pedido pagado.',
+  CANNOT_REMOVE_SELF: 'No puedes quitarte el acceso a ti mismo.',
+  LAST_ADMIN: 'No puedes quitar al único que tiene acceso al studio.',
+  NOT_ADMIN: 'Esa persona ya no tenía acceso.',
   API_403: 'Esta cuenta no es la del artista.',
   API_401: 'Tu sesión venció. Entra otra vez.',
   API_NOT_CONFIGURED: 'Esto es una maqueta: no hay tienda conectada donde guardar.',
@@ -104,6 +107,19 @@ export async function markShipped(
     await apiSend(`/admin/orders/${orderId}/ship`, 'POST', tracking);
     return null;
   });
+}
+
+/** Gives someone the artist's role and mails them a way in. */
+export async function addAdmin(email: string): Promise<Result<{ id: string; email: string }>> {
+  return attempt(() => apiSend<{ id: string; email: string }>('/admin/team', 'POST', { email }), false);
+}
+
+/** Takes the role away. The API refuses to remove yourself or the last one left. */
+export async function removeAdmin(id: string): Promise<Result<null>> {
+  return attempt(async () => {
+    await apiSend(`/admin/team/${id}`, 'DELETE');
+    return null;
+  }, false);
 }
 
 export interface UploadTicket {

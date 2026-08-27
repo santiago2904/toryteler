@@ -146,6 +146,22 @@
 }
 
 
+/* Equipo */
+
+.team {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: var(--gutter);
+  align-items: center;
+  padding: var(--unit) 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.error {
+  border-left: 2px solid var(--ink);
+  padding-left: var(--unit);
+}
+
 .save {
   display: flex;
   flex-direction: column;
