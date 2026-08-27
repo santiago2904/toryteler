@@ -1,5 +1,5 @@
 import {
-  Body, Controller, Get, Param, ParseUUIDPipe, Post, Req, Res, UseGuards,
+  Body, Controller, ForbiddenException, Get, Param, ParseUUIDPipe, Post, Req, Res, UseGuards,
 } from '@nestjs/common';
 import { IsBoolean, IsString, Length, Matches } from 'class-validator';
 import type { Request, Response } from 'express';
@@ -22,7 +22,17 @@ class SignDto {
   @IsBoolean() scrolledToEnd!: boolean;
 }
 
-type Authenticated = Request & { user: { id: string } };
+type Authenticated = Request & { user: { id: string; scope: string } };
+
+/**
+ * A guest's checkout-scoped token only touches the order it was minted for.
+ * A real account session (`scope === 'account'`) is unrestricted here — the
+ * ownership checks that exist per endpoint below predate this feature and are
+ * unchanged by it.
+ */
+function assertOrderScope(scope: string, orderId: string): void {
+  if (scope !== 'account' && scope !== orderId) throw new ForbiddenException('ORDER_SCOPE_MISMATCH');
+}
 
 @Controller()
 @UseGuards(SessionGuard)
@@ -31,7 +41,8 @@ export class ContractsController {
 
   /** Builds the PDF and sends the code. Asking twice returns the same document. */
   @Post('orders/:id/contract')
-  prepare(@Param('id', ParseUUIDPipe) id: string, @Body() body: PrepareDto) {
+  prepare(@Param('id', ParseUUIDPipe) id: string, @Body() body: PrepareDto, @Req() req: Authenticated) {
+    assertOrderScope(req.user.scope, id);
     return this.contracts.prepare(id, body);
   }
 
@@ -48,7 +59,7 @@ export class ContractsController {
     @Req() req: Authenticated,
     @Res() res: Response,
   ) {
-    const pdf = await this.contracts.document(id, req.user.id);
+    const pdf = await this.contracts.document(id, req.user.id, req.user.scope);
 
     res.setHeader('Content-Type', 'application/pdf');
     // Inline: the buyer is about to sign it, so it has to open, not download.
@@ -74,7 +85,7 @@ export class ContractsController {
       ...body,
       ip: req.ip ?? '',
       userAgent: req.headers['user-agent'] ?? '',
-    });
+    }, req.user.scope);
     return { ok: true };
   }
 }

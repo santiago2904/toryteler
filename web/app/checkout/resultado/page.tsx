@@ -40,8 +40,13 @@ export default async function ResultPage({
   searchParams: Promise<{ order?: string; id?: string }>;
 }) {
   const { order: orderId, id: transactionId } = await searchParams;
-  const orders = await apiGet<OrderSummary[]>('/me/orders', true);
-  const order = orders.find((o) => o.id === orderId);
+  // A single order, not the whole account: a guest lands here on a
+  // checkout-scoped session that only opens this one order, never a list of
+  // everything they have ever bought. A 404 — wrong order, someone else's —
+  // reads the same as "nothing here", not a crash.
+  const order = orderId
+    ? await apiGet<OrderSummary>(`/orders/${orderId}`, true).catch(() => null)
+    : null;
 
   if (!order) {
     return (

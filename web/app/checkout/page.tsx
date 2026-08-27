@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { ProductImage } from '@/components/ProductImage';
@@ -23,6 +24,13 @@ export default function CheckoutPage() {
   const [signed, setSigned] = useState<string[]>([]);
   const [working, setWorking] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  /**
+   * null while unknown, then true/false. Buying does not need a magic link
+   * first: someone without a session just types an email here, and the order
+   * is placed under it — the same account a magic link would have found.
+   */
+  const [signedIn, setSignedIn] = useState<boolean | null>(null);
+  const [email, setEmail] = useState('');
 
   /**
    * One key per attempt, minted once and kept for as long as this page lives.
@@ -32,16 +40,9 @@ export default function CheckoutPage() {
   const [idempotencyKey] = useState(() => crypto.randomUUID());
 
   useEffect(() => { setLines(readCart()); }, []);
+  useEffect(() => { void isSignedIn().then(setSignedIn); }, []);
 
-  useEffect(() => {
-    // Sending someone to fill in an address only to bounce them to sign in
-    // would be asking for work twice.
-    void isSignedIn().then((signedIn) => {
-      if (!signedIn) router.replace('/entrar?next=/checkout');
-    });
-  }, [router]);
-
-  if (lines === null) return <div className={styles.checkout} />;
+  if (lines === null || signedIn === null) return <div className={styles.checkout} />;
 
   if (lines.length === 0) {
     return (
@@ -58,6 +59,7 @@ export default function CheckoutPage() {
   const addressComplete =
     !needsAddress ||
     (address.line1.trim() !== '' && address.city.trim() !== '' && address.phone.trim() !== '');
+  const emailComplete = signedIn || email.trim() !== '';
 
   async function submit(event: React.FormEvent) {
     event.preventDefault();
@@ -70,6 +72,7 @@ export default function CheckoutPage() {
       paymentMethod: method,
       shippingAddress: needsAddress ? address : undefined,
       signedPieceSlugs: signed,
+      email: signedIn ? undefined : email.trim(),
       idempotencyKey,
     });
 
@@ -114,6 +117,27 @@ export default function CheckoutPage() {
       </div>
 
       <form onSubmit={submit} className={styles.form}>
+        {!signedIn && (
+          <fieldset className={styles.fieldset}>
+            <legend className="label muted">Tu correo</legend>
+            <label htmlFor="email">Correo</label>
+            <input
+              id="email"
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              autoComplete="email"
+              inputMode="email"
+              required
+            />
+            <p className="muted">
+              Ahí te llegan el recibo y, si compras una pieza, el código para firmar el
+              contrato. ¿Ya tienes cuenta? <Link href="/entrar?next=/checkout">Entra</Link> para
+              ver tus pedidos anteriores.
+            </p>
+          </fieldset>
+        )}
+
         <fieldset className={styles.fieldset}>
           <legend className="label muted">Cómo pagas</legend>
           {METHODS.map((m) => (
@@ -204,7 +228,7 @@ export default function CheckoutPage() {
 
         {error && <p role="alert" className={styles.error}>{error}</p>}
 
-        <button type="submit" disabled={working || !addressComplete}>
+        <button type="submit" disabled={working || !addressComplete || !emailComplete}>
           {working ? 'Apartando…' : 'Continuar'}
         </button>
       </form>

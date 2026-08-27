@@ -104,6 +104,12 @@ async function mock<T>(path: string): Promise<T> {
   }
 
   if (path === '/me/orders') return ORDERS as T;
+
+  if (path.startsWith('/orders/')) {
+    const order = ORDERS.find((o) => o.id === path.slice('/orders/'.length));
+    if (!order) throw new Error('API_404');
+    return order as T;
+  }
   if (path === '/me/entitlements') return ENTITLEMENTS as T;
 
   if (path.startsWith('/me/entitlements/')) {

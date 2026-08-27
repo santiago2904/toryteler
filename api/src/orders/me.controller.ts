@@ -3,7 +3,7 @@ import {
   UnauthorizedException, UseGuards,
 } from '@nestjs/common';
 import type { Request } from 'express';
-import { SessionGuard } from '../auth/session.guard';
+import { AccountGuard } from '../auth/session.guard';
 import { AccountService } from './account.service';
 
 type Authenticated = Request & { user: { id: string } };
@@ -11,10 +11,12 @@ type Authenticated = Request & { user: { id: string } };
 /**
  * Everything under /me is scoped to the session, never to an id in the path.
  * A caller cannot ask for someone else's history because there is nowhere to
- * put the request.
+ * put the request. `AccountGuard` — not the plainer `SessionGuard` — because
+ * a guest's checkout-scoped token proves nothing about the rest of this
+ * account and must not read it.
  */
 @Controller('me')
-@UseGuards(SessionGuard)
+@UseGuards(AccountGuard)
 export class MeController {
   constructor(private readonly account: AccountService) {}
 

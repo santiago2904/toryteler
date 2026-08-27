@@ -7,7 +7,7 @@ import { AdminController } from './admin/admin.controller';
 import { AdminService } from './admin/admin.service';
 import { AuthController } from './auth/auth.controller';
 import { AuthService } from './auth/auth.service';
-import { AdminGuard, SessionGuard } from './auth/session.guard';
+import { AccountGuard, AdminGuard, OptionalSessionGuard, SessionGuard } from './auth/session.guard';
 import { envSchema } from './config/configuration';
 import { ContractPdfService } from './contracts/contract-pdf.service';
 import { ContractsController } from './contracts/contracts.controller';
@@ -96,6 +96,8 @@ const cloudflareSigner =
   providers: [
     AuthService,
     SessionGuard,
+    OptionalSessionGuard,
+    AccountGuard,
     AdminGuard,
     OtpService,
     MailService,
