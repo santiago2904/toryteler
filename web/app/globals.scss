@@ -136,7 +136,11 @@ button.link-button:hover {
   text-underline-offset: 0.3em;
 }
 
-input, textarea, select {
+/* Text fields only. A checkbox or radio is a native square/circle, not a
+   bordered box — the rule above stretched both to width:100% with a 44px
+   min-height and its own border, so the browser drew a giant misshapen
+   control instead of a check mark. */
+input:not([type='checkbox']):not([type='radio']), textarea, select {
   font: inherit;
   font-size: var(--text-body);   /* 16px avoids iOS auto-zoom */
   width: 100%;
@@ -148,6 +152,16 @@ input, textarea, select {
   color: var(--ink);
 }
 input:focus, textarea:focus { border-color: var(--ink); }
+
+/* Kept small and square, monochrome to match the theme. The 44px touch
+   target still exists — it's the `.radio`/`.check` row around it, not the
+   control itself. */
+input[type='checkbox'], input[type='radio'] {
+  width: 1.125rem;
+  height: 1.125rem;
+  flex-shrink: 0;
+  accent-color: var(--ink);
+}
 
 label { font-size: var(--text-label); color: var(--muted); }
 
