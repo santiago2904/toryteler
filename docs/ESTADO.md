@@ -225,10 +225,12 @@ nada más; no puede leer su cuenta.
 
 ## Lo siguiente que hay que hacer
 
-1. **Verificar un dominio en Resend.** Hoy los correos salen desde
-   `onboarding@resend.dev`, que solo entrega a la dirección dueña de la cuenta:
-   ningún comprador recibiría su enlace de acceso. Es lo único que falta para
-   poder vender.
+1. ~~Verificar un dominio en Resend.~~ Hecho: `toryteler.com` está verificado.
+   Falta el último paso, manual en Railway (no hay comando ni código de por
+   medio): cambiar `MAIL_FROM=Toryteler <hola@toryteler.com>` en las
+   variables de entorno de la API y redesplegar. Hasta que eso no se haga,
+   los correos siguen saliendo desde `onboarding@resend.dev`, que solo
+   entrega a la dirección dueña de la cuenta de Resend.
 4. Definir `API_URL` en Vercel y borrar `web/lib/mock-data.ts`.
 5. Reemplazar las imágenes de ejemplo, que son portadas de discos reales.
 
