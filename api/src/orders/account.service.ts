@@ -23,6 +23,7 @@ export interface OrderSummary {
   reference: string;
   status: string;
   totalCop: number;
+  totalUsdCents: number | null;
   createdAt: Date;
   items: OrderItem[];
   tracking: OrderTracking | null;
@@ -77,6 +78,7 @@ interface OrderRow {
   reference: string;
   status: string;
   total_cop: number;
+  total_usd_cents: number | null;
   created_at: Date;
   tracking_carrier: string | null;
   tracking_number: string | null;
@@ -130,7 +132,7 @@ export class AccountService {
   async orders(userId: string): Promise<OrderSummary[]> {
     const orders = returnedRows<OrderRow>(
       await this.ds.query(
-        `SELECT o.id, o.reference, o.status, o.total_cop, o.created_at,
+        `SELECT o.id, o.reference, o.status, o.total_cop, o.total_usd_cents, o.created_at,
                 o.tracking_carrier, o.tracking_number,
                 c.id AS contract_id
            FROM orders o
@@ -170,6 +172,7 @@ export class AccountService {
       reference: o.reference,
       status: o.status,
       totalCop: o.total_cop,
+      totalUsdCents: o.total_usd_cents,
       createdAt: o.created_at,
       contractId: o.contract_id,
       items: items
@@ -187,7 +190,7 @@ export class AccountService {
   async orderById(orderId: string): Promise<(OrderSummary & { userId: string }) | null> {
     const order = firstRow<OrderRow & { user_id: string }>(
       await this.ds.query(
-        `SELECT o.id, o.user_id, o.reference, o.status, o.total_cop, o.created_at,
+        `SELECT o.id, o.user_id, o.reference, o.status, o.total_cop, o.total_usd_cents, o.created_at,
                 o.tracking_carrier, o.tracking_number,
                 c.id AS contract_id
            FROM orders o
@@ -222,6 +225,7 @@ export class AccountService {
       reference: order.reference,
       status: order.status,
       totalCop: order.total_cop,
+      totalUsdCents: order.total_usd_cents,
       createdAt: order.created_at,
       contractId: order.contract_id,
       items: items.map(({ kind, slug, title, image, signed }) => ({ kind, slug, title, image, signed })),

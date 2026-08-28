@@ -4,6 +4,7 @@ import request from 'supertest';
 import { DataSource } from 'typeorm';
 import { AppModule } from '../../src/app.module';
 import { AuthService } from '../../src/auth/auth.service';
+import { ExchangeRateService } from '../../src/payments/exchange-rate.service';
 import { truncateAll } from '../setup/db';
 
 /**
@@ -20,7 +21,10 @@ describe('http wiring', () => {
   let auth: AuthService;
 
   beforeAll(async () => {
-    const moduleRef = await Test.createTestingModule({ imports: [AppModule] }).compile();
+    const moduleRef = await Test.createTestingModule({ imports: [AppModule] })
+      .overrideProvider(ExchangeRateService)
+      .useValue({ copPerUsd: async () => 4000 })
+      .compile();
 
     app = moduleRef.createNestApplication();
     app.useGlobalPipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true }));

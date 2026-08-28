@@ -3,6 +3,7 @@ import { InjectDataSource } from '@nestjs/typeorm';
 import { randomBytes } from 'crypto';
 import { DataSource } from 'typeorm';
 import { PiecesService } from '../pieces/pieces.service';
+import { ExchangeRateService } from '../payments/exchange-rate.service';
 import { firstRow, returnedRows } from '../database/rows';
 import { PaymentMethod } from './order.entity';
 
@@ -23,6 +24,7 @@ export interface CreatedOrder {
   id: string;
   reference: string;
   totalCop: number;
+  totalUsdCents: number;
 }
 
 @Injectable()
@@ -30,6 +32,7 @@ export class OrdersService {
   constructor(
     @InjectDataSource() private readonly ds: DataSource,
     private readonly pieces: PiecesService,
+    private readonly rates: ExchangeRateService,
   ) {}
 
   /**
@@ -54,9 +57,9 @@ export class OrdersService {
     }
 
     const pieces = input.pieceSlugs.length
-      ? returnedRows<{ id: string; slug: string; price_cop: number }>(
+      ? returnedRows<{ id: string; slug: string; price_usd_cents: number }>(
           await this.ds.query(
-            `SELECT id, slug, price_cop FROM pieces
+            `SELECT id, slug, price_usd_cents FROM pieces
               WHERE slug = ANY($1) AND status = 'available'`,
             [input.pieceSlugs],
           ),
@@ -65,9 +68,9 @@ export class OrdersService {
     if (pieces.length !== input.pieceSlugs.length) throw new ConflictException('PIECE_UNAVAILABLE');
 
     const drops = input.dropSlugs.length
-      ? returnedRows<{ id: string; slug: string; price_cop: number }>(
+      ? returnedRows<{ id: string; slug: string; price_usd_cents: number }>(
           await this.ds.query(
-            `SELECT id, slug, price_cop FROM drops
+            `SELECT id, slug, price_usd_cents FROM drops
               WHERE slug = ANY($1) AND status = 'available'`,
             [input.dropSlugs],
           ),
@@ -91,6 +94,9 @@ export class OrdersService {
       if (stillUsable) throw new ConflictException('ALREADY_OWNED');
     }
 
+    const copPerUsd = await this.rates.copPerUsd();
+    const toCop = (usdCents: number) => Math.round((usdCents / 100) * copPerUsd);
+
     const taken: string[] = [];
     try {
       for (const piece of pieces) {
@@ -98,19 +104,25 @@ export class OrdersService {
         taken.push(piece.id);
       }
 
+      const totalUsdCents =
+        pieces.reduce((sum, p) => sum + p.price_usd_cents, 0) +
+        drops.reduce((sum, d) => sum + d.price_usd_cents, 0);
+      // Se suma lo ya redondeado por línea, no se redondea la suma: así el
+      // total coincide con lo que un comprador vería sumando las líneas a mano.
       const totalCop =
-        pieces.reduce((sum, p) => sum + p.price_cop, 0) +
-        drops.reduce((sum, d) => sum + d.price_cop, 0);
+        pieces.reduce((sum, p) => sum + toCop(p.price_usd_cents), 0) +
+        drops.reduce((sum, d) => sum + toCop(d.price_usd_cents), 0);
 
       return await this.ds.transaction(async (m) => {
-        const order = firstRow<{ id: string; reference: string; total_cop: number }>(
+        const order = firstRow<{ id: string; reference: string; total_cop: number; total_usd_cents: number }>(
           await m.query(
-            `INSERT INTO orders (user_id, total_cop, payment_method, shipping_address, reference)
-             VALUES ($1, $2, $3, $4, $5)
-             RETURNING id, reference, total_cop`,
+            `INSERT INTO orders (user_id, total_cop, total_usd_cents, payment_method, shipping_address, reference)
+             VALUES ($1, $2, $3, $4, $5, $6)
+             RETURNING id, reference, total_cop, total_usd_cents`,
             [
               userId,
               totalCop,
+              totalUsdCents,
               input.paymentMethod,
               input.shippingAddress ?? null,
               `ord_${randomBytes(12).toString('hex')}`,
@@ -122,19 +134,23 @@ export class OrdersService {
         const signed = new Set(input.signedPieceSlugs ?? []);
         for (const piece of pieces) {
           await m.query(
-            `INSERT INTO order_items (order_id, piece_id, unit_price_cop, wants_signature)
-             VALUES ($1, $2, $3, $4)`,
-            [order.id, piece.id, piece.price_cop, signed.has(piece.slug)],
+            `INSERT INTO order_items (order_id, piece_id, unit_price_cop, unit_price_usd_cents, wants_signature)
+             VALUES ($1, $2, $3, $4, $5)`,
+            [order.id, piece.id, toCop(piece.price_usd_cents), piece.price_usd_cents, signed.has(piece.slug)],
           );
         }
         for (const drop of drops) {
           await m.query(
-            `INSERT INTO order_items (order_id, drop_id, unit_price_cop) VALUES ($1, $2, $3)`,
-            [order.id, drop.id, drop.price_cop],
+            `INSERT INTO order_items (order_id, drop_id, unit_price_cop, unit_price_usd_cents)
+             VALUES ($1, $2, $3, $4)`,
+            [order.id, drop.id, toCop(drop.price_usd_cents), drop.price_usd_cents],
           );
         }
 
-        return { id: order.id, reference: order.reference, totalCop: order.total_cop };
+        return {
+          id: order.id, reference: order.reference,
+          totalCop: order.total_cop, totalUsdCents: order.total_usd_cents!,
+        };
       });
     } catch (err) {
       // Nothing taken in this attempt may stay blocked: a failed checkout must

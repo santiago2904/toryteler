@@ -2,6 +2,7 @@ import { DataSource } from 'typeorm';
 import { testDb, truncateAll } from '../setup/db';
 import { OrdersService } from '../../src/orders/orders.service';
 import { PiecesService } from '../../src/pieces/pieces.service';
+import { AccountService } from '../../src/orders/account.service';
 
 describe('create order', () => {
   let ds: DataSource;
@@ -9,7 +10,7 @@ describe('create order', () => {
 
   beforeAll(async () => {
     ds = await testDb();
-    orders = new OrdersService(ds, new PiecesService(ds));
+    orders = new OrdersService(ds, new PiecesService(ds), { copPerUsd: async () => 4000 } as never);
   });
   beforeEach(async () => { await truncateAll(ds); });
   afterAll(async () => { await ds.destroy(); });
@@ -22,26 +23,26 @@ describe('create order', () => {
     return u.id;
   };
 
-  const newPiece = async (priceCop = 500000, stock = 1, status = 'available'): Promise<string> => {
+  const newPiece = async (priceUsdCents = 5000, stock = 1, status = 'available'): Promise<string> => {
     const slug = `p-${Math.random().toString(36).slice(2)}`;
     await ds.query(
-      `INSERT INTO pieces (slug, title, price_cop, stock, status, published_at)
-       VALUES ($1, 'P', $2, $3, $4, now())`, [slug, priceCop, stock, status]);
+      `INSERT INTO pieces (slug, title, price_usd_cents, stock, status, published_at)
+       VALUES ($1, 'P', $2, $3, $4, now())`, [slug, priceUsdCents, stock, status]);
     return slug;
   };
 
-  const newDrop = async (priceCop = 25000): Promise<string> => {
+  const newDrop = async (priceUsdCents = 250): Promise<string> => {
     const slug = `d-${Math.random().toString(36).slice(2)}`;
     await ds.query(
-      `INSERT INTO drops (slug, title, price_cop, video_asset_id, capacity, status, published_at)
-       VALUES ($1, 'D', $2, 'vid', 50, 'available', now())`, [slug, priceCop]);
+      `INSERT INTO drops (slug, title, price_usd_cents, video_asset_id, capacity, status, published_at)
+       VALUES ($1, 'D', $2, 'vid', 50, 'available', now())`, [slug, priceUsdCents]);
     return slug;
   };
 
   it('adds up the total from database prices, not the request', async () => {
     const order = await orders.create(await newUser(), {
-      pieceSlugs: [await newPiece(500000)],
-      dropSlugs: [await newDrop(25000)],
+      pieceSlugs: [await newPiece(12500)],
+      dropSlugs: [await newDrop(625)],
       paymentMethod: 'CARD',
       shippingAddress: address,
     });
@@ -50,7 +51,7 @@ describe('create order', () => {
   });
 
   it('takes the unit when the order is created', async () => {
-    const slug = await newPiece(500000, 1);
+    const slug = await newPiece(12500, 1);
     await orders.create(await newUser(), {
       pieceSlugs: [slug], dropSlugs: [], paymentMethod: 'CARD', shippingAddress: address,
     });
@@ -59,7 +60,7 @@ describe('create order', () => {
   });
 
   it('an edition survives several orders', async () => {
-    const slug = await newPiece(100000, 3);
+    const slug = await newPiece(2500, 3);
     for (let i = 0; i < 3; i++) {
       await orders.create(await newUser(), {
         pieceSlugs: [slug], dropSlugs: [], paymentMethod: 'CARD', shippingAddress: address,
@@ -71,8 +72,8 @@ describe('create order', () => {
   });
 
   it('gives the unit back if a later piece in the same order fails', async () => {
-    const ok = await newPiece(100000, 1);
-    const gone = await newPiece(100000, 1);
+    const ok = await newPiece(2500, 1);
+    const gone = await newPiece(2500, 1);
     await orders.create(await newUser(), {
       pieceSlugs: [gone], dropSlugs: [], paymentMethod: 'CARD', shippingAddress: address,
     });
@@ -93,7 +94,7 @@ describe('create order', () => {
 
   it('needs no address for a video-only order', async () => {
     const order = await orders.create(await newUser(), {
-      pieceSlugs: [], dropSlugs: [await newDrop(25000)], paymentMethod: 'PSE',
+      pieceSlugs: [], dropSlugs: [await newDrop(625)], paymentMethod: 'PSE',
     });
     expect(order.totalCop).toBe(25000);
   });
@@ -114,7 +115,7 @@ describe('create order', () => {
 
   it('rejects an unpublished piece', async () => {
     await expect(orders.create(await newUser(), {
-      pieceSlugs: [await newPiece(100000, 1, 'draft')], dropSlugs: [],
+      pieceSlugs: [await newPiece(2500, 1, 'draft')], dropSlugs: [],
       paymentMethod: 'CARD', shippingAddress: address,
     })).rejects.toThrow(/PIECE_UNAVAILABLE/);
   });
@@ -127,11 +128,11 @@ describe('create order', () => {
   });
 
   it('records the price of the moment on each line', async () => {
-    const slug = await newPiece(400000, 1);
+    const slug = await newPiece(10000, 1);
     const order = await orders.create(await newUser(), {
       pieceSlugs: [slug], dropSlugs: [], paymentMethod: 'CARD', shippingAddress: address,
     });
-    await ds.query(`UPDATE pieces SET price_cop = 999999 WHERE slug = $1`, [slug]);
+    await ds.query(`UPDATE pieces SET price_usd_cents = 99999 WHERE slug = $1`, [slug]);
     const [item] = await ds.query(
       `SELECT unit_price_cop FROM order_items WHERE order_id = $1`, [order.id]);
     expect(item.unit_price_cop).toBe(400000);
@@ -139,8 +140,8 @@ describe('create order', () => {
 
   describe('signature request', () => {
     it('marks only the pieces the buyer asked to have signed', async () => {
-      const wanted = await newPiece(100000, 1);
-      const plain = await newPiece(100000, 1);
+      const wanted = await newPiece(2500, 1);
+      const plain = await newPiece(2500, 1);
       const order = await orders.create(await newUser(), {
         pieceSlugs: [wanted, plain],
         dropSlugs: [],
@@ -236,17 +237,69 @@ describe('create order', () => {
       const order = await orders.create(userId, {
         pieceSlugs: [], dropSlugs: [slug], paymentMethod: 'CARD',
       });
-      expect(order.totalCop).toBe(25000);
+      expect(order.totalCop).toBe(10000);
     });
   });
 
   it('one unit goes to a single order under simultaneous checkouts', async () => {
-    const slug = await newPiece(100000, 1);
+    const slug = await newPiece(2500, 1);
     const buyers = await Promise.all(Array.from({ length: 8 }, () => newUser()));
     const results = await Promise.allSettled(buyers.map((userId) =>
       orders.create(userId, {
         pieceSlugs: [slug], dropSlugs: [], paymentMethod: 'CARD', shippingAddress: address,
       })));
     expect(results.filter((r) => r.status === 'fulfilled')).toHaveLength(1);
+  });
+
+  describe('freezing the peso price', () => {
+    it('converts at the rate given by ExchangeRateService and freezes both figures', async () => {
+      const rate = { copPerUsd: async () => 4000 };
+      const withRate = new OrdersService(ds, new PiecesService(ds), rate as never);
+
+      const slug = await newPiece(24000); // $240.00
+      const order = await withRate.create(await newUser(), {
+        pieceSlugs: [slug], dropSlugs: [], paymentMethod: 'CARD', shippingAddress: address,
+      });
+
+      const [row] = await ds.query(
+        `SELECT total_cop, total_usd_cents FROM orders WHERE id = $1`, [order.id]);
+      expect(row.total_usd_cents).toBe(24000);
+      expect(row.total_cop).toBe(960000); // 240.00 * 4000
+
+      const [item] = await ds.query(
+        `SELECT unit_price_cop, unit_price_usd_cents FROM order_items WHERE order_id = $1`, [order.id]);
+      expect(item.unit_price_usd_cents).toBe(24000);
+      expect(item.unit_price_cop).toBe(960000);
+    });
+
+    it('refuses to create an order when no rate is available', async () => {
+      const rate = { copPerUsd: async () => { throw new Error('EXCHANGE_RATE_UNAVAILABLE'); } };
+      const withRate = new OrdersService(ds, new PiecesService(ds), rate as never);
+
+      const slug = await newPiece(24000);
+      await expect(withRate.create(await newUser(), {
+        pieceSlugs: [slug], dropSlugs: [], paymentMethod: 'CARD', shippingAddress: address,
+      })).rejects.toThrow(/EXCHANGE_RATE_UNAVAILABLE/);
+
+      // Nothing was taken: a failed conversion must not park a unit.
+      const [piece] = await ds.query(`SELECT stock FROM pieces WHERE slug = $1`, [slug]);
+      expect(piece.stock).toBe(1);
+    });
+
+    it('AccountService.orderById reads the frozen dollar figure back', async () => {
+      const rate = { copPerUsd: async () => 4000 };
+      const withRate = new OrdersService(ds, new PiecesService(ds), rate as never);
+      const account = new AccountService(ds);
+
+      const slug = await newPiece(5000); // $50.00
+      const userId = await newUser();
+      const created = await withRate.create(userId, {
+        pieceSlugs: [slug], dropSlugs: [], paymentMethod: 'CARD', shippingAddress: address,
+      });
+
+      const found = await account.orderById(created.id);
+      expect(found!.totalUsdCents).toBe(5000);
+      expect(found!.totalCop).toBe(200000);
+    });
   });
 });
