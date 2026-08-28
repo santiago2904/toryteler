@@ -99,7 +99,7 @@ describe('payment settlement', () => {
 
     if (opts.piece) {
       const [p] = await ds.query(
-        `INSERT INTO pieces (slug, title, price_cop, stock, status, published_at)
+        `INSERT INTO pieces (slug, title, price_usd_cents, stock, status, published_at)
          VALUES ($1, 'P', 500000, 0, 'available', now()) RETURNING id`,
         [`p-${Math.random().toString(36).slice(2)}`]);
       pieceId = p.id;
@@ -114,7 +114,7 @@ describe('payment settlement', () => {
 
     if (opts.drop) {
       const [d] = await ds.query(
-        `INSERT INTO drops (slug, title, price_cop, video_asset_id, capacity, status, published_at)
+        `INSERT INTO drops (slug, title, price_usd_cents, video_asset_id, capacity, status, published_at)
          VALUES ($1, 'D', 25000, 'vid', $2, 'available', now()) RETURNING id`,
         [`d-${Math.random().toString(36).slice(2)}`, opts.dropCapacity ?? 50]);
       dropId = d.id;

@@ -76,7 +76,7 @@ describe('payment reconciliation', () => {
     const suffix = Math.random().toString(36).slice(2);
     const [u] = await ds.query(`INSERT INTO users (email) VALUES ($1) RETURNING id`, [`u-${suffix}@x.co`]);
     const [p] = await ds.query(
-      `INSERT INTO pieces (slug, title, price_cop, stock, status, published_at)
+      `INSERT INTO pieces (slug, title, price_usd_cents, stock, status, published_at)
        VALUES ($1, 'P', 500000, 0, 'available', now()) RETURNING id`,
       [`p-${suffix}`],
     );
