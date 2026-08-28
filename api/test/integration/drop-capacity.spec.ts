@@ -16,7 +16,7 @@ describe('drop capacity', () => {
 
   async function newDrop(capacity: number | null, status = 'available'): Promise<string> {
     const [d] = await ds.query(
-      `INSERT INTO drops (slug, title, price_cop, video_asset_id, capacity, status, published_at)
+      `INSERT INTO drops (slug, title, price_usd_cents, video_asset_id, capacity, status, published_at)
        VALUES ($1, 'D', 25000, 'vid', $2, $3, now()) RETURNING id`,
       [`d-${Math.random().toString(36).slice(2)}`, capacity, status],
     );

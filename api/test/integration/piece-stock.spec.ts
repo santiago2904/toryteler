@@ -17,7 +17,7 @@ describe('piece stock', () => {
 
   async function newPiece(stock: number, status = 'available'): Promise<string> {
     const [row] = await ds.query(
-      `INSERT INTO pieces (slug, title, price_cop, stock, status, published_at)
+      `INSERT INTO pieces (slug, title, price_usd_cents, stock, status, published_at)
        VALUES ($1, 'P', 500000, $2, $3, now()) RETURNING id`,
       [`p-${Math.random().toString(36).slice(2)}`, stock, status],
     );

@@ -24,7 +24,7 @@ describe('ephemeral playback', () => {
     const suffix = Math.random().toString(36).slice(2);
     const [u] = await ds.query(`INSERT INTO users (email) VALUES ($1) RETURNING id`, [`u-${suffix}@x.co`]);
     const [d] = await ds.query(
-      `INSERT INTO drops (slug, title, price_cop, video_asset_id, capacity, view_window_hours, status, published_at)
+      `INSERT INTO drops (slug, title, price_usd_cents, video_asset_id, capacity, view_window_hours, status, published_at)
        VALUES ($1, 'D', 15000, $2, 50, $3, 'available', now()) RETURNING id`,
       [`d-${suffix}`, `asset-${suffix}`, windowHours],
     );

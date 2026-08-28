@@ -65,7 +65,7 @@ describe('contract signing', () => {
     const [u] = await ds.query(`INSERT INTO users (email) VALUES ($1) RETURNING id`,
       [`u-${Math.random().toString(36).slice(2)}@x.co`]);
     const [p] = await ds.query(
-      `INSERT INTO pieces (slug, title, description, price_cop, stock, status, published_at)
+      `INSERT INTO pieces (slug, title, description, price_usd_cents, stock, status, published_at)
        VALUES ($1, 'Chaqueta de la gira', 'Teñida a mano, talla única.', 500000, 1, 'available', now())
        RETURNING id`, [`p-${Math.random().toString(36).slice(2)}`]);
     const [o] = await ds.query(

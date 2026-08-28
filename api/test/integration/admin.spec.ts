@@ -53,7 +53,7 @@ describe('artist administration', () => {
     it('builds the address from the title', async () => {
       const { id } = await admin.createPiece({
         title: 'Prueba de color — Casa 42',
-        priceCop: 250000,
+        priceUsdCents: 250000,
         stock: 1,
         images: ['a.jpg'],
       });
@@ -63,15 +63,15 @@ describe('artist administration', () => {
     });
 
     it('never collides two addresses', async () => {
-      await admin.createPiece({ title: 'Boceto', priceCop: 1000, stock: 1, images: [] });
-      const second = await admin.createPiece({ title: 'Boceto', priceCop: 1000, stock: 1, images: [] });
+      await admin.createPiece({ title: 'Boceto', priceUsdCents: 1000, stock: 1, images: [] });
+      const second = await admin.createPiece({ title: 'Boceto', priceUsdCents: 1000, stock: 1, images: [] });
       const [p] = await ds.query(`SELECT slug FROM pieces WHERE id = $1`, [second.id]);
       expect(p.slug).not.toBe('boceto');
       expect(p.slug).toMatch(/^boceto-/);
     });
 
     it('stays out of the shop until it is published', async () => {
-      const { id } = await admin.createPiece({ title: 'Oculta', priceCop: 1000, stock: 1, images: [] });
+      const { id } = await admin.createPiece({ title: 'Oculta', priceUsdCents: 1000, stock: 1, images: [] });
       expect(await pieces.listPublished()).toEqual([]);
 
       await admin.setPieceListed(id, true);
@@ -79,7 +79,7 @@ describe('artist administration', () => {
     });
 
     it('keeps the original publication date when it comes back', async () => {
-      const { id } = await admin.createPiece({ title: 'Vuelve', priceCop: 1000, stock: 1, images: [] });
+      const { id } = await admin.createPiece({ title: 'Vuelve', priceUsdCents: 1000, stock: 1, images: [] });
       await admin.setPieceListed(id, true);
       const [first] = await ds.query(`SELECT published_at FROM pieces WHERE id = $1`, [id]);
 
@@ -92,12 +92,12 @@ describe('artist administration', () => {
 
     it('edits only what it was given', async () => {
       const { id } = await admin.createPiece({
-        title: 'Antes', description: 'Descripción', priceCop: 1000, stock: 2, images: ['a.jpg'],
+        title: 'Antes', description: 'Descripción', priceUsdCents: 1000, stock: 2, images: ['a.jpg'],
       });
       await admin.updatePiece(id, { title: 'Después', stock: 5 });
 
-      const [p] = await ds.query(`SELECT title, description, stock, price_cop FROM pieces WHERE id = $1`, [id]);
-      expect(p).toMatchObject({ title: 'Después', description: 'Descripción', stock: 5, price_cop: 1000 });
+      const [p] = await ds.query(`SELECT title, description, stock, price_usd_cents FROM pieces WHERE id = $1`, [id]);
+      expect(p).toMatchObject({ title: 'Después', description: 'Descripción', stock: 5, price_usd_cents: 1000 });
     });
   });
 
@@ -105,7 +105,7 @@ describe('artist administration', () => {
     async function dropWith(capacity: number | null, sold: number) {
       const { id } = await admin.createDrop({
         title: `Video ${Math.random().toString(36).slice(2)}`,
-        priceCop: 15000,
+        priceUsdCents: 15000,
         videoAssetId: 'vid',
         capacity,
         viewWindowHours: 24,
@@ -151,7 +151,7 @@ describe('artist administration', () => {
   describe('unlisting', () => {
     it('takes the video out of the shop without taking it from whoever bought it', async () => {
       const { id } = await admin.createDrop({
-        title: 'Retirado', priceCop: 15000, videoAssetId: 'vid', capacity: 10, viewWindowHours: 24,
+        title: 'Retirado', priceUsdCents: 15000, videoAssetId: 'vid', capacity: 10, viewWindowHours: 24,
       });
       await admin.setDropListed(id, true);
       await sellSeat(id);

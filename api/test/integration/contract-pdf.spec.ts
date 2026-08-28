@@ -17,7 +17,7 @@ const BASE = {
   reference: 'ord_a1b2c3d4e5f6',
   pieceTitle: 'Boceto de portada — primer disco',
   pieceDescription: 'Impresión de trabajo sobre papel mate, 30 × 30 cm.',
-  priceCop: 2400000,
+  priceUsdCents: 2400000,
   buyerName: 'Ana Comprador',
   buyerDocument: '1020304050',
   buyerEmail: 'ana@ejemplo.co',
@@ -38,7 +38,7 @@ describe('contract document', () => {
   });
 
   it('changes when the sale changes', async () => {
-    const other = await pdf.render({ ...BASE, priceCop: 2400001 });
+    const other = await pdf.render({ ...BASE, priceUsdCents: 2400001 });
     expect(hash(other)).not.toBe(hash(await pdf.render(BASE)));
   });
 

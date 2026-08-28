@@ -50,12 +50,12 @@ describe('http wiring', () => {
   describe('public', () => {
     it('serves the catalogue', async () => {
       await ds.query(
-        `INSERT INTO pieces (slug, title, price_cop, status, published_at)
+        `INSERT INTO pieces (slug, title, price_usd_cents, status, published_at)
          VALUES ('boceto', 'Boceto', 250000, 'available', now())`,
       );
       const res = await request(app.getHttpServer()).get('/pieces').expect(200);
       expect(res.body).toEqual([
-        expect.objectContaining({ slug: 'boceto', priceCop: 250000, available: true }),
+        expect.objectContaining({ slug: 'boceto', priceUsdCents: 250000, available: true }),
       ]);
     });
 
@@ -65,7 +65,7 @@ describe('http wiring', () => {
 
     it('serves the videos without their asset id', async () => {
       await ds.query(
-        `INSERT INTO drops (slug, title, price_cop, video_asset_id, status, published_at)
+        `INSERT INTO drops (slug, title, price_usd_cents, video_asset_id, status, published_at)
          VALUES ('maqueta', 'Maqueta', 15000, 'secreto', 'available', now())`,
       );
       const res = await request(app.getHttpServer()).get('/drops').expect(200);
@@ -147,7 +147,7 @@ describe('http wiring', () => {
   describe('guest checkout', () => {
     it('creates an order from just an email, no session needed', async () => {
       await ds.query(
-        `INSERT INTO drops (slug, title, price_cop, video_asset_id, capacity, status, published_at)
+        `INSERT INTO drops (slug, title, price_usd_cents, video_asset_id, capacity, status, published_at)
          VALUES ('video', 'Video', 25000, 'vid', 50, 'available', now())`,
       );
 
@@ -164,7 +164,7 @@ describe('http wiring', () => {
 
     it('re-scopes to a second order made with the same guest cookie', async () => {
       await ds.query(
-        `INSERT INTO drops (slug, title, price_cop, video_asset_id, capacity, status, published_at)
+        `INSERT INTO drops (slug, title, price_usd_cents, video_asset_id, capacity, status, published_at)
          VALUES ('video1b', 'Video 1b', 25000, 'vid', 50, 'available', now()),
                 ('video2b', 'Video 2b', 25000, 'vid', 50, 'available', now())`,
       );
@@ -198,7 +198,7 @@ describe('http wiring', () => {
 
     it('lets the guest token continue only the order it was minted for', async () => {
       await ds.query(
-        `INSERT INTO drops (slug, title, price_cop, video_asset_id, capacity, status, published_at)
+        `INSERT INTO drops (slug, title, price_usd_cents, video_asset_id, capacity, status, published_at)
          VALUES ('video2', 'Video 2', 25000, 'vid', 50, 'available', now())`,
       );
 

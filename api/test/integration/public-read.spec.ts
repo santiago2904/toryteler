@@ -23,7 +23,7 @@ describe('public and account reads', () => {
   describe('catalogue', () => {
     it('shows what is published and hides drafts and archives', async () => {
       await ds.query(
-        `INSERT INTO pieces (slug, title, price_cop, stock, status, published_at) VALUES
+        `INSERT INTO pieces (slug, title, price_usd_cents, stock, status, published_at) VALUES
            ('a', 'A', 1000, 1, 'available', now()),
            ('b', 'B', 1000, 1, 'draft', NULL),
            ('c', 'C', 1000, 0, 'available', now()),
@@ -35,7 +35,7 @@ describe('public and account reads', () => {
 
     it('keeps a sold-out piece listed but not available', async () => {
       await ds.query(
-        `INSERT INTO pieces (slug, title, price_cop, stock, status, published_at)
+        `INSERT INTO pieces (slug, title, price_usd_cents, stock, status, published_at)
          VALUES ('gone', 'Gone', 1000, 0, 'available', now())`,
       );
       const [piece] = await pieces.listPublished();
@@ -45,7 +45,7 @@ describe('public and account reads', () => {
 
     it('reports the remaining units of an edition', async () => {
       await ds.query(
-        `INSERT INTO pieces (slug, title, price_cop, stock, status, published_at)
+        `INSERT INTO pieces (slug, title, price_usd_cents, stock, status, published_at)
          VALUES ('ed', 'Edition', 1000, 12, 'available', now())`,
       );
       const [piece] = await pieces.listPublished();
@@ -55,7 +55,7 @@ describe('public and account reads', () => {
 
     it('lists the newest first', async () => {
       await ds.query(
-        `INSERT INTO pieces (slug, title, price_cop, status, published_at) VALUES
+        `INSERT INTO pieces (slug, title, price_usd_cents, status, published_at) VALUES
            ('old', 'Old', 1000, 'available', now() - interval '2 days'),
            ('new', 'New', 1000, 'available', now())`,
       );
@@ -66,19 +66,19 @@ describe('public and account reads', () => {
   describe('piece detail', () => {
     it('carries the story and the images', async () => {
       await ds.query(
-        `INSERT INTO pieces (slug, title, description, story, price_cop, images, stock, status, published_at)
+        `INSERT INTO pieces (slug, title, description, story, price_usd_cents, images, stock, status, published_at)
          VALUES ('x', 'X', 'Boceto', 'La usé en la gira', 250000, '["a.jpg","b.jpg"]', 1, 'available', now())`,
       );
       const detail = await pieces.findBySlug('x');
       expect(detail!.story).toBe('La usé en la gira');
-      expect(detail!.priceCop).toBe(250000);
+      expect(detail!.priceUsdCents).toBe(250000);
       expect(detail!.images).toEqual(['a.jpg', 'b.jpg']);
       expect(detail!.available).toBe(true);
     });
 
     it('never leaks the personal note, which belongs to whoever buys it', async () => {
       await ds.query(
-        `INSERT INTO pieces (slug, title, price_cop, personal_note, status, published_at)
+        `INSERT INTO pieces (slug, title, price_usd_cents, personal_note, status, published_at)
          VALUES ('n', 'N', 1000, 'Gracias por cuidarla', 'available', now())`,
       );
       expect(await pieces.findBySlug('n')).not.toHaveProperty('personalNote');
@@ -86,7 +86,7 @@ describe('public and account reads', () => {
 
     it('hides a draft from anyone who guesses its address', async () => {
       await ds.query(
-        `INSERT INTO pieces (slug, title, price_cop, status) VALUES ('y', 'Y', 1000, 'draft')`,
+        `INSERT INTO pieces (slug, title, price_usd_cents, status) VALUES ('y', 'Y', 1000, 'draft')`,
       );
       await expect(pieces.findBySlug('y')).resolves.toBeNull();
     });
@@ -95,7 +95,7 @@ describe('public and account reads', () => {
   describe('drops', () => {
     async function drop(slug: string, capacity: number | null, status = 'available') {
       const [d] = await ds.query(
-        `INSERT INTO drops (slug, title, price_cop, video_asset_id, capacity, status, published_at)
+        `INSERT INTO drops (slug, title, price_usd_cents, video_asset_id, capacity, status, published_at)
          VALUES ($1, $2, 15000, 'vid', $3, $4, now()) RETURNING id`,
         [slug, slug.toUpperCase(), capacity, status],
       );
@@ -161,11 +161,11 @@ describe('public and account reads', () => {
     it('shows what was bought, with an image per line', async () => {
       const userId = await buyer();
       const [p] = await ds.query(
-        `INSERT INTO pieces (slug, title, price_cop, images, status, published_at)
+        `INSERT INTO pieces (slug, title, price_usd_cents, images, status, published_at)
          VALUES ('boceto', 'Boceto', 250000, '["cover.jpg"]', 'available', now()) RETURNING id`,
       );
       const [d] = await ds.query(
-        `INSERT INTO drops (slug, title, price_cop, video_asset_id, poster_image, status, published_at)
+        `INSERT INTO drops (slug, title, price_usd_cents, video_asset_id, poster_image, status, published_at)
          VALUES ('maqueta', 'Maqueta', 15000, 'vid', 'poster.jpg', 'available', now()) RETURNING id`,
       );
       const [o] = await ds.query(
@@ -200,7 +200,7 @@ describe('public and account reads', () => {
       const orderWithContract = async (contractStatus: string): Promise<string> => {
         const userId = await buyer();
         const [p] = await ds.query(
-          `INSERT INTO pieces (slug, title, price_cop, status, published_at)
+          `INSERT INTO pieces (slug, title, price_usd_cents, status, published_at)
            VALUES ($1, 'P', 250000, 'available', now()) RETURNING id`,
           [`p-${Math.random().toString(36).slice(2)}`],
         );
@@ -286,7 +286,7 @@ describe('public and account reads', () => {
       async function entitlement(userId: string, opts: { played?: boolean; expired?: boolean } = {}) {
         const suffix = Math.random().toString(36).slice(2);
         const [d] = await ds.query(
-          `INSERT INTO drops (slug, title, price_cop, video_asset_id, status, published_at)
+          `INSERT INTO drops (slug, title, price_usd_cents, video_asset_id, status, published_at)
            VALUES ($1, 'D', 15000, 'vid', 'available', now()) RETURNING id`,
           [`d-${suffix}`],
         );
