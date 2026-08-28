@@ -303,4 +303,61 @@ describe('http wiring', () => {
         .expect(400);
     });
   });
+
+  describe('content', () => {
+    it('sirve el mapa de overrides sin sesión', async () => {
+      await request(app.getHttpServer()).get('/content').expect(200, {});
+    });
+
+    it('turna away el panel de admin sin sesión', async () => {
+      await request(app.getHttpServer()).get('/admin/content').expect(401);
+    });
+
+    it('turna away a quien no es el artista', async () => {
+      const { token } = await session();
+      await request(app.getHttpServer())
+        .get('/admin/content')
+        .set('Authorization', `Bearer ${token}`)
+        .expect(403);
+    });
+
+    it('deja al artista guardar, ver y restablecer un texto', async () => {
+      const { token } = await session({ admin: true });
+      const auth = `Bearer ${token}`;
+
+      await request(app.getHttpServer())
+        .put('/admin/content/home.empty.body')
+        .set('Authorization', auth)
+        .send({ value: 'Todavía nada.' })
+        .expect(200);
+
+      await request(app.getHttpServer())
+        .get('/content')
+        .expect(200, { 'home.empty.body': 'Todavía nada.' });
+
+      const list = await request(app.getHttpServer())
+        .get('/admin/content')
+        .set('Authorization', auth)
+        .expect(200);
+      expect(list.body).toHaveLength(43);
+      expect(list.body).toContainEqual(
+        expect.objectContaining({ key: 'home.empty.body', hasOverride: true }),
+      );
+
+      await request(app.getHttpServer())
+        .delete('/admin/content/home.empty.body')
+        .set('Authorization', auth)
+        .expect(200);
+      await request(app.getHttpServer()).get('/content').expect(200, {});
+    });
+
+    it('rechaza una clave desconocida', async () => {
+      const { token } = await session({ admin: true });
+      await request(app.getHttpServer())
+        .put('/admin/content/no.existe')
+        .set('Authorization', `Bearer ${token}`)
+        .send({ value: 'x' })
+        .expect(400);
+    });
+  });
 });

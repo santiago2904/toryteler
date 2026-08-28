@@ -9,6 +9,9 @@ import { AuthController } from './auth/auth.controller';
 import { AuthService } from './auth/auth.service';
 import { AccountGuard, AdminGuard, OptionalSessionGuard, SessionGuard } from './auth/session.guard';
 import { envSchema } from './config/configuration';
+import { AdminContentController } from './content/admin-content.controller';
+import { ContentController } from './content/content.controller';
+import { ContentService } from './content/content.service';
 import { ContractPdfService } from './contracts/contract-pdf.service';
 import { ContractsController } from './contracts/contracts.controller';
 import { ContractsService } from './contracts/contracts.service';
@@ -93,6 +96,8 @@ const cloudflareSigner =
     PlaybackController,
     MeController,
     AdminController,
+    AdminContentController,
+    ContentController,
   ],
   providers: [
     AuthService,
@@ -112,6 +117,7 @@ const cloudflareSigner =
     ReconciliationService,
     ExchangeRateService,
     AdminService,
+    ContentService,
     UploadSignatureService,
     VideoUploadService,
     // The rest of the system depends on the abstract class, so swapping the
