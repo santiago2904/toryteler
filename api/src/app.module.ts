@@ -21,6 +21,7 @@ import { MeController } from './orders/me.controller';
 import { OrdersController } from './orders/orders.controller';
 import { OrdersService } from './orders/orders.service';
 import { OtpService } from './otp/otp.service';
+import { ExchangeRateService } from './payments/exchange-rate.service';
 import { PaymentGateway } from './payments/payment-gateway';
 import { PaymentsController } from './payments/payments.controller';
 import { PaymentsService } from './payments/payments.service';
@@ -109,6 +110,7 @@ const cloudflareSigner =
     ContractPdfService,
     PaymentsService,
     ReconciliationService,
+    ExchangeRateService,
     AdminService,
     UploadSignatureService,
     VideoUploadService,
