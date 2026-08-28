@@ -53,7 +53,7 @@ export async function apiBytes(path: string): Promise<string> {
 
 export async function apiSend<T>(
   path: string,
-  method: 'POST' | 'PATCH' | 'DELETE',
+  method: 'POST' | 'PUT' | 'PATCH' | 'DELETE',
   body: unknown = {},
   opts: { idempotencyKey?: string } = {},
 ): Promise<T> {

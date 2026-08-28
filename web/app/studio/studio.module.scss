@@ -170,3 +170,23 @@
   padding-top: var(--gutter);
 }
 
+/* ContentEditor */
+
+.contentSection {
+  display: grid;
+  gap: var(--gutter);
+}
+
+.contentItem {
+  display: grid;
+  gap: calc(var(--unit) * 0.5);
+
+  textarea { min-height: 4.5rem; }
+}
+
+.contentActions {
+  display: flex;
+  gap: var(--unit);
+  align-items: center;
+}
+

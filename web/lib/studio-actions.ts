@@ -1,6 +1,6 @@
 'use server';
 
-import { revalidatePath } from 'next/cache';
+import { revalidatePath, revalidateTag } from 'next/cache';
 import { apiSend } from './api';
 
 /**
@@ -207,4 +207,26 @@ export async function videoStatus(uid: string): Promise<Result<VideoStatus>> {
     },
     false,
   );
+}
+
+/**
+ * Cambia uno de los 43 textos editoriales. revalidateTag, no
+ * revalidatePath: el contenido se lee desde decenas de rutas a la vez, no
+ * una sola.
+ */
+export async function updateContent(key: string, value: string): Promise<Result<null>> {
+  return attempt(async () => {
+    await apiSend(`/admin/content/${encodeURIComponent(key)}`, 'PUT', { value });
+    revalidateTag('content', { expire: 0 });
+    return null;
+  }, false);
+}
+
+/** Vuelve al texto original, borrando el override. */
+export async function resetContent(key: string): Promise<Result<null>> {
+  return attempt(async () => {
+    await apiSend(`/admin/content/${encodeURIComponent(key)}`, 'DELETE');
+    revalidateTag('content', { expire: 0 });
+    return null;
+  }, false);
 }

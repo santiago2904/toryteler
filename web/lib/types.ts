@@ -153,3 +153,11 @@ export interface TeamMember {
   id: string;
   email: string;
 }
+
+export interface ContentItem {
+  key: string;
+  section: string;
+  defaultValue: string;
+  currentValue: string;
+  hasOverride: boolean;
+}
