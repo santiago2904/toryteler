@@ -22,6 +22,7 @@ export class Order {
   @Column({ type: 'uuid', name: 'user_id' }) userId!: string;
   @Column({ type: 'text', default: 'pending' }) status!: OrderStatus;
   @Column({ type: 'int', name: 'total_cop' }) totalCop!: number;
+  @Column({ type: 'int', name: 'total_usd_cents', nullable: true }) totalUsdCents!: number | null;
   @Column({ type: 'text', name: 'payment_method' }) paymentMethod!: PaymentMethod;
   @Column({ type: 'jsonb', name: 'shipping_address', nullable: true })
   shippingAddress!: Record<string, string> | null;

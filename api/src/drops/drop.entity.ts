@@ -8,7 +8,7 @@ export class Drop {
   @Column({ type: 'text', unique: true }) slug!: string;
   @Column({ type: 'text' }) title!: string;
   @Column({ type: 'text', nullable: true }) description!: string | null;
-  @Column({ type: 'int', name: 'price_cop' }) priceCop!: number;
+  @Column({ type: 'int', name: 'price_usd_cents' }) priceUsdCents!: number;
   @Column({ type: 'text', name: 'video_asset_id' }) videoAssetId!: string;
   @Column({ type: 'text', name: 'poster_image', nullable: true }) posterImage!: string | null;
   /** null means no limit. */

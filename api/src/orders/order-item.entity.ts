@@ -8,4 +8,5 @@ export class OrderItem {
   @Column({ type: 'uuid', name: 'drop_id', nullable: true }) dropId!: string | null;
   /** Price at the moment of purchase: a later edit must not rewrite history. */
   @Column({ type: 'int', name: 'unit_price_cop' }) unitPriceCop!: number;
+  @Column({ type: 'int', name: 'unit_price_usd_cents', nullable: true }) unitPriceUsdCents!: number | null;
 }

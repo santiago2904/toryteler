@@ -11,7 +11,7 @@ export class Piece {
   /** Provenance: where it comes from and why it matters. */
   @Column({ type: 'text', nullable: true }) story!: string | null;
   @Column({ type: 'text', name: 'personal_note', nullable: true }) personalNote!: string | null;
-  @Column({ type: 'int', name: 'price_cop' }) priceCop!: number;
+  @Column({ type: 'int', name: 'price_usd_cents' }) priceUsdCents!: number;
   @Column({ type: 'jsonb', default: () => "'[]'" }) images!: string[];
   /** 1 is an irreplaceable piece; more than 1, an edition. */
   @Column({ type: 'int' }) stock!: number;

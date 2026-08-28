@@ -25,18 +25,18 @@ describe('base schema', () => {
 
   it('rejects a piece priced at zero or below', async () => {
     await expect(
-      ds.query(`INSERT INTO pieces (slug, title, price_cop) VALUES ('x', 'X', 0)`),
+      ds.query(`INSERT INTO pieces (slug, title, price_usd_cents) VALUES ('x', 'X', 0)`),
     ).rejects.toThrow();
   });
 
   it('rejects negative stock', async () => {
     await expect(
-      ds.query(`INSERT INTO pieces (slug, title, price_cop, stock) VALUES ('y', 'Y', 100, -1)`),
+      ds.query(`INSERT INTO pieces (slug, title, price_usd_cents, stock) VALUES ('y', 'Y', 100, -1)`),
     ).rejects.toThrow();
   });
 
   it('defaults a piece to one unit and draft status', async () => {
-    await ds.query(`INSERT INTO pieces (slug, title, price_cop) VALUES ('z', 'Z', 100)`);
+    await ds.query(`INSERT INTO pieces (slug, title, price_usd_cents) VALUES ('z', 'Z', 100)`);
     const [piece] = await ds.query(`SELECT stock, status FROM pieces WHERE slug = 'z'`);
     expect(piece.stock).toBe(1);
     expect(piece.status).toBe('draft');
@@ -44,15 +44,15 @@ describe('base schema', () => {
 
   it('rejects an unknown piece status', async () => {
     await expect(
-      ds.query(`INSERT INTO pieces (slug, title, price_cop, status)
+      ds.query(`INSERT INTO pieces (slug, title, price_usd_cents, status)
                 VALUES ('w', 'W', 100, 'reserved')`),
     ).rejects.toThrow();
   });
 
   it('rejects two pieces with the same slug', async () => {
-    await ds.query(`INSERT INTO pieces (slug, title, price_cop) VALUES ('dup', 'A', 100)`);
+    await ds.query(`INSERT INTO pieces (slug, title, price_usd_cents) VALUES ('dup', 'A', 100)`);
     await expect(
-      ds.query(`INSERT INTO pieces (slug, title, price_cop) VALUES ('dup', 'B', 200)`),
+      ds.query(`INSERT INTO pieces (slug, title, price_usd_cents) VALUES ('dup', 'B', 200)`),
     ).rejects.toThrow();
   });
 });
