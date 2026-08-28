@@ -44,10 +44,14 @@ pedido". Es la columna que `WompiGateway` y `PaymentsService` ya leen; no
 tocarla es lo que evita cualquier cambio en el núcleo de pagos.
 
 Se agregan `orders.total_usd_cents` y `order_items.unit_price_usd_cents`
-(nuevas, `integer NOT NULL CHECK (... > 0)`): el precio en dólares que el
-comprador vio, congelado junto con su equivalente en pesos. Sin esto no hay
-manera de mostrarle después "pagaste $25 USD (a $3.144,28, cobrados como
-$78.607 COP)" en el recibo o en `/cuenta`.
+(nuevas, `integer NULL CHECK (total_usd_cents IS NULL OR total_usd_cents > 0)`)
+— **nulas a propósito**: son informativas (para mostrar después "pagaste $25
+USD, cobrados como $78.607 COP"), nada en `WompiGateway` ni en
+`PaymentsService` las lee nunca. Hacerlas `NOT NULL` obligaría a tocar cada
+fixture de prueba que inserta un pedido por SQL directo sin pasar por
+`OrdersService.create()` — un costo real sin beneficio, porque ninguna de
+esas pruebas necesita el dato en dólares. Solo `OrdersService.create()` las
+llena a partir de aquí en adelante.
 
 Como en la sesión anterior: **después de desplegar, cada pieza y video
 publicado necesita que alguien le vuelva a poner precio desde `/studio`** —
