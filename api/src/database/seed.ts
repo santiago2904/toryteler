@@ -323,7 +323,7 @@ async function fillSeats(ds: DataSource, dropId: string, slug: string, wanted: n
      )
      INSERT INTO entitlements (user_id, drop_id, order_id)
      SELECT user_id, $1, id FROM pedidos
-     ON CONFLICT (user_id, drop_id) DO NOTHING`,
+     ON CONFLICT (order_id, drop_id) DO NOTHING`,
     [dropId, slug, count, wanted],
   );
 }
