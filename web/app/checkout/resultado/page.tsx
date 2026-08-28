@@ -71,7 +71,11 @@ export default async function ResultPage({
         <dt className="label muted">Pedido</dt>
         <dd>{order.reference}</dd>
         <dt className="label muted">Total</dt>
-        <dd>{formatPrice(order.totalCop)}</dd>
+        <dd>
+          {order.totalUsdCents !== null
+            ? formatPrice(order.totalUsdCents)
+            : `${new Intl.NumberFormat('es-CO').format(order.totalCop)} COP`}
+        </dd>
       </dl>
 
       <ul className={styles.items}>

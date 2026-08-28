@@ -1,9 +1,9 @@
-const PESOS = new Intl.NumberFormat('es-CO', { maximumFractionDigits: 0 });
+const DOLLARS = new Intl.NumberFormat('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const MONTHS = ['ENE', 'FEB', 'MAR', 'ABR', 'MAY', 'JUN', 'JUL', 'AGO', 'SEP', 'OCT', 'NOV', 'DIC'];
 
-/** User-facing strings stay in Spanish: the store sells in Colombia. */
-export function formatPrice(cop: number): string {
-  return `$${PESOS.format(cop)} COP`;
+/** User-facing strings stay in Spanish; the number itself reads as a dollar amount. */
+export function formatPrice(usdCents: number): string {
+  return `$${DOLLARS.format(usdCents / 100)} USD`;
 }
 
 export function formatDate(iso: string): string {

@@ -1,27 +1,27 @@
 import { calculateFees } from './fees';
 
 describe('fees', () => {
-  it('a token price loses almost half', () => {
-    const f = calculateFees(4000);
-    expect(f.payoutCop).toBe(2994);
-    expect(f.percentage).toBe(25);
+  it('a very cheap price loses a third to the flat fee', () => {
+    const f = calculateFees(100); // $1.00
+    expect(f.payoutUsdCents).toBe(67);
+    expect(f.percentage).toBe(33);
   });
 
   it('at the suggested price the fee drops to single digits', () => {
-    const f = calculateFees(15000);
+    const f = calculateFees(500); // $5.00
     expect(f.percentage).toBeLessThanOrEqual(9);
-    expect(f.payoutCop).toBe(13702); // 15,000 − (398 + 900)
+    expect(f.payoutUsdCents).toBe(457);
   });
 
   it('on an expensive piece the flat fee stops mattering', () => {
-    expect(calculateFees(2400000).percentage).toBe(3);
+    expect(calculateFees(25000).percentage).toBe(3); // $250.00
   });
 
   it('never reports a negative payout', () => {
-    expect(calculateFees(500).payoutCop).toBe(0);
+    expect(calculateFees(10).payoutUsdCents).toBe(0);
   });
 
   it('a zero price does not divide by zero', () => {
-    expect(calculateFees(0)).toEqual({ feeCop: 0, payoutCop: 0, percentage: 0 });
+    expect(calculateFees(0)).toEqual({ feeUsdCents: 0, payoutUsdCents: 0, percentage: 0 });
   });
 });

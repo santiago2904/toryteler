@@ -1,30 +1,31 @@
 /**
- * Rough fee of a Colombian payment gateway on card: a percentage plus a flat
- * amount per transaction. The flat part is what makes a very low price
- * unworkable, which is why the studio shows this while setting the price.
- *
- * It is an estimate to guide the artist, not an accounting settlement.
+ * Comisión real de Wompi: porcentaje sobre lo que de verdad se cobra en
+ * pesos, más un monto fijo por transacción. El porcentaje no cambia al
+ * pasar a dólares — es una proporción, no una cifra en una moneda — pero
+ * el monto fijo (900 COP) sí necesita una referencia para expresarse en
+ * dólares; se usa una tasa de referencia fija para esta estimación nada
+ * más, no la TRM en vivo (ver docs/superpowers/specs/2026-08-27-precios-usd-cobro-trm-design.md
+ * §6 — esto es una guía para el artista, no una liquidación).
  */
 const RATE = 0.0265;
-const FLAT_COP = 900;
+const FLAT_USD_CENTS = 30; // ~900 COP a una tasa de referencia de ~3.000 COP/USD
 
-/** Below this, fees eat more than 10%. */
-export const SUGGESTED_PRICE_COP = 15000;
+/** Por debajo de esto, la comisión se come más del 10%. */
+export const SUGGESTED_PRICE_USD_CENTS = 500;
 
 export interface Fees {
-  feeCop: number;
-  payoutCop: number;
+  feeUsdCents: number;
+  payoutUsdCents: number;
   percentage: number;
 }
 
-export function calculateFees(priceCop: number): Fees {
-  if (priceCop <= 0) return { feeCop: 0, payoutCop: 0, percentage: 0 };
-  const feeCop = Math.round(priceCop * RATE) + FLAT_COP;
-  // A price below the flat fee would leave a negative payout: report zero.
-  const payoutCop = Math.max(0, priceCop - feeCop);
+export function calculateFees(priceUsdCents: number): Fees {
+  if (priceUsdCents <= 0) return { feeUsdCents: 0, payoutUsdCents: 0, percentage: 0 };
+  const feeUsdCents = Math.round(priceUsdCents * RATE) + FLAT_USD_CENTS;
+  const payoutUsdCents = Math.max(0, priceUsdCents - feeUsdCents);
   return {
-    feeCop,
-    payoutCop,
-    percentage: Math.round((feeCop / priceCop) * 100),
+    feeUsdCents,
+    payoutUsdCents,
+    percentage: Math.round((feeUsdCents / priceUsdCents) * 100),
   };
 }

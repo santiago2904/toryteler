@@ -1,6 +1,6 @@
 'use client';
 
-import { calculateFees, SUGGESTED_PRICE_COP } from '@/lib/fees';
+import { calculateFees, SUGGESTED_PRICE_USD_CENTS } from '@/lib/fees';
 import { formatPrice } from '@/lib/format';
 import styles from './PayoutHint.module.scss';
 
@@ -10,15 +10,15 @@ import styles from './PayoutHint.module.scss';
  * any price, including a token one.
  */
 export function PayoutHint({ price }: { price: number }) {
-  const { payoutCop, percentage } = calculateFees(price);
+  const { payoutUsdCents, percentage } = calculateFees(price);
 
   return (
     <p className={`${styles.hint} muted`} role="status">
       {price > 0 && (
         <>
-          Recibes {formatPrice(payoutCop)} · {percentage}% se va en comisión.
-          {price < SUGGESTED_PRICE_COP &&
-            ` Desde ${formatPrice(SUGGESTED_PRICE_COP)} la comisión baja a cerca del 8%.`}
+          Recibes {formatPrice(payoutUsdCents)} · {percentage}% se va en comisión.
+          {price < SUGGESTED_PRICE_USD_CENTS &&
+            ` Desde ${formatPrice(SUGGESTED_PRICE_USD_CENTS)} la comisión baja a cerca del 8%.`}
         </>
       )}
     </p>

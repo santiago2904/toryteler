@@ -3,7 +3,7 @@
 import { caretAfterFormat } from '@/lib/format';
 import styles from './PriceInput.module.scss';
 
-const PESOS = new Intl.NumberFormat('es-CO', { maximumFractionDigits: 0 });
+const DOLLARS = new Intl.NumberFormat('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
 /**
  * Amount in pesos, formatted as it is typed: 2400000 reads as 2.400.000.
@@ -26,7 +26,7 @@ export function PriceInput({
   value: number;
   onChange: (value: number) => void;
 }) {
-  const shown = value > 0 ? PESOS.format(value) : '';
+  const shown = value > 0 ? `$${DOLLARS.format(value / 100)}` : '';
 
   function handleChange(event: React.ChangeEvent<HTMLInputElement>) {
     const input = event.target;
@@ -40,7 +40,7 @@ export function PriceInput({
     // After React repaints, walk back from the end until the same number of
     // digits is to the right again.
     requestAnimationFrame(() => {
-      const text = next > 0 ? PESOS.format(next) : '';
+      const text = next > 0 ? `$${DOLLARS.format(next / 100)}` : '';
       const position = caretAfterFormat(text, digitsAfterCaret);
       input.setSelectionRange(position, position);
     });
@@ -59,7 +59,7 @@ export function PriceInput({
         placeholder="0"
         className={styles.input}
       />
-      <span className={styles.currency} aria-hidden="true">COP</span>
+      <span className={styles.currency} aria-hidden="true">USD</span>
     </div>
   );
 }

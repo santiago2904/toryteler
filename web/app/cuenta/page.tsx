@@ -4,7 +4,7 @@ import { apiGet } from '@/lib/api';
 import { EntitlementSummary, OrderSummary, Profile } from '@/lib/types';
 import { ProductImage } from '@/components/ProductImage';
 import { SignOutButton } from '@/components/SignOutButton';
-import { formatDate, formatPrice, timeLeft } from '@/lib/format';
+import { formatDate, timeLeft } from '@/lib/format';
 import styles from './page.module.scss';
 
 export const metadata: Metadata = { title: 'Tu cuenta — Toryteler' };
@@ -84,7 +84,7 @@ export default async function AccountPage() {
                   <span className="muted">
                     {order.items.map((item) => item.title).join(' · ')}
                   </span>
-                  <span>{formatPrice(order.totalCop)}</span>
+                  <span>{new Intl.NumberFormat('es-CO').format(order.totalCop)} COP</span>
                   <span className="label muted">
                     {ORDER_STATUS[order.status]} · {formatDate(order.createdAt)}
                   </span>

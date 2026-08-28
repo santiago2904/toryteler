@@ -3,7 +3,7 @@ import { apiGet } from '@/lib/api';
 import { AdminOrder } from '@/lib/types';
 import { ProductImage } from '@/components/ProductImage';
 import { ShipOrder } from '@/components/ShipOrder';
-import { formatDate, formatPrice } from '@/lib/format';
+import { formatDate } from '@/lib/format';
 import styles from '../studio.module.scss';
 
 export const metadata: Metadata = { title: 'Pedidos — Studio' };
@@ -49,7 +49,7 @@ export default async function OrdersPage() {
             <div className={styles.meta}>
               <span className="label">{order.reference}</span>
               <span className="muted">{order.items.map((i) => i.title).join(' · ')}</span>
-              <span>{formatPrice(order.totalCop)}</span>
+              <span>{new Intl.NumberFormat('es-CO').format(order.totalCop)} COP</span>
               <span className="label muted">
                 {ORDER_STATUS[order.status] ?? order.status} · {formatDate(order.createdAt)}
               </span>

@@ -1,9 +1,10 @@
 import { formatPrice, formatDate, timeLeft, caretAfterFormat } from './format';
 
 describe('format', () => {
-  it('formats pesos without decimals and with thousand separators', () => {
-    expect(formatPrice(500000)).toBe('$500.000 COP');
-    expect(formatPrice(4000)).toBe('$4.000 COP');
+  it('formats dollars with cents and a thousands separator', () => {
+    expect(formatPrice(2500)).toBe('$25.00 USD');
+    expect(formatPrice(400)).toBe('$4.00 USD');
+    expect(formatPrice(1234567)).toBe('$12,345.67 USD');
   });
 
   it('formats dates in Spanish, uppercase', () => {
