@@ -246,6 +246,23 @@ describe('http wiring', () => {
         .expect(400);
     });
 
+    it('requires a country in the shipping address', async () => {
+      const { token } = await session();
+      await ds.query(
+        `INSERT INTO pieces (slug, title, price_usd_cents, status, published_at)
+         VALUES ('boceto-pais', 'Boceto', 25000, 'available', now())`,
+      );
+      await request(app.getHttpServer())
+        .post('/orders')
+        .set('Authorization', `Bearer ${token}`)
+        .set('Idempotency-Key', 'pais-1')
+        .send({
+          pieceSlugs: ['boceto-pais'], dropSlugs: [], paymentMethod: 'CARD',
+          shippingAddress: { line1: 'Calle 1', city: 'Medellín', phone: '3001234567' },
+        })
+        .expect(400);
+    });
+
     it('answers the same whether or not the address is known', async () => {
       const seen = await request(app.getHttpServer())
         .post('/auth/magic-link')

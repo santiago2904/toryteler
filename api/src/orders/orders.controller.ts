@@ -18,6 +18,7 @@ import { OrdersService } from './orders.service';
 class ShippingAddressDto {
   @IsString() line1!: string;
   @IsString() city!: string;
+  @IsString() country!: string;
   @IsString() phone!: string;
 }
 

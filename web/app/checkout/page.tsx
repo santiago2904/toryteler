@@ -19,7 +19,7 @@ export default function CheckoutPage() {
   const router = useRouter();
   const [lines, setLines] = useState<CartLine[] | null>(null);
   const [method, setMethod] = useState<'CARD' | 'PSE' | 'NEQUI'>('CARD');
-  const [address, setAddress] = useState({ line1: '', city: '', phone: '' });
+  const [address, setAddress] = useState({ line1: '', city: '', country: '', phone: '' });
   /** Slugs of the pieces the buyer wants signed. Empty is the default. */
   const [signed, setSigned] = useState<string[]>([]);
   const [working, setWorking] = useState(false);
@@ -58,7 +58,8 @@ export default function CheckoutPage() {
   const needsAddress = pieces.length > 0;
   const addressComplete =
     !needsAddress ||
-    (address.line1.trim() !== '' && address.city.trim() !== '' && address.phone.trim() !== '');
+    (address.line1.trim() !== '' && address.city.trim() !== ''
+      && address.country.trim() !== '' && address.phone.trim() !== '');
   const emailComplete = signedIn || email.trim() !== '';
 
   async function submit(event: React.FormEvent) {
@@ -204,6 +205,15 @@ export default function CheckoutPage() {
               value={address.city}
               onChange={(e) => setAddress({ ...address, city: e.target.value })}
               autoComplete="address-level2"
+              required
+            />
+
+            <label htmlFor="country">País</label>
+            <input
+              id="country"
+              value={address.country}
+              onChange={(e) => setAddress({ ...address, country: e.target.value })}
+              autoComplete="country-name"
               required
             />
 

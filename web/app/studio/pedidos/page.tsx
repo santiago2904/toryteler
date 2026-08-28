@@ -60,7 +60,10 @@ export default async function OrdersPage() {
 
               {order.shippingAddress && (
                 <span className="muted">
-                  {[order.shippingAddress.line1, order.shippingAddress.city, order.shippingAddress.phone]
+                  {[
+                    order.shippingAddress.line1, order.shippingAddress.city,
+                    order.shippingAddress.country, order.shippingAddress.phone,
+                  ]
                     .filter(Boolean)
                     .join(' · ')}
                 </span>
