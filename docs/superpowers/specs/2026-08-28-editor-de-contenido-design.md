@@ -12,14 +12,16 @@ cambiar ni una palabra sin pedirle a alguien que toque código y despliegue.
 ## Alcance
 
 **No** es un rediseño de i18n de toda la app. Es un editor para un conjunto
-acotado de ~38 textos "editoriales" — los que un artista razonablemente
+acotado de ~35 textos "editoriales" — los que un artista razonablemente
 querría cambiar sin tocar código: copy de marca, mensajes de momentos clave
 del flujo de compra, estados vacíos con tono. Quedan fuera, deliberadamente:
 labels de campos de formulario técnicos, mensajes de error de
-validación/API, y cualquier texto del propio panel `/studio` (es para el
-artista, no necesita editarse a sí mismo).
+validación/API, cualquier texto del propio panel `/studio` (es para el
+artista, no necesita editarse a sí mismo), y cualquier texto que tenga una
+parte dinámica incrustada (un `{título}`, una fecha, un número de horas) —
+ver "Fuera de alcance".
 
-### Las 38 claves
+### Las 35 claves
 
 Formato: clave → texto original (el que se usa como fallback si no hay
 override) → dónde vive hoy.
@@ -48,7 +50,6 @@ override) → dónde vive hoy.
 **Checkout**
 - `checkout.empty.body` → "No tienes nada en el carrito." → `web/app/checkout/page.tsx:51`
 - `checkout.emailNotice.body` → "Ahí te llegan el recibo y, si compras una pieza, el código para firmar el contrato. ¿Ya tienes cuenta? Entra para ver tus pedidos anteriores." → `web/app/checkout/page.tsx:134-138`
-- `checkout.signature.checkboxLabel` → "Quiero «{título}» firmada a mano" → `web/app/checkout/page.tsx:180`
 - `checkout.signature.note` → "Sin costo. Firmarla toma unos días más antes de que salga el envío." → `web/app/checkout/page.tsx:183-185`
 - `checkout.addressNotice.body` → "En el siguiente paso firmarás el contrato de compraventa. Ten a mano tu cédula." → `web/app/checkout/page.tsx:234-236`
 
@@ -81,21 +82,20 @@ override) → dónde vive hoy.
 
 **Reproductor efímero**
 - `watch.closed.title` → "Tu ventana se cerró." → `web/components/EphemeralPlayer.tsx:87`
-- `watch.closed.body` → "Lo viste el {fecha}. Este video no vuelve a abrirse: era una sola vez." → `:88-91`
 - `watch.intro.title` → "Antes de reproducir" → `:101`
-- `watch.intro.body` → "Al darle play se abre tu ventana de {horas} horas. Dentro de ese tiempo puedes salir y volver las veces que quieras, desde el teléfono o el computador." → `:102-105`
 - `watch.intro.warning` → "Cuando la ventana se cierre, este video no vuelve a abrirse. Ocurre una sola vez." → `:106`
 
-Los textos con `{título}`, `{fecha}`, `{horas}` tienen una parte dinámica:
-el override reemplaza el texto completo, pero debe conservar el marcador
-literal (`{título}`, etc.) para que la interpolación siga funcionando — ver
-"Formato con variables" más abajo.
+Tres textos quedan deliberadamente fuera del editor por tener una parte
+dinámica incrustada en la frase (`checkout.signature.checkboxLabel` con el
+título de la pieza, `watch.closed.body` con la fecha en que se vio, y
+`watch.intro.body` con el número de horas de la ventana) — ver
+"Fuera de alcance".
 
 ## Arquitectura y flujo de datos
 
 Un solo endpoint público, `GET /content`, devuelve el mapa completo de
 overrides activos: `{ [key: string]: string }`. Solo contiene las claves que
-el artista ya cambió — nunca las 38 completas. En cada uno de los 38 lugares
+el artista ya cambió — nunca las 35 completas. En cada uno de los 35 lugares
 del código, el texto hardcodeado se envuelve así:
 
 ```ts
@@ -108,22 +108,6 @@ nada** al lanzar la función: día uno, sin overrides, la tienda se ve
 exactamente igual que hoy. El artista solo "gasta" una fila en la tabla el
 día que efectivamente cambia algo.
 
-### Formato con variables
-
-Para las 4 claves con una parte dinámica (`checkout.signature.checkboxLabel`,
-`watch.closed.body`, `watch.intro.body`), `content()` acepta un tercer
-argumento opcional con los valores a interpolar:
-
-```ts
-await content('watch.intro.body', DEFAULT, { horas: windowHours })
-```
-
-El override guardado debe contener literalmente `{horas}`; `content()` hace
-un reemplazo simple de `{clave}` por el valor de `vars[clave]` sobre el
-string ya resuelto (override o fallback). El panel de `/studio/contenido`
-muestra, junto al campo de estas 4 claves, una nota indicando qué marcador
-no se debe borrar.
-
 ## Lado API
 
 ### Migración y entidad
@@ -132,7 +116,7 @@ Tabla `content_overrides`:
 
 | columna | tipo | notas |
 |---|---|---|
-| `key` | `varchar` PK | una de las 38 claves conocidas |
+| `key` | `varchar` PK | una de las 35 claves conocidas |
 | `value` | `text` | el texto que reemplaza al original |
 | `updated_at` | `timestamptz` | `now()` en cada `PUT` |
 | `updated_by` | `uuid` | FK a `users.id`, quién lo cambió |
@@ -143,7 +127,7 @@ volver al texto original, no ver cada cambio intermedio. Eso lo cubre el
 fallback del código. Si más adelante se necesitan versiones múltiples por
 clave, es una ampliación aparte, fuera de este alcance.
 
-Las 38 claves y sus textos originales viven en una lista fija en el código
+Las 35 claves y sus textos originales viven en una lista fija en el código
 del API (`api/src/content/content-keys.ts` o similar), la misma tabla de
 arriba — es la fuente de verdad de "qué claves existen" para el panel de
 admin, independiente de si tienen override o no.
@@ -152,12 +136,12 @@ admin, independiente de si tienen override o no.
 
 - `GET /content` — público, sin auth. Devuelve `{ [key]: value }` con todas
   las filas actuales de `content_overrides`. Lo consume la tienda pública.
-- `GET /admin/content` — requiere admin. Devuelve las 38 claves conocidas,
+- `GET /admin/content` — requiere admin. Devuelve las 35 claves conocidas,
   cada una con `{ key, section, defaultValue, currentValue, hasOverride }`
   (`currentValue` es el override si existe, si no el `defaultValue`).
 - `PUT /admin/content/:key` — requiere admin. Body `{ value: string }`.
-  Rechaza (400) una clave que no esté en la lista fija de 38. Hace `UPSERT`
-  con `updated_by` = el admin autenticado.
+  Rechaza (400, `UNKNOWN_KEY`) una clave que no esté en la lista fija de 35.
+  Hace `UPSERT` con `updated_by` = el admin autenticado.
 - `DELETE /admin/content/:key` — requiere admin. Borra la fila si existe
   (204 igual si no existía — restablecer algo que ya está en su valor
   original no es un error).
@@ -167,14 +151,9 @@ admin, independiente de si tienen override o no.
 `web/lib/content.ts`, mismo patrón que `web/lib/api.ts`:
 
 ```ts
-export async function content(
-  key: string,
-  fallback: string,
-  vars?: Record<string, string>,
-): Promise<string> {
+export async function content(key: string, fallback: string): Promise<string> {
   const overrides = await getOverrides();
-  const text = overrides[key] ?? fallback;
-  return vars ? interpolate(text, vars) : text;
+  return overrides[key] ?? fallback;
 }
 ```
 
@@ -187,11 +166,14 @@ invalide la tag. `web/lib/studio-actions.ts` gana dos acciones nuevas,
 `updateDrop` con `revalidatePath`, adaptado a `revalidateTag` porque el
 contenido se lee desde muchas rutas a la vez, no una sola.
 
-Como los 38 lugares están en Server Components (páginas `page.tsx` async o
+Como los 35 lugares están en Server Components (páginas `page.tsx` async o
 funciones que ya son `async`), `content(...)` se llama con `await` directo
 en el JSX. `EphemeralPlayer.tsx` es la única excepción (`'use client'`): sus
-3 claves se resuelven en el `page.tsx` que lo renderiza y se le pasan como
-props ya resueltas, igual que hace hoy con cualquier otro dato del servidor.
+3 claves editables (`watch.closed.title`, `watch.intro.title`,
+`watch.intro.warning` — las que sí llevan texto dinámico incrustado quedan
+fuera, ver "Fuera de alcance") se resuelven en el `page.tsx` que lo
+renderiza y se le pasan como props ya resueltas, igual que hace hoy con
+cualquier otro dato del servidor.
 
 Sin `API_URL` configurado (modo maqueta), `content()` devuelve siempre el
 `fallback` — no hay overrides posibles sin API real, igual que el resto de
@@ -201,11 +183,11 @@ Sin `API_URL` configurado (modo maqueta), `content()` devuelve siempre el
 
 Una sola pantalla, agrupada por sección exactamente como en la tabla de
 arriba (Home, Artista, Marca global, Carrito, Checkout, Contrato, Pagar,
-Resultado del pago, Pieza, Drop, Reproductor). Por cada uno de los 38
+Resultado del pago, Pieza, Drop, Reproductor). Por cada uno de los 35
 textos: un `<textarea>` con el valor actual (override si existe, si no el
 original), un botón "Guardar" habilitado solo si el valor cambió, y un
 botón "Restablecer" visible solo si esa clave tiene `hasOverride: true`.
-Sin buscador ni paginación: 38 campos en una sola página con anclas por
+Sin buscador ni paginación: 35 campos en una sola página con anclas por
 sección es navegable sin necesitar más estructura.
 
 Se agrega al menú de `/studio` como una entrada más, junto a "Piezas",
@@ -214,20 +196,28 @@ Se agrega al menú de `/studio` como una entrada más, junto a "Piezas",
 ## Pruebas
 
 - **API:** integración para los 4 endpoints — `GET /content` sin overrides
-  (mapa vacío) y con overrides; `GET /admin/content` trae las 38 con
+  (mapa vacío) y con overrides; `GET /admin/content` trae las 35 con
   `hasOverride` correcto; `PUT` crea y actualiza; `DELETE` borra y es
   idempotente; los 3 endpoints de `/admin/*` devuelven 401/403 sin sesión de
-  admin; `PUT` con una clave fuera de la lista fija devuelve 400.
-- **Web:** `content()` con y sin override, con y sin `vars` (interpolación);
-  smoke test de que `updateContent`/`resetContent` llaman
-  `revalidateTag('content')`.
+  admin; `PUT` con una clave fuera de la lista fija devuelve 400
+  (`UNKNOWN_KEY`).
+- **Web:** `content()` con y sin override (fallback correcto); smoke test de
+  que `updateContent`/`resetContent` llaman `revalidateTag('content')`.
 
 ## Fuera de alcance
 
-- Cualquier texto no listado en las 38 claves — agregar una clave nueva más
+- Cualquier texto no listado en las 35 claves — agregar una clave nueva más
   adelante es una tarea de una línea de código (envolver el texto en
   `content(...)`) más una fila en la lista fija del API, no un cambio de
   arquitectura.
+- Los 3 textos con una parte dinámica incrustada en la frase —
+  `checkout.signature.checkboxLabel` ("Quiero «{título}» firmada a mano"),
+  `watch.closed.body` (con la fecha en que se vio) y `watch.intro.body` (con
+  el número de horas de la ventana) — quedan fuera del editor y siguen
+  hardcodeados como hoy. Sacarlos evita construir un mecanismo de
+  interpolación (`vars`, validación de marcadores obligatorios) solo para 3
+  textos; si más adelante se quieren editables, es una extensión aparte del
+  mecanismo base descrito aquí, no algo que este editor resuelva ahora.
 - Versiones múltiples por clave / deshacer más de un paso atrás.
 - Edición de textos del propio panel `/studio`.
 - Cualquier soporte multi-idioma — el mecanismo permite un texto por clave,
