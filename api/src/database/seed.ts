@@ -27,7 +27,7 @@ interface SeedPiece {
   title: string;
   description: string;
   story: string;
-  priceCop: number;
+  priceUsdCents: number;
   image: string;
   stock: number;
   /** Days ago it was published: the catalogue is ordered by this. */
@@ -43,7 +43,7 @@ const PIECES: SeedPiece[] = [
       'Impresión de trabajo sobre papel mate, 30 × 30 cm. Marcas de lápiz en el margen inferior y una anotación de puño y letra en el reverso.',
     story:
       'Es la versión que llevé a la reunión donde decidimos la portada. Perdió por dos votos. La guardé enrollada detrás de un parlante durante seis años y tiene la esquina doblada por eso.',
-    priceCop: 2400000,
+    priceUsdCents: 24000,
     image: 'v1786679539/800w-KKOAYz5esa4.jpg',
     stock: 1,
     published: 1,
@@ -55,7 +55,7 @@ const PIECES: SeedPiece[] = [
       'Prueba de imprenta, 30 × 30 cm, con las correcciones de tono marcadas en rojo por el diseñador.',
     story:
       'Hicimos catorce pruebas hasta dar con el color. Esta es la número nueve, la que casi queda. Todavía se ven las indicaciones de cuánto había que bajarle al azul.',
-    priceCop: 900000,
+    priceUsdCents: 9000,
     image: 'v1786679537/3YV2PTJAVFGCVJK5IC6RJYY6EA.jpg',
     stock: 1,
     published: 2,
@@ -66,7 +66,7 @@ const PIECES: SeedPiece[] = [
     description: 'Única copia impresa de una portada que nunca se usó, 30 × 30 cm.',
     story:
       'Esta portada existió durante once días. Se imprimió una sola vez, para verla en papel, y al día siguiente cambiamos de idea. Nadie fuera del estudio la había visto hasta ahora.',
-    priceCop: 3800000,
+    priceUsdCents: 38000,
     image: 'v1786679539/250px-Taylor_Swift_-_1989.png.png',
     stock: 0,
     published: 3,
@@ -78,7 +78,7 @@ const PIECES: SeedPiece[] = [
     description: 'Cartón de trabajo con la retícula de la portada dibujada a mano, 30 × 30 cm.',
     story:
       'Antes de que existiera el arte final existió esto: una cuadrícula a lápiz para saber dónde iba cada cosa. Lo usábamos de mantel cuando pedíamos comida al estudio, y se nota.',
-    priceCop: 620000,
+    priceUsdCents: 6200,
     image:
       'v1786679538/unknown-cd-album-mixtape-cover-design-templat-template-a0089f026a71f9722a55157364f22590_screen.jpg',
     stock: 1,
@@ -90,7 +90,7 @@ const PIECES: SeedPiece[] = [
     description: 'Copia fotográfica de la sesión de portada, 30 × 30 cm. Sin retoque.',
     story:
       'De esa sesión salieron cuatrocientas fotos y se usó una. Esta es la que yo quería. Me dijeron que se me veía cansado; llevaba dos días sin dormir, así que tenían razón.',
-    priceCop: 1750000,
+    priceUsdCents: 17500,
     image: 'v1786679538/rihanna-anti-cover-2016-billboard-1240.jpg',
     stock: 12,
     published: 5,
@@ -101,7 +101,7 @@ const PIECES: SeedPiece[] = [
     description: 'Maqueta física del empaque, armada a mano con cinta y cartón.',
     story:
       'La armé yo en la cocina para ver si el disco cabía. No cabía. Le sobra medio centímetro por un lado y ahí quedó la marca del corte que le hice con un bisturí.',
-    priceCop: 1100000,
+    priceUsdCents: 11000,
     image: 'v1786679539/Ecomm-PreLaunch-CD-16STD-1_d64d3610-8393-4a07-95db-959456b7f15c.png',
     stock: 1,
     published: 6,
@@ -112,7 +112,7 @@ const PIECES: SeedPiece[] = [
     description: 'Lámina de calcomanías de la primera gira, 30 × 30 cm. Faltan tres.',
     story:
       'Repartimos estas láminas en la primera gira. De la mía faltan tres calcomanías: dos se las pegué a la guitarra y una la perdí en un aeropuerto.',
-    priceCop: 480000,
+    priceUsdCents: 4800,
     image: 'v1786679540/TattooYou81.jpg.jpg',
     stock: 0,
     published: 7,
@@ -124,7 +124,7 @@ const PIECES: SeedPiece[] = [
     description: 'Portada alterna impresa para la edición en vinilo, 31 × 31 cm.',
     story:
       'Sacamos doscientos vinilos con esta portada y nunca se repitió. Esta es la copia cero, la que sale antes de la tirada para revisar que todo esté bien.',
-    priceCop: 2950000,
+    priceUsdCents: 29500,
     image: 'v1786679541/RR8051_The-Travelled-Road.jpg',
     stock: 5,
     published: 8,
@@ -135,7 +135,7 @@ const PIECES: SeedPiece[] = [
     description: 'Impresión de un estudio de luz para la portada, 30 × 30 cm.',
     story:
       'Estuvimos una noche entera probando cómo se rompía la luz al pasar por un vidrio. De ahí salió todo lo demás. Es la imagen más antigua del proyecto.',
-    priceCop: 4200000,
+    priceUsdCents: 42000,
     image: 'v1786682102/6.-Pink-Floyd-_E2_80_98Dark-Side-of-the-Moon-1973-album-art-billboard-1240.jpg',
     stock: 1,
     published: 9,
@@ -146,7 +146,7 @@ const PIECES: SeedPiece[] = [
     description: 'Arte de contraportada con los créditos escritos a máquina, 30 × 30 cm.',
     story:
       'Los créditos los escribí en la máquina de mi abuelo. Hay un nombre mal escrito que nunca corregimos y que sigue mal en todas las ediciones.',
-    priceCop: 1350000,
+    priceUsdCents: 13500,
     image: 'v1786682103/63a008f631ae7492a75a001bd0791e8f.jpg',
     stock: 1,
     published: 10,
@@ -157,7 +157,7 @@ interface SeedDrop {
   slug: string;
   title: string;
   description: string;
-  priceCop: number;
+  priceUsdCents: number;
   posterImage: string;
   capacity: number;
   windowHours: number;
@@ -171,7 +171,7 @@ const DROPS: SeedDrop[] = [
     title: 'Ojitos verdes — máster de maqueta',
     description:
       'La maqueta original, sin mezclar. Se oye el conteo, se oye la silla, y en el segundo verso me equivoco y sigo. Es la primera vez que la canción existió entera.',
-    priceCop: 25000,
+    priceUsdCents: 250,
     posterImage: 'v1786679539/800w-KKOAYz5esa4.jpg',
     capacity: 50,
     windowHours: 24,
@@ -182,7 +182,7 @@ const DROPS: SeedDrop[] = [
     title: 'Casa 42 — máster de maqueta',
     description:
       'Grabada en la casa que le da el nombre, con un micrófono prestado y la ventana abierta. Al final se oye pasar una moto y por eso nunca la usamos.',
-    priceCop: 25000,
+    priceUsdCents: 250,
     posterImage: 'v1786682103/63a008f631ae7492a75a001bd0791e8f.jpg',
     capacity: 30,
     windowHours: 24,
@@ -193,7 +193,7 @@ const DROPS: SeedDrop[] = [
     title: 'Cómo conocí a Gabi',
     description:
       'Siete minutos contando cómo nos conocimos, sin editar y sin guion. Es la historia que está detrás de medio disco y que nunca he contado en una entrevista.',
-    priceCop: 4000,
+    priceUsdCents: 40,
     posterImage: 'v1786679541/RR8051_The-Travelled-Road.jpg',
     capacity: 200,
     windowHours: 48,
@@ -207,13 +207,13 @@ async function seed(ds: DataSource): Promise<void> {
 
   for (const piece of PIECES) {
     await ds.query(
-      `INSERT INTO pieces (slug, title, description, story, personal_note, price_cop,
+      `INSERT INTO pieces (slug, title, description, story, personal_note, price_usd_cents,
                            images, stock, status, published_at, sold_at)
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'available',
                now() - make_interval(days => $9), $10)
        ON CONFLICT (slug) DO UPDATE SET
          title = EXCLUDED.title, description = EXCLUDED.description,
-         story = EXCLUDED.story, price_cop = EXCLUDED.price_cop,
+         story = EXCLUDED.story, price_usd_cents = EXCLUDED.price_usd_cents,
          images = EXCLUDED.images, stock = EXCLUDED.stock,
          status = EXCLUDED.status, sold_at = EXCLUDED.sold_at`,
       [
@@ -222,7 +222,7 @@ async function seed(ds: DataSource): Promise<void> {
         piece.description,
         piece.story,
         `Gracias por quedarte con esto. Espero que te dure más de lo que me duró a mí.\n\nTory`,
-        piece.priceCop,
+        piece.priceUsdCents,
         JSON.stringify([piece.image]),
         piece.stock,
         piece.published,
@@ -235,12 +235,12 @@ async function seed(ds: DataSource): Promise<void> {
 
   for (const drop of DROPS) {
     const [row] = await ds.query(
-      `INSERT INTO drops (slug, title, description, price_cop, video_asset_id, poster_image,
+      `INSERT INTO drops (slug, title, description, price_usd_cents, video_asset_id, poster_image,
                           capacity, view_window_hours, status, published_at)
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'available', now() - make_interval(days => $9))
        ON CONFLICT (slug) DO UPDATE SET
          title = EXCLUDED.title, description = EXCLUDED.description,
-         price_cop = EXCLUDED.price_cop, video_asset_id = EXCLUDED.video_asset_id,
+         price_usd_cents = EXCLUDED.price_usd_cents, video_asset_id = EXCLUDED.video_asset_id,
          poster_image = EXCLUDED.poster_image, capacity = EXCLUDED.capacity,
          view_window_hours = EXCLUDED.view_window_hours
        RETURNING id`,
@@ -248,7 +248,7 @@ async function seed(ds: DataSource): Promise<void> {
         drop.slug,
         drop.title,
         drop.description,
-        drop.priceCop,
+        drop.priceUsdCents,
         VIDEO_ASSET,
         drop.posterImage,
         drop.capacity,
@@ -317,7 +317,7 @@ async function fillSeats(ds: DataSource, dropId: string, slug: string, wanted: n
        RETURNING id
      ), pedidos AS (
        INSERT INTO orders (user_id, total_cop, payment_method, reference, status, paid_at)
-       SELECT id, 25000, 'CARD', 'ord_seed_' || replace(id::text, '-', ''), 'paid', now()
+       SELECT id, 250, 'CARD', 'ord_seed_' || replace(id::text, '-', ''), 'paid', now()
          FROM nuevos
        RETURNING id, user_id
      )
@@ -340,7 +340,7 @@ async function giveBuyerHistory(ds: DataSource, buyerId: string): Promise<void> 
   if (count > 0) return; // already has a history
 
   // Asked signed, so the studio shows what that looks like on a real order.
-  const shipped = await createOrder(ds, buyerId, 2400000, {
+  const shipped = await createOrder(ds, buyerId, 24000, {
     pieceSlug: 'boceto-portada-primer-disco',
     signed: true,
   });
@@ -351,7 +351,7 @@ async function giveBuyerHistory(ds: DataSource, buyerId: string): Promise<void> 
     [shipped],
   );
 
-  await createOrder(ds, buyerId, 925000, {
+  await createOrder(ds, buyerId, 9250, {
     pieceSlug: 'prueba-de-color',
     dropSlug: 'ojitos-verdes-maqueta',
   });
@@ -378,14 +378,14 @@ async function createOrder(
   if (items.pieceSlug) {
     await ds.query(
       `INSERT INTO order_items (order_id, piece_id, unit_price_cop, wants_signature)
-       SELECT $1, id, price_cop, $3 FROM pieces WHERE slug = $2`,
+       SELECT $1, id, price_usd_cents, $3 FROM pieces WHERE slug = $2`,
       [order.id, items.pieceSlug, items.signed ?? false],
     );
   }
   if (items.dropSlug) {
     await ds.query(
       `INSERT INTO order_items (order_id, drop_id, unit_price_cop)
-       SELECT $1, id, price_cop FROM drops WHERE slug = $2`,
+       SELECT $1, id, price_usd_cents FROM drops WHERE slug = $2`,
       [order.id, items.dropSlug],
     );
   }
@@ -411,10 +411,10 @@ async function grant(
 
   await ds.query(
     `WITH d AS (
-       SELECT id, price_cop FROM drops WHERE slug = $2
+       SELECT id, price_usd_cents FROM drops WHERE slug = $2
      ), o AS (
        INSERT INTO orders (user_id, total_cop, payment_method, reference, status, paid_at)
-       SELECT $1, d.price_cop, 'CARD',
+       SELECT $1, d.price_usd_cents, 'CARD',
               'ord_ent_' || substr(md5(random()::text), 1, 12), 'paid', now()
          FROM d
        RETURNING id

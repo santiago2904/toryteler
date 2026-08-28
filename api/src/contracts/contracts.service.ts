@@ -45,12 +45,13 @@ export class ContractsService {
   async prepare(orderId: string, signer: SignerData): Promise<PreparedContract> {
     const row = firstRow<{
       order_id: string; reference: string; user_id: string; email: string;
-      piece_id: string; title: string; description: string; unit_price_cop: number;
+      piece_id: string; title: string; description: string;
+      unit_price_cop: number; unit_price_usd_cents: number | null;
     }>(
       await this.ds.query(
         `SELECT o.id AS order_id, o.reference, o.user_id, u.email,
                 p.id AS piece_id, p.title, coalesce(p.description, '') AS description,
-                oi.unit_price_cop
+                oi.unit_price_cop, oi.unit_price_usd_cents
            FROM orders o
            JOIN order_items oi ON oi.order_id = o.id AND oi.piece_id IS NOT NULL
            JOIN pieces p ON p.id = oi.piece_id
@@ -91,6 +92,7 @@ export class ContractsService {
       pieceTitle: row.title,
       pieceDescription: row.description,
       priceCop: row.unit_price_cop,
+      priceUsdCents: row.unit_price_usd_cents,
       buyerName: signer.fullName,
       buyerDocument: signer.documentId,
       buyerEmail: row.email,

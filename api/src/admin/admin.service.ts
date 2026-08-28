@@ -16,7 +16,7 @@ export interface AdminPiece {
   id: string;
   slug: string;
   title: string;
-  priceCop: number;
+  priceUsdCents: number;
   images: string[];
   stock: number;
   status: string;
@@ -28,7 +28,7 @@ export interface AdminDrop {
   id: string;
   slug: string;
   title: string;
-  priceCop: number;
+  priceUsdCents: number;
   posterImage: string | null;
   capacity: number | null;
   viewWindowHours: number;
@@ -66,7 +66,7 @@ export interface NewPiece {
   description?: string | null;
   story?: string | null;
   personalNote?: string | null;
-  priceCop: number;
+  priceUsdCents: number;
   stock: number;
   images: string[];
 }
@@ -74,7 +74,7 @@ export interface NewPiece {
 export interface NewDrop {
   title: string;
   description?: string | null;
-  priceCop: number;
+  priceUsdCents: number;
   videoAssetId: string;
   posterImage?: string | null;
   capacity: number | null;
@@ -87,7 +87,7 @@ const PIECE_FIELDS: Record<string, string> = {
   description: 'description',
   story: 'story',
   personalNote: 'personal_note',
-  priceCop: 'price_cop',
+  priceUsdCents: 'price_usd_cents',
   stock: 'stock',
   images: 'images',
 };
@@ -95,7 +95,7 @@ const PIECE_FIELDS: Record<string, string> = {
 const DROP_FIELDS: Record<string, string> = {
   title: 'title',
   description: 'description',
-  priceCop: 'price_cop',
+  priceUsdCents: 'price_usd_cents',
   posterImage: 'poster_image',
   capacity: 'capacity',
   viewWindowHours: 'view_window_hours',
@@ -119,7 +119,7 @@ export class AdminService {
     const slug = await this.uniqueSlug('pieces', piece.title);
     const row = firstRow<{ id: string }>(
       await this.ds.query(
-        `INSERT INTO pieces (slug, title, description, story, personal_note, price_cop, stock, images)
+        `INSERT INTO pieces (slug, title, description, story, personal_note, price_usd_cents, stock, images)
          VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id`,
         [
           slug,
@@ -127,7 +127,7 @@ export class AdminService {
           piece.description ?? null,
           piece.story ?? null,
           piece.personalNote ?? null,
-          piece.priceCop,
+          piece.priceUsdCents,
           piece.stock,
           JSON.stringify(piece.images),
         ],
@@ -140,14 +140,14 @@ export class AdminService {
     const slug = await this.uniqueSlug('drops', drop.title);
     const row = firstRow<{ id: string }>(
       await this.ds.query(
-        `INSERT INTO drops (slug, title, description, price_cop, video_asset_id, poster_image,
+        `INSERT INTO drops (slug, title, description, price_usd_cents, video_asset_id, poster_image,
                             capacity, view_window_hours)
          VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id`,
         [
           slug,
           drop.title,
           drop.description ?? null,
-          drop.priceCop,
+          drop.priceUsdCents,
           drop.videoAssetId,
           drop.posterImage ?? null,
           drop.capacity,
@@ -235,11 +235,11 @@ export class AdminService {
    */
   async listPieces(): Promise<AdminPiece[]> {
     const rows = returnedRows<{
-      id: string; slug: string; title: string; price_cop: number; images: string[];
+      id: string; slug: string; title: string; price_usd_cents: number; images: string[];
       stock: number; status: string; sold: number;
     }>(
       await this.ds.query(
-        `SELECT p.id, p.slug, p.title, p.price_cop, p.images, p.stock, p.status,
+        `SELECT p.id, p.slug, p.title, p.price_usd_cents, p.images, p.stock, p.status,
                 (SELECT count(*)::int
                    FROM order_items i JOIN orders o ON o.id = i.order_id
                   WHERE i.piece_id = p.id AND o.status = 'paid') AS sold
@@ -250,18 +250,18 @@ export class AdminService {
       ),
     );
     return rows.map((r) => ({
-      id: r.id, slug: r.slug, title: r.title, priceCop: r.price_cop,
+      id: r.id, slug: r.slug, title: r.title, priceUsdCents: r.price_usd_cents,
       images: r.images, stock: r.stock, status: r.status, sold: r.sold,
     }));
   }
 
   async listDrops(): Promise<AdminDrop[]> {
     const rows = returnedRows<{
-      id: string; slug: string; title: string; price_cop: number; poster_image: string | null;
+      id: string; slug: string; title: string; price_usd_cents: number; poster_image: string | null;
       capacity: number | null; view_window_hours: number; status: string; sold: number;
     }>(
       await this.ds.query(
-        `SELECT d.id, d.slug, d.title, d.price_cop, d.poster_image, d.capacity,
+        `SELECT d.id, d.slug, d.title, d.price_usd_cents, d.poster_image, d.capacity,
                 d.view_window_hours, d.status,
                 (SELECT count(*)::int FROM entitlements e WHERE e.drop_id = d.id) AS sold
            FROM drops d
@@ -270,7 +270,7 @@ export class AdminService {
       ),
     );
     return rows.map((r) => ({
-      id: r.id, slug: r.slug, title: r.title, priceCop: r.price_cop,
+      id: r.id, slug: r.slug, title: r.title, priceUsdCents: r.price_usd_cents,
       posterImage: r.poster_image, capacity: r.capacity,
       viewWindowHours: r.view_window_hours, status: r.status, sold: r.sold,
     }));
@@ -287,7 +287,7 @@ export class AdminService {
   async findPiece(slug: string) {
     const row = firstRow<Record<string, unknown>>(
       await this.ds.query(
-        `SELECT id, slug, title, description, story, personal_note, price_cop,
+        `SELECT id, slug, title, description, story, personal_note, price_usd_cents,
                 images, stock, status, sold_at
            FROM pieces WHERE slug = $1`,
         [slug],
@@ -297,7 +297,7 @@ export class AdminService {
 
     return {
       id: row.id, slug: row.slug, title: row.title, description: row.description,
-      story: row.story, personalNote: row.personal_note, priceCop: row.price_cop,
+      story: row.story, personalNote: row.personal_note, priceUsdCents: row.price_usd_cents,
       images: row.images, stock: row.stock, status: row.status, soldAt: row.sold_at,
       available: (row.stock as number) > 0,
     };
@@ -306,7 +306,7 @@ export class AdminService {
   async findDrop(slug: string) {
     const row = firstRow<Record<string, unknown>>(
       await this.ds.query(
-        `SELECT d.id, d.slug, d.title, d.description, d.price_cop, d.video_asset_id,
+        `SELECT d.id, d.slug, d.title, d.description, d.price_usd_cents, d.video_asset_id,
                 d.poster_image, d.capacity, d.view_window_hours, d.status,
                 (SELECT count(*)::int FROM entitlements e WHERE e.drop_id = d.id) AS sold
            FROM drops d WHERE d.slug = $1`,
@@ -319,7 +319,7 @@ export class AdminService {
     const sold = row.sold as number;
     return {
       id: row.id, slug: row.slug, title: row.title, description: row.description,
-      priceCop: row.price_cop, videoAssetId: row.video_asset_id,
+      priceUsdCents: row.price_usd_cents, videoAssetId: row.video_asset_id,
       posterImage: row.poster_image, capacity,
       viewWindowHours: row.view_window_hours, status: row.status, sold,
       remaining: capacity === null ? null : Math.max(0, capacity - sold),

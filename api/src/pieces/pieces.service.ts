@@ -7,7 +7,7 @@ import { affectedRows, firstRow, returnedRows } from '../database/rows';
 export interface PieceSummary {
   slug: string;
   title: string;
-  priceCop: number;
+  priceUsdCents: number;
   images: string[];
   /** 1 is an irreplaceable piece; more than 1, an edition. */
   stock: number;
@@ -27,7 +27,7 @@ interface PieceRow {
   title: string;
   description: string | null;
   story: string | null;
-  price_cop: number;
+  price_usd_cents: number;
   images: string[];
   stock: number;
   sold_at: Date | null;
@@ -45,7 +45,7 @@ export class PiecesService {
   async listPublished(): Promise<PieceSummary[]> {
     const rows = returnedRows<PieceRow>(
       await this.ds.query(
-        `SELECT slug, title, price_cop, images, stock
+        `SELECT slug, title, price_usd_cents, images, stock
            FROM pieces
           WHERE status = 'available' AND published_at IS NOT NULL
           ORDER BY published_at DESC`,
@@ -61,7 +61,7 @@ export class PiecesService {
   async findBySlug(slug: string): Promise<PieceDetail | null> {
     const row = firstRow<PieceRow>(
       await this.ds.query(
-        `SELECT id, slug, title, description, story, price_cop, images, stock, sold_at
+        `SELECT id, slug, title, description, story, price_usd_cents, images, stock, sold_at
            FROM pieces
           WHERE slug = $1 AND status = 'available' AND published_at IS NOT NULL`,
         [slug],
@@ -82,7 +82,7 @@ export class PiecesService {
     return {
       slug: row.slug,
       title: row.title,
-      priceCop: row.price_cop,
+      priceUsdCents: row.price_usd_cents,
       images: row.images,
       stock: row.stock,
       available: row.stock > 0,

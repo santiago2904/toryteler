@@ -15,7 +15,7 @@ export interface DropDetail {
   slug: string;
   title: string;
   description: string | null;
-  priceCop: number;
+  priceUsdCents: number;
   posterImage: string | null;
   capacity: number | null;
   remaining: number | null;
@@ -28,14 +28,14 @@ interface DropRow {
   slug: string;
   title: string;
   description: string | null;
-  price_cop: number;
+  price_usd_cents: number;
   poster_image: string | null;
   capacity: number | null;
   view_window_hours: number;
   granted: number;
 }
 
-const PUBLIC_COLUMNS = `d.id, d.slug, d.title, d.description, d.price_cop, d.poster_image,
+const PUBLIC_COLUMNS = `d.id, d.slug, d.title, d.description, d.price_usd_cents, d.poster_image,
                         d.capacity, d.view_window_hours,
                         (SELECT count(*)::int FROM entitlements e WHERE e.drop_id = d.id) AS granted`;
 
@@ -155,7 +155,7 @@ export class DropsService {
       slug: row.slug,
       title: row.title,
       description: row.description,
-      priceCop: row.price_cop,
+      priceUsdCents: row.price_usd_cents,
       posterImage: row.poster_image,
       capacity: row.capacity,
       remaining,

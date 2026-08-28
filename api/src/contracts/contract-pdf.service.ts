@@ -8,6 +8,7 @@ export interface ContractData {
   pieceTitle: string;
   pieceDescription: string;
   priceCop: number;
+  priceUsdCents: number | null;
   buyerName: string;
   buyerDocument: string;
   buyerEmail: string;
@@ -45,7 +46,10 @@ export class ContractPdfService {
   async render(data: ContractData): Promise<Buffer> {
     const pdf = await PDFDocument.create();
     const layout = await ContractLayout.create(pdf);
-    const money = new Intl.NumberFormat('es-CO').format(data.priceCop);
+    const cop = new Intl.NumberFormat('es-CO').format(data.priceCop);
+    const figure = data.priceUsdCents !== null
+      ? `$${(data.priceUsdCents / 100).toFixed(2)} USD ($${cop} COP)`
+      : `$${cop} COP`; // pedido antiguo, sin registro en dólares
 
     pdf.setTitle(`Contrato de compraventa · ${data.reference}`);
     pdf.setAuthor(this.seller().name);
@@ -68,7 +72,7 @@ export class ContractPdfService {
     if (data.pieceDescription) layout.paragraph(data.pieceDescription, { muted: true });
 
     layout.section('Precio');
-    layout.figure(`$${money} COP`);
+    layout.figure(figure);
     layout.paragraph('Pagadero en su totalidad al momento de la compra.', { muted: true });
 
     layout.rule();
