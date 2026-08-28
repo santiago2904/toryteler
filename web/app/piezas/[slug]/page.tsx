@@ -23,7 +23,7 @@ export async function generateMetadata(
   const piece = await load(slug);
   if (!piece) return { title: 'Pieza no encontrada' };
   return {
-    title: `${piece.title} — Tory teler`,
+    title: `${piece.title} — Toryteler`,
     description: piece.description ?? undefined,
   };
 }

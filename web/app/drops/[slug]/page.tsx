@@ -23,7 +23,7 @@ export async function generateMetadata(
   const drop = await load(slug);
   if (!drop) return { title: 'No encontrado' };
   return {
-    title: `${drop.title} — Tory teler`,
+    title: `${drop.title} — Toryteler`,
     description: drop.description ?? undefined,
   };
 }
