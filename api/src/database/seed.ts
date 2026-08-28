@@ -22,6 +22,14 @@ const VIDEO_ASSET = 'd95d44921471579a2f1e0a3ae1144b6f';
 const ARTIST = 'tory@toryteler.co';
 const BUYER = 'comprador@toryteler.co';
 
+/**
+ * Tasa de referencia fija solo para convertir los datos de siembra a pesos,
+ * no una tasa real: el mismo criterio de web/lib/fees.ts — una referencia fija
+ * para una estimación, no la TRM en vivo. Estos pedidos son de demostración y
+ * nunca pasan por Wompi.
+ */
+const REFERENCE_COP_PER_USD = 4000;
+
 interface SeedPiece {
   slug: string;
   title: string;
@@ -340,7 +348,7 @@ async function giveBuyerHistory(ds: DataSource, buyerId: string): Promise<void> 
   if (count > 0) return; // already has a history
 
   // Asked signed, so the studio shows what that looks like on a real order.
-  const shipped = await createOrder(ds, buyerId, 24000, {
+  const shipped = await createOrder(ds, buyerId, Math.round((24000 / 100) * REFERENCE_COP_PER_USD), {
     pieceSlug: 'boceto-portada-primer-disco',
     signed: true,
   });
@@ -351,7 +359,7 @@ async function giveBuyerHistory(ds: DataSource, buyerId: string): Promise<void> 
     [shipped],
   );
 
-  await createOrder(ds, buyerId, 9250, {
+  await createOrder(ds, buyerId, Math.round((9250 / 100) * REFERENCE_COP_PER_USD), {
     pieceSlug: 'prueba-de-color',
     dropSlug: 'ojitos-verdes-maqueta',
   });
@@ -378,15 +386,15 @@ async function createOrder(
   if (items.pieceSlug) {
     await ds.query(
       `INSERT INTO order_items (order_id, piece_id, unit_price_cop, wants_signature)
-       SELECT $1, id, price_usd_cents, $3 FROM pieces WHERE slug = $2`,
-      [order.id, items.pieceSlug, items.signed ?? false],
+       SELECT $1, id, ROUND(price_usd_cents::numeric / 100 * $4), $3 FROM pieces WHERE slug = $2`,
+      [order.id, items.pieceSlug, items.signed ?? false, REFERENCE_COP_PER_USD],
     );
   }
   if (items.dropSlug) {
     await ds.query(
       `INSERT INTO order_items (order_id, drop_id, unit_price_cop)
-       SELECT $1, id, price_usd_cents FROM drops WHERE slug = $2`,
-      [order.id, items.dropSlug],
+       SELECT $1, id, ROUND(price_usd_cents::numeric / 100 * $3) FROM drops WHERE slug = $2`,
+      [order.id, items.dropSlug, REFERENCE_COP_PER_USD],
     );
   }
   return order.id;
@@ -414,7 +422,7 @@ async function grant(
        SELECT id, price_usd_cents FROM drops WHERE slug = $2
      ), o AS (
        INSERT INTO orders (user_id, total_cop, payment_method, reference, status, paid_at)
-       SELECT $1, d.price_usd_cents, 'CARD',
+       SELECT $1, ROUND(d.price_usd_cents::numeric / 100 * $5), 'CARD',
               'ord_ent_' || substr(md5(random()::text), 1, 12), 'paid', now()
          FROM d
        RETURNING id
@@ -425,7 +433,7 @@ async function grant(
             CASE WHEN $4::text IS NULL THEN NULL ELSE now() + $4::interval END,
             CASE WHEN $3::text IS NULL THEN 0 ELSE 1 END
        FROM d, o`,
-    [userId, dropSlug, playedAgo, expiresIn],
+    [userId, dropSlug, playedAgo, expiresIn, REFERENCE_COP_PER_USD],
   );
 }
 

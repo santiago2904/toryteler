@@ -1,5 +1,5 @@
 import { formatPrice } from '@/lib/format';
 
-export function Price({ cop }: { cop: number }) {
-  return <span className="label">{formatPrice(cop)}</span>;
+export function Price({ usdCents }: { usdCents: number }) {
+  return <span className="label">{formatPrice(usdCents)}</span>;
 }

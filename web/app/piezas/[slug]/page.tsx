@@ -51,7 +51,7 @@ export default async function PiecePage({ params }: { params: Promise<{ slug: st
         <h1 className="title">{piece.title}</h1>
 
         <div className={styles.meta}>
-          <Price cop={piece.priceUsdCents} />
+          <Price usdCents={piece.priceUsdCents} />
           <PieceStatus stock={piece.stock} soldAt={piece.soldAt} />
         </div>
 

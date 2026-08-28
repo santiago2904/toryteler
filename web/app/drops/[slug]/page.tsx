@@ -48,7 +48,7 @@ export default async function DropPage({ params }: { params: Promise<{ slug: str
         <h1 className="title">{drop.title}</h1>
 
         <div className={styles.meta}>
-          <Price cop={drop.priceUsdCents} />
+          <Price usdCents={drop.priceUsdCents} />
           <DropStatus remaining={drop.remaining} soldOut={drop.soldOut} />
         </div>
 

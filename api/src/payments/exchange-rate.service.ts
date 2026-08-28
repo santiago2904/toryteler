@@ -1,4 +1,4 @@
-import { Injectable, ServiceUnavailableException } from '@nestjs/common';
+import { Injectable, Logger, ServiceUnavailableException } from '@nestjs/common';
 
 /**
  * Cuántos pesos vale un dólar, según la TRM oficial de Banco de la
@@ -12,6 +12,7 @@ import { Injectable, ServiceUnavailableException } from '@nestjs/common';
  */
 @Injectable()
 export class ExchangeRateService {
+  private readonly logger = new Logger(ExchangeRateService.name);
   private cached: { copPerUsd: number; fetchedAt: number } | null = null;
   private readonly TTL_MS = 24 * 3_600_000; // la TRM se publica un día hábil por día
 
@@ -32,7 +33,8 @@ export class ExchangeRateService {
 
       this.cached = { copPerUsd: rate, fetchedAt: Date.now() };
       return rate;
-    } catch {
+    } catch (error) {
+      this.logger.warn(`No se pudo obtener la TRM: ${error}`);
       // Una TRM de ayer sigue siendo una tasa real; inventar una no lo es.
       if (this.cached) return this.cached.copPerUsd;
       throw new ServiceUnavailableException('EXCHANGE_RATE_UNAVAILABLE');

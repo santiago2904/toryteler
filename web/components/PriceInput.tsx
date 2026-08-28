@@ -26,7 +26,7 @@ export function PriceInput({
   value: number;
   onChange: (value: number) => void;
 }) {
-  const shown = value > 0 ? `$${DOLLARS.format(value / 100)}` : '';
+  const shown = value > 0 ? DOLLARS.format(value / 100) : '';
 
   function handleChange(event: React.ChangeEvent<HTMLInputElement>) {
     const input = event.target;
@@ -40,7 +40,7 @@ export function PriceInput({
     // After React repaints, walk back from the end until the same number of
     // digits is to the right again.
     requestAnimationFrame(() => {
-      const text = next > 0 ? `$${DOLLARS.format(next / 100)}` : '';
+      const text = next > 0 ? DOLLARS.format(next / 100) : '';
       const position = caretAfterFormat(text, digitsAfterCaret);
       input.setSelectionRange(position, position);
     });
