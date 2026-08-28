@@ -17,7 +17,7 @@ export const PIECES: PieceDetail[] = [
       'Impresión de trabajo sobre papel mate, 30 × 30 cm. Marcas de lápiz en el margen inferior y una anotación de puño y letra en el reverso.',
     story:
       'Es la versión que llevé a la reunión donde decidimos la portada. Perdió por dos votos. La guardé enrollada detrás de un parlante durante seis años y tiene la esquina doblada por eso.',
-    priceCop: 2400000,
+    priceUsdCents: 24000,
     images: ['v1786679539/800w-KKOAYz5esa4.jpg'],
     stock: 1,
     available: true,
@@ -31,7 +31,7 @@ export const PIECES: PieceDetail[] = [
       'Prueba de imprenta, 30 × 30 cm, con las correcciones de tono marcadas en rojo por el diseñador.',
     story:
       'Hicimos catorce pruebas hasta dar con el color. Esta es la número nueve, la que casi queda. Todavía se ven las indicaciones de cuánto había que bajarle al azul.',
-    priceCop: 900000,
+    priceUsdCents: 9000,
     images: ['v1786679537/3YV2PTJAVFGCVJK5IC6RJYY6EA.jpg'],
     stock: 1,
     available: true,
@@ -44,7 +44,7 @@ export const PIECES: PieceDetail[] = [
     description: 'Única copia impresa de una portada que nunca se usó, 30 × 30 cm.',
     story:
       'Esta portada existió durante once días. Se imprimió una sola vez, para verla en papel, y al día siguiente cambiamos de idea. Nadie fuera del estudio la había visto hasta ahora.',
-    priceCop: 3800000,
+    priceUsdCents: 38000,
     images: ['v1786679539/250px-Taylor_Swift_-_1989.png.png'],
     stock: 0,
     available: false,
@@ -57,7 +57,7 @@ export const PIECES: PieceDetail[] = [
     description: 'Cartón de trabajo con la retícula de la portada dibujada a mano, 30 × 30 cm.',
     story:
       'Antes de que existiera el arte final existió esto: una cuadrícula a lápiz para saber dónde iba cada cosa. Lo usábamos de mantel cuando pedíamos comida al estudio, y se nota.',
-    priceCop: 620000,
+    priceUsdCents: 6200,
     images: [
       'v1786679538/unknown-cd-album-mixtape-cover-design-templat-template-a0089f026a71f9722a55157364f22590_screen.jpg',
     ],
@@ -72,7 +72,7 @@ export const PIECES: PieceDetail[] = [
     description: 'Copia fotográfica de la sesión de portada, 30 × 30 cm. Sin retoque.',
     story:
       'De esa sesión salieron cuatrocientas fotos y se usó una. Esta es la que yo quería. Me dijeron que se me veía cansado; llevaba dos días sin dormir, así que tenían razón.',
-    priceCop: 1750000,
+    priceUsdCents: 17500,
     images: ['v1786679538/rihanna-anti-cover-2016-billboard-1240.jpg'],
     stock: 12,
     available: true,
@@ -85,7 +85,7 @@ export const PIECES: PieceDetail[] = [
     description: 'Maqueta física del empaque, armada a mano con cinta y cartón.',
     story:
       'La armé yo en la cocina para ver si el disco cabía. No cabía. Le sobra medio centímetro por un lado y ahí quedó la marca del corte que le hice con un bisturí.',
-    priceCop: 1100000,
+    priceUsdCents: 11000,
     images: ['v1786679539/Ecomm-PreLaunch-CD-16STD-1_d64d3610-8393-4a07-95db-959456b7f15c.png'],
     stock: 1,
     available: true,
@@ -98,7 +98,7 @@ export const PIECES: PieceDetail[] = [
     description: 'Lámina de calcomanías de la primera gira, 30 × 30 cm. Faltan tres.',
     story:
       'Repartimos estas láminas en la primera gira. De la mía faltan tres calcomanías: dos se las pegué a la guitarra y una la perdí en un aeropuerto.',
-    priceCop: 480000,
+    priceUsdCents: 4800,
     images: ['v1786679540/TattooYou81.jpg.jpg'],
     stock: 0,
     available: false,
@@ -111,7 +111,7 @@ export const PIECES: PieceDetail[] = [
     description: 'Portada alterna impresa para la edición en vinilo, 31 × 31 cm.',
     story:
       'Sacamos doscientos vinilos con esta portada y nunca se repitió. Esta es la copia cero, la que sale antes de la tirada para revisar que todo esté bien.',
-    priceCop: 2950000,
+    priceUsdCents: 29500,
     images: ['v1786679541/RR8051_The-Travelled-Road.jpg'],
     stock: 5,
     available: true,
@@ -124,7 +124,7 @@ export const PIECES: PieceDetail[] = [
     description: 'Impresión de un estudio de luz para la portada, 30 × 30 cm.',
     story:
       'Estuvimos una noche entera probando cómo se rompía la luz al pasar por un vidrio. De ahí salió todo lo demás. Es la imagen más antigua del proyecto.',
-    priceCop: 4200000,
+    priceUsdCents: 42000,
     images: [
       'v1786682102/6.-Pink-Floyd-_E2_80_98Dark-Side-of-the-Moon-1973-album-art-billboard-1240.jpg',
     ],
@@ -139,7 +139,7 @@ export const PIECES: PieceDetail[] = [
     description: 'Arte de contraportada con los créditos escritos a máquina, 30 × 30 cm.',
     story:
       'Los créditos los escribí en la máquina de mi abuelo. Hay un nombre mal escrito que nunca corregimos y que sigue mal en todas las ediciones.',
-    priceCop: 1350000,
+    priceUsdCents: 13500,
     images: ['v1786682103/63a008f631ae7492a75a001bd0791e8f.jpg'],
     stock: 1,
     available: true,
@@ -154,7 +154,7 @@ export const DROPS: DropDetail[] = [
     title: 'Ojitos verdes — máster de maqueta',
     description:
       'La maqueta original, sin mezclar. Se oye el conteo, se oye la silla, y en el segundo verso me equivoco y sigo. Es la primera vez que la canción existió contain.',
-    priceCop: 25000,
+    priceUsdCents: 250,
     posterImage: 'v1786679539/800w-KKOAYz5esa4.jpg',
     capacity: 50,
     remaining: 12,
@@ -167,7 +167,7 @@ export const DROPS: DropDetail[] = [
     title: 'Casa 42 — máster de maqueta',
     description:
       'Grabada en la casa que le da el nombre, con un micrófono prestado y la windowHours abierta. Al final se oye pasar una moto y por eso nunca la usamos.',
-    priceCop: 25000,
+    priceUsdCents: 250,
     posterImage: 'v1786682103/63a008f631ae7492a75a001bd0791e8f.jpg',
     capacity: 30,
     remaining: 0,
@@ -180,7 +180,7 @@ export const DROPS: DropDetail[] = [
     title: 'Cómo conocí a Gabi',
     description:
       'Siete minutos contando cómo nos conocimos, sin editar y sin guion. Es la historia que está detrás de medio disco y que nunca he contado en una entrevista.',
-    priceCop: 4000,
+    priceUsdCents: 40,
     posterImage: 'v1786679541/RR8051_The-Travelled-Road.jpg',
     capacity: 200,
     remaining: 147,
@@ -195,6 +195,7 @@ export const ORDERS: OrderSummary[] = [
     reference: 'ord_a1b2c3d4e5f6',
     status: 'paid',
     totalCop: 2400000,
+    totalUsdCents: 24000,
     createdAt: '2026-08-10T14:30:00Z',
     items: [
       {
@@ -218,6 +219,7 @@ export const ORDERS: OrderSummary[] = [
     reference: 'ord_9f8e7d6c5b4a',
     status: 'paid',
     totalCop: 925000,
+    totalUsdCents: 9250,
     createdAt: '2026-08-13T20:05:00Z',
     items: [
       {

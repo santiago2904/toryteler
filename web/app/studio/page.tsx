@@ -67,7 +67,7 @@ export default async function PublishedPage({
                 >
                   {piece.title}
                 </Link>
-                <span>{formatPrice(piece.priceCop)}</span>
+                <span>{formatPrice(piece.priceUsdCents)}</span>
                 <span className="label muted">
                   {piece.status !== 'available' && 'Sin publicar · '}
                   {piece.stock === 0
@@ -111,7 +111,7 @@ export default async function PublishedPage({
                 >
                   {video.title}
                 </Link>
-                <span>{formatPrice(video.priceCop)}</span>
+                <span>{formatPrice(video.priceUsdCents)}</span>
                 <span className="label muted">
                   {video.status !== 'available' && 'Sin publicar · '}
                   {video.capacity === null

@@ -23,7 +23,7 @@ export async function generateMetadata(
   const drop = await load(slug);
   if (!drop) return { title: 'No encontrado' };
   return {
-    title: `${drop.title} — Toryteler`,
+    title: `${drop.title} — Tory teler`,
     description: drop.description ?? undefined,
   };
 }
@@ -48,7 +48,7 @@ export default async function DropPage({ params }: { params: Promise<{ slug: str
         <h1 className="title">{drop.title}</h1>
 
         <div className={styles.meta}>
-          <Price cop={drop.priceCop} />
+          <Price cop={drop.priceUsdCents} />
           <DropStatus remaining={drop.remaining} soldOut={drop.soldOut} />
         </div>
 
@@ -81,7 +81,7 @@ export default async function DropPage({ params }: { params: Promise<{ slug: str
                 slug: drop.slug,
                 title: drop.title,
                 image: drop.posterImage,
-                priceCop: drop.priceCop,
+                priceUsdCents: drop.priceUsdCents,
               }}
             />
           </div>

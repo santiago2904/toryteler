@@ -3,7 +3,7 @@ export interface CartLine {
   slug: string;
   title: string;
   image: string | null;
-  priceCop: number;
+  priceUsdCents: number;
 }
 
 const KEY = 'cart';
@@ -58,6 +58,6 @@ export function isInCart(kind: CartLine['kind'], slug: string): boolean {
   return readCart().some((l) => l.kind === kind && l.slug === slug);
 }
 
-export function cartTotalCop(lines: CartLine[]): number {
-  return lines.reduce((sum, l) => sum + l.priceCop, 0);
+export function cartTotalUsdCents(lines: CartLine[]): number {
+  return lines.reduce((sum, l) => sum + l.priceUsdCents, 0);
 }

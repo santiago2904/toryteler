@@ -38,7 +38,7 @@ export default async function Catalog() {
                   )}
                   <div className={styles.dropMeta}>
                     <span className="label">{drop.title}</span>
-                    <Price cop={drop.priceCop} />
+                    <Price cop={drop.priceUsdCents} />
                     <DropStatus remaining={drop.remaining} soldOut={drop.soldOut} />
                   </div>
                 </Link>
@@ -62,7 +62,7 @@ export default async function Catalog() {
               )}
               <div className={styles.footer}>
                 <span className="label">{piece.title}</span>
-                <Price cop={piece.priceCop} />
+                <Price cop={piece.priceUsdCents} />
                 {piece.stock !== 1 && <PieceStatus stock={piece.stock} soldAt={null} />}
               </div>
             </Link>

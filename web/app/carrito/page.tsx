@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { ProductImage } from '@/components/ProductImage';
 import { formatPrice } from '@/lib/format';
-import { CART_CHANGED, CartLine, readCart, removeFromCart, cartTotalCop } from '@/lib/cart';
+import { CART_CHANGED, CartLine, readCart, removeFromCart, cartTotalUsdCents } from '@/lib/cart';
 import styles from './page.module.scss';
 
 export default function CartPage() {
@@ -54,7 +54,7 @@ export default function CartPage() {
               <span className="muted label">
                 {line.kind === 'piece' ? 'Pieza' : 'Video'}
               </span>
-              <span>{formatPrice(line.priceCop)}</span>
+              <span>{formatPrice(line.priceUsdCents)}</span>
             </div>
 
             <button
@@ -71,7 +71,7 @@ export default function CartPage() {
 
       <div className={styles.total}>
         <span className="label">Total</span>
-        <span className="label">{formatPrice(cartTotalCop(lines))}</span>
+        <span className="label">{formatPrice(cartTotalUsdCents(lines))}</span>
       </div>
 
       {hasPiece && (

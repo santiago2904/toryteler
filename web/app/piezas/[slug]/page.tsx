@@ -23,7 +23,7 @@ export async function generateMetadata(
   const piece = await load(slug);
   if (!piece) return { title: 'Pieza no encontrada' };
   return {
-    title: `${piece.title} — Toryteler`,
+    title: `${piece.title} — Tory teler`,
     description: piece.description ?? undefined,
   };
 }
@@ -51,7 +51,7 @@ export default async function PiecePage({ params }: { params: Promise<{ slug: st
         <h1 className="title">{piece.title}</h1>
 
         <div className={styles.meta}>
-          <Price cop={piece.priceCop} />
+          <Price cop={piece.priceUsdCents} />
           <PieceStatus stock={piece.stock} soldAt={piece.soldAt} />
         </div>
 
@@ -76,7 +76,7 @@ export default async function PiecePage({ params }: { params: Promise<{ slug: st
                 slug: piece.slug,
                 title: piece.title,
                 image: piece.images[0] ?? null,
-                priceCop: piece.priceCop,
+                priceUsdCents: piece.priceUsdCents,
               }}
             />
           </div>

@@ -74,8 +74,8 @@ async function mock<T>(path: string): Promise<T> {
   const { PIECES, DROPS, ORDERS, ENTITLEMENTS } = await import('./mock-data');
 
   if (path === '/pieces') {
-    return PIECES.map(({ slug, title, priceCop, images, stock, available }) => ({
-      slug, title, priceCop, images, stock, available,
+    return PIECES.map(({ slug, title, priceUsdCents, images, stock, available }) => ({
+      slug, title, priceUsdCents, images, stock, available,
     })) as T;
   }
 

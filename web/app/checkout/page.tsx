@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { ProductImage } from '@/components/ProductImage';
-import { CartLine, cartTotalCop, readCart } from '@/lib/cart';
+import { CartLine, cartTotalUsdCents, readCart } from '@/lib/cart';
 import { createOrder, isSignedIn } from '@/lib/checkout-actions';
 import { formatPrice } from '@/lib/format';
 import styles from './page.module.scss';
@@ -107,14 +107,14 @@ export default function CheckoutPage() {
               <span className="label">{line.title}</span>
               <span className="muted label">{line.kind === 'piece' ? 'Pieza' : 'Video'}</span>
             </div>
-            <span>{formatPrice(line.priceCop)}</span>
+            <span>{formatPrice(line.priceUsdCents)}</span>
           </li>
         ))}
       </ul>
 
       <div className={styles.total}>
         <span className="label">Total</span>
-        <span className="label">{formatPrice(cartTotalCop(lines))}</span>
+        <span className="label">{formatPrice(cartTotalUsdCents(lines))}</span>
       </div>
 
       <form onSubmit={submit} className={styles.form}>

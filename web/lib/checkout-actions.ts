@@ -96,7 +96,7 @@ export interface CreateOrderInput {
   pieceSlugs: string[];
   dropSlugs: string[];
   paymentMethod: 'CARD' | 'PSE' | 'NEQUI';
-  shippingAddress?: { line1: string; city: string; phone: string };
+  shippingAddress?: { line1: string; city: string; country: string; phone: string };
   /** Which pieces go signed by the artist. A subset of `pieceSlugs`. */
   signedPieceSlugs?: string[];
   /**
@@ -115,11 +115,11 @@ export interface CreateOrderInput {
 
 export async function createOrder(
   input: CreateOrderInput,
-): Promise<Result<{ id: string; reference: string; totalCop: number }>> {
+): Promise<Result<{ id: string; reference: string; totalCop: number; totalUsdCents: number }>> {
   const { idempotencyKey, ...body } = input;
   return attempt(async () => {
     const order = await apiSend<
-      { id: string; reference: string; totalCop: number; sessionToken?: string }
+      { id: string; reference: string; totalCop: number; totalUsdCents: number; sessionToken?: string }
     >('/orders', 'POST', body, { idempotencyKey });
 
     // Present only for a guest: the API just found or created their account

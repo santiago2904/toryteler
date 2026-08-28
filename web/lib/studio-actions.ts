@@ -49,7 +49,7 @@ export interface PieceInput {
   description?: string | null;
   story?: string | null;
   personalNote?: string | null;
-  priceCop: number;
+  priceUsdCents: number;
   stock: number;
   images: string[];
 }
@@ -57,7 +57,7 @@ export interface PieceInput {
 export interface DropInput {
   title: string;
   description?: string | null;
-  priceCop: number;
+  priceUsdCents: number;
   videoAssetId: string;
   posterImage?: string | null;
   capacity: number | null;

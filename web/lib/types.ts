@@ -14,7 +14,7 @@ export interface Profile {
 export interface PieceSummary {
   slug: string;
   title: string;
-  priceCop: number;
+  priceUsdCents: number;
   images: string[];
   /** Units on sale. 1 means an irreplaceable piece; more than 1, an edition. */
   stock: number;
@@ -33,7 +33,7 @@ export interface DropDetail {
   slug: string;
   title: string;
   description: string | null;
-  priceCop: number;
+  priceUsdCents: number;
   posterImage: string | null;
   capacity: number | null;
   remaining: number | null;
@@ -66,6 +66,8 @@ export interface OrderSummary {
   reference: string;
   status: 'pending' | 'paid' | 'failed' | 'expired' | 'refunded';
   totalCop: number;
+  /** Null only for an order placed before Task 3 shipped. Every new order carries it. */
+  totalUsdCents: number | null;
   createdAt: string;
   items: OrderItem[];
   tracking: OrderTracking | null;
@@ -92,7 +94,7 @@ export interface AdminPiece {
   id: string;
   slug: string;
   title: string;
-  priceCop: number;
+  priceUsdCents: number;
   images: string[];
   stock: number;
   status: string;
@@ -103,7 +105,7 @@ export interface AdminDrop {
   id: string;
   slug: string;
   title: string;
-  priceCop: number;
+  priceUsdCents: number;
   posterImage: string | null;
   capacity: number | null;
   viewWindowHours: number;
@@ -117,7 +119,7 @@ export interface AdminDropDetail {
   slug: string;
   title: string;
   description: string | null;
-  priceCop: number;
+  priceUsdCents: number;
   videoAssetId: string;
   posterImage: string | null;
   capacity: number | null;
@@ -134,6 +136,8 @@ export interface AdminOrder {
   reference: string;
   status: string;
   totalCop: number;
+  /** Null only for an order placed before Task 3 shipped. Every new order carries it. */
+  totalUsdCents: number | null;
   createdAt: string;
   shippedAt: string | null;
   buyer: { email: string; fullName: string | null };

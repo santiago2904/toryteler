@@ -18,7 +18,7 @@ export function VideoForm({ video }: { video?: AdminDropDetail }) {
 
   const [title, setTitle] = useState(video?.title ?? '');
   const [description, setDescription] = useState(video?.description ?? '');
-  const [price, setPrice] = useState(video?.priceCop ?? 0);
+  const [price, setPrice] = useState(video?.priceUsdCents ?? 0);
   const [unlimited, setUnlimited] = useState(video?.capacity === null);
   const [seats, setSeats] = useState(video?.capacity ?? 50);
   const [windowHours, setWindowHours] = useState(video?.viewWindowHours ?? 24);
@@ -125,7 +125,7 @@ export function VideoForm({ video }: { video?: AdminDropDetail }) {
     const common = {
       title: title.trim(),
       description: description.trim() || null,
-      priceCop: price,
+      priceUsdCents: price,
       videoAssetId,
       posterImage,
       capacity: unlimited ? null : seats,

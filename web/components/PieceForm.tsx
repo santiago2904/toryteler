@@ -23,7 +23,7 @@ export function PieceForm({ piece }: { piece?: PieceDetail }) {
   const [description, setDescription] = useState(piece?.description ?? '');
   const [story, setStory] = useState(piece?.story ?? '');
   const [note, setNote] = useState('');
-  const [price, setPrice] = useState(piece?.priceCop ?? 0);
+  const [price, setPrice] = useState(piece?.priceUsdCents ?? 0);
   const [units, setUnits] = useState(piece?.stock ?? 1);
   const [files, setFiles] = useState<File[]>([]);
 
@@ -58,7 +58,7 @@ export function PieceForm({ piece }: { piece?: PieceDetail }) {
       title: title.trim(),
       description: description.trim() || null,
       story: story.trim() || null,
-      priceCop: price,
+      priceUsdCents: price,
       stock: units,
       images,
       ...(note.trim() ? { personalNote: note.trim() } : {}),
