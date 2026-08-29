@@ -9,7 +9,7 @@ export async function getOverrides(): Promise<Record<string, string>> {
   const base = process.env.API_URL;
   if (!base) return {};
   try {
-    const res = await fetch(`${base}/content`, { next: { tags: ['content'] } });
+    const res = await fetch(`${base}/content`, { cache: 'force-cache', next: { tags: ['content'] } });
     if (!res.ok) return {};
     return (await res.json()) as Record<string, string>;
   } catch {
