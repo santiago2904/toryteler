@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import type { Metadata } from 'next';
 import { apiGet } from '@/lib/api';
+import { content } from '@/lib/content';
 import { formatPrice } from '@/lib/format';
 import { OrderSummary } from '@/lib/types';
 import { OrderWatcher } from './OrderWatcher';
@@ -11,28 +12,50 @@ export const metadata: Metadata = { title: 'Tu compra — Toryteler' };
 /** Nothing here is cached: the whole point is the state right now. */
 export const dynamic = 'force-dynamic';
 
-const OUTCOMES: Record<OrderSummary['status'], { title: string; body: string }> = {
-  pending: {
-    title: 'Confirmando tu pago',
-    body: 'La pasarela todavía no nos ha confirmado el cobro. Esto suele tardar segundos; te escribimos al correo en cuanto quede.',
-  },
-  paid: {
-    title: 'Listo',
-    body: 'Tu compra quedó confirmada. Te enviamos el correo con el detalle y, si compraste una pieza, el contrato firmado.',
-  },
-  failed: {
-    title: 'El pago no se completó',
-    body: 'No te cobramos nada y lo que habías apartado volvió a la tienda. Puedes intentarlo otra vez.',
-  },
-  expired: {
-    title: 'El pedido venció',
-    body: 'Pasó demasiado tiempo sin completar el pago, así que soltamos lo que tenías apartado.',
-  },
-  refunded: {
-    title: 'Te devolvimos el dinero',
-    body: 'Alguien se adelantó con lo que compraste, así que reembolsamos el valor completo.',
-  },
-};
+async function outcomeFor(status: OrderSummary['status']): Promise<{ title: string; body: string }> {
+  switch (status) {
+    case 'pending':
+      return {
+        title: await content('checkout.result.pending.title', 'Confirmando tu pago'),
+        body: await content(
+          'checkout.result.pending.body',
+          'La pasarela todavía no nos ha confirmado el cobro. Esto suele tardar segundos; te escribimos al correo en cuanto quede.',
+        ),
+      };
+    case 'paid':
+      return {
+        title: await content('checkout.result.paid.title', 'Listo'),
+        body: await content(
+          'checkout.result.paid.body',
+          'Tu compra quedó confirmada. Te enviamos el correo con el detalle y, si compraste una pieza, el contrato firmado.',
+        ),
+      };
+    case 'failed':
+      return {
+        title: await content('checkout.result.failed.title', 'El pago no se completó'),
+        body: await content(
+          'checkout.result.failed.body',
+          'No te cobramos nada y lo que habías apartado volvió a la tienda. Puedes intentarlo otra vez.',
+        ),
+      };
+    case 'expired':
+      return {
+        title: await content('checkout.result.expired.title', 'El pedido venció'),
+        body: await content(
+          'checkout.result.expired.body',
+          'Pasó demasiado tiempo sin completar el pago, así que soltamos lo que tenías apartado.',
+        ),
+      };
+    case 'refunded':
+      return {
+        title: await content('checkout.result.refunded.title', 'Te devolvimos el dinero'),
+        body: await content(
+          'checkout.result.refunded.body',
+          'Alguien se adelantó con lo que compraste, así que reembolsamos el valor completo.',
+        ),
+      };
+  }
+}
 
 export default async function ResultPage({
   searchParams,
@@ -51,14 +74,21 @@ export default async function ResultPage({
   if (!order) {
     return (
       <div className={styles.result}>
-        <h1 className="label muted">No encontramos ese pedido</h1>
-        <p>Puede que sea de otra cuenta. Mira tus pedidos para comprobarlo.</p>
+        <h1 className="label muted">
+          {await content('checkout.result.notFound.title', 'No encontramos ese pedido')}
+        </h1>
+        <p>
+          {await content(
+            'checkout.result.notFound.body',
+            'Puede que sea de otra cuenta. Mira tus pedidos para comprobarlo.',
+          )}
+        </p>
         <Link href="/cuenta" className="label">Ver mis pedidos</Link>
       </div>
     );
   }
 
-  const outcome = OUTCOMES[order.status];
+  const outcome = await outcomeFor(order.status);
 
   return (
     <div className={styles.result}>
