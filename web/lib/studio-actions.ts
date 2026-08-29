@@ -1,6 +1,6 @@
 'use server';
 
-import { revalidatePath, revalidateTag } from 'next/cache';
+import { revalidatePath, updateTag } from 'next/cache';
 import { apiSend } from './api';
 
 /**
@@ -217,7 +217,7 @@ export async function videoStatus(uid: string): Promise<Result<VideoStatus>> {
 export async function updateContent(key: string, value: string): Promise<Result<null>> {
   return attempt(async () => {
     await apiSend(`/admin/content/${encodeURIComponent(key)}`, 'PUT', { value });
-    revalidateTag('content', { expire: 0 });
+    updateTag('content');
     return null;
   }, false);
 }
@@ -226,7 +226,7 @@ export async function updateContent(key: string, value: string): Promise<Result<
 export async function resetContent(key: string): Promise<Result<null>> {
   return attempt(async () => {
     await apiSend(`/admin/content/${encodeURIComponent(key)}`, 'DELETE');
-    revalidateTag('content', { expire: 0 });
+    updateTag('content');
     return null;
   }, false);
 }
