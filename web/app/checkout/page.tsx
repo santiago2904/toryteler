@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
+import { useContent } from '@/components/ContentProvider';
 import { ProductImage } from '@/components/ProductImage';
 import { CartLine, cartTotalUsdCents, readCart } from '@/lib/cart';
 import { createOrder, isSignedIn } from '@/lib/checkout-actions';
@@ -39,6 +40,20 @@ export default function CheckoutPage() {
    */
   const [idempotencyKey] = useState(() => crypto.randomUUID());
 
+  const emptyBody = useContent('checkout.empty.body', 'No tienes nada en el carrito.');
+  const emailNotice = useContent(
+    'checkout.emailNotice.body',
+    'Ahí te llegan el recibo y, si compras una pieza, el código para firmar el contrato.',
+  );
+  const signatureNote = useContent(
+    'checkout.signature.note',
+    'Sin costo. Firmarla toma unos días más antes de que salga el envío.',
+  );
+  const addressNotice = useContent(
+    'checkout.addressNotice.body',
+    'En el siguiente paso firmarás el contrato de compraventa. Ten a mano tu cédula.',
+  );
+
   useEffect(() => { setLines(readCart()); }, []);
   useEffect(() => { void isSignedIn().then(setSignedIn); }, []);
 
@@ -48,7 +63,7 @@ export default function CheckoutPage() {
     return (
       <div className={styles.checkout}>
         <h1 className="label muted">Pagar</h1>
-        <p>No tienes nada en el carrito.</p>
+        <p>{emptyBody}</p>
       </div>
     );
   }
@@ -132,9 +147,8 @@ export default function CheckoutPage() {
               required
             />
             <p className="muted">
-              Ahí te llegan el recibo y, si compras una pieza, el código para firmar el
-              contrato. ¿Ya tienes cuenta? <Link href="/entrar?next=/checkout">Entra</Link> para
-              ver tus pedidos anteriores.
+              {emailNotice} ¿Ya tienes cuenta?{' '}
+              <Link href="/entrar?next=/checkout">Entra</Link> para ver tus pedidos anteriores.
             </p>
           </fieldset>
         )}
@@ -180,9 +194,7 @@ export default function CheckoutPage() {
                 Quiero «{piece.title}» firmada a mano
               </label>
             ))}
-            <p className="muted">
-              Sin costo. Firmarla toma unos días más antes de que salga el envío.
-            </p>
+            <p className="muted">{signatureNote}</p>
           </fieldset>
         )}
 
@@ -230,11 +242,7 @@ export default function CheckoutPage() {
           </fieldset>
         )}
 
-        {needsAddress && (
-          <p className="muted">
-            En el siguiente paso firmarás el contrato de compraventa. Ten a mano tu cédula.
-          </p>
-        )}
+        {needsAddress && <p className="muted">{addressNotice}</p>}
 
         {error && <p role="alert" className={styles.error}>{error}</p>}
 

@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
+import { useContent } from '@/components/ContentProvider';
 import { ProductImage } from '@/components/ProductImage';
 import { formatPrice } from '@/lib/format';
 import { CART_CHANGED, CartLine, readCart, removeFromCart, cartTotalUsdCents } from '@/lib/cart';
@@ -9,6 +10,13 @@ import styles from './page.module.scss';
 
 export default function CartPage() {
   const [lines, setLineas] = useState<CartLine[] | null>(null);
+
+  const emptyBody = useContent('cart.empty.body', 'No tienes nada en el carrito.');
+  const emptyCta = useContent('cart.empty.cta', 'Ver la casa de Tory');
+  const contractNotice = useContent(
+    'cart.contractNotice.body',
+    'Al pagar firmarás el contrato de compraventa de las piezas físicas. Necesitarás tu cédula a mano.',
+  );
 
   useEffect(() => {
     const refresh = () => setLineas(readCart());
@@ -25,8 +33,8 @@ export default function CartPage() {
     return (
       <div className={styles.cart}>
         <h1 className="label muted">Carrito</h1>
-        <p>No tienes nada en el carrito.</p>
-        <Link href="/" className="label">Ver la casa de Tory</Link>
+        <p>{emptyBody}</p>
+        <Link href="/" className="label">{emptyCta}</Link>
       </div>
     );
   }
@@ -74,12 +82,7 @@ export default function CartPage() {
         <span className="label">{formatPrice(cartTotalUsdCents(lines))}</span>
       </div>
 
-      {hasPiece && (
-        <p className="muted">
-          Al pagar firmarás el contrato de compraventa de las piezas físicas. Necesitarás tu
-          cédula a mano.
-        </p>
-      )}
+      {hasPiece && <p className="muted">{contractNotice}</p>}
 
       <Link href="/checkout" className={styles.pay}>Pagar</Link>
     </div>
