@@ -3,6 +3,7 @@
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Suspense, useState } from 'react';
 import { PreparedContract, prepareContract, signContract } from '@/lib/checkout-actions';
+import { useContent } from '@/components/ContentProvider';
 import styles from './page.module.scss';
 
 function Contract() {
@@ -17,10 +18,25 @@ function Contract() {
   const [working, setWorking] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const invalidLink = useContent('checkout.invalidLink.body', 'Este enlace no lleva a ningún pedido.');
+  const intro = useContent(
+    'checkout.contract.intro',
+    'Estos datos van en el documento que vas a firmar, así que tienen que coincidir con tu cédula.',
+  );
+  const otpIntro = useContent(
+    'checkout.contract.otpIntro',
+    'Te enviamos un código de seis dígitos a tu correo. Lee el documento y fírmalo con ese código.',
+  );
+  const mustOpenNotice = useContent('checkout.contract.mustOpenNotice', 'Abre el documento para poder confirmarlo.');
+  const signBeforePayNotice = useContent(
+    'checkout.contract.signBeforePayNotice',
+    'Firmas antes de pagar. Si el pago no se completa, el contrato queda anulado.',
+  );
+
   if (!orderId) {
     return (
       <div className={styles.contract}>
-        <p>Este enlace no lleva a ningún pedido.</p>
+        <p>{invalidLink}</p>
       </div>
     );
   }
@@ -70,10 +86,7 @@ function Contract() {
     return (
       <div className={styles.contract}>
         <h1 className="label muted">Contrato de compraventa</h1>
-        <p>
-          Estos datos van en el documento que vas a firmar, así que tienen que coincidir
-          con tu cédula.
-        </p>
+        <p>{intro}</p>
 
         <form onSubmit={prepare} className={styles.form}>
           <label htmlFor="fullName">Nombre completo</label>
@@ -119,10 +132,7 @@ function Contract() {
     <div className={styles.contract}>
       <h1 className="label muted">Firma el contrato</h1>
 
-      <p>
-        Te enviamos un código de seis dígitos a tu correo. Lee el documento y fírmalo con
-        ese código.
-      </p>
+      <p>{otpIntro}</p>
 
       {/* Served through this site, not from storage: the stored link never
           expires and opens a document with your ID number in it. */}
@@ -151,9 +161,7 @@ function Contract() {
           Leí el contrato completo y estoy de acuerdo
         </label>
 
-        {!opened && (
-          <p className="muted">Abre el documento para poder confirmarlo.</p>
-        )}
+        {!opened && <p className="muted">{mustOpenNotice}</p>}
 
         <label htmlFor="code">Código</label>
         <input
@@ -173,9 +181,7 @@ function Contract() {
         </button>
       </form>
 
-      <p className="muted">
-        Firmas antes de pagar. Si el pago no se completa, el contrato queda anulado.
-      </p>
+      <p className="muted">{signBeforePayNotice}</p>
     </div>
   );
 }

@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { startPayment } from '@/lib/checkout-actions';
+import { useContent } from '@/components/ContentProvider';
 import { formatPrice } from '@/lib/format';
 import { OrderSummary } from '@/lib/types';
 import styles from './page.module.scss';
@@ -9,6 +10,12 @@ import styles from './page.module.scss';
 export function Pay({ orderId, order }: { orderId: string; order: OrderSummary | null }) {
   const [working, setWorking] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const gatewayNotice = useContent(
+    'checkout.pay.gatewayNotice',
+    'Te llevamos a la pasarela para completar el pago. Volverás aquí al terminar.',
+  );
+  const securityNotice = useContent('checkout.pay.securityNotice', 'Los datos de tu tarjeta no pasan por esta tienda.');
 
   async function pay() {
     setWorking(true);
@@ -41,7 +48,7 @@ export function Pay({ orderId, order }: { orderId: string; order: OrderSummary |
         </p>
       )}
 
-      <p>Te llevamos a la pasarela para completar el pago. Volverás aquí al terminar.</p>
+      <p>{gatewayNotice}</p>
 
       {error && <p role="alert" className={styles.error}>{error}</p>}
 
@@ -49,7 +56,7 @@ export function Pay({ orderId, order }: { orderId: string; order: OrderSummary |
         {working ? 'Abriendo…' : 'Ir a pagar'}
       </button>
 
-      <p className="muted">Los datos de tu tarjeta no pasan por esta tienda.</p>
+      <p className="muted">{securityNotice}</p>
     </div>
   );
 }

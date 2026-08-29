@@ -1,5 +1,6 @@
 import { Suspense } from 'react';
 import { apiGet } from '@/lib/api';
+import { content } from '@/lib/content';
 import { OrderSummary } from '@/lib/types';
 import { Pay } from './Pay';
 import styles from './page.module.scss';
@@ -18,7 +19,7 @@ export default async function PayPage({
   if (!orderId) {
     return (
       <div className={styles.pay}>
-        <p>Este enlace no lleva a ningún pedido.</p>
+        <p>{await content('checkout.invalidLink.body', 'Este enlace no lleva a ningún pedido.')}</p>
       </div>
     );
   }
