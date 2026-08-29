@@ -2,6 +2,7 @@ import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
 import { AddToCart } from '@/components/AddToCart';
 import { apiGet } from '@/lib/api';
+import { content } from '@/lib/content';
 import { DropDetail } from '@/lib/types';
 import { ProductImage } from '@/components/ProductImage';
 import { Price } from '@/components/Price';
@@ -32,6 +33,8 @@ export default async function DropPage({ params }: { params: Promise<{ slug: str
   const { slug } = await params;
   const drop = await load(slug);
   if (!drop) notFound();
+
+  const soldOutBody = await content('drop.detail.soldOutBody', 'Ya no quedan seats.');
 
   const hours = drop.viewWindowHours;
 
@@ -72,7 +75,7 @@ export default async function DropPage({ params }: { params: Promise<{ slug: str
         </section>
 
         {drop.soldOut ? (
-          <p className="label muted">Ya no quedan seats.</p>
+          <p className="label muted">{soldOutBody}</p>
         ) : (
           <div className={styles.action}>
             <AddToCart

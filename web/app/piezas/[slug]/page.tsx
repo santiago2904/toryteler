@@ -2,6 +2,7 @@ import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
 import { AddToCart } from '@/components/AddToCart';
 import { apiGet } from '@/lib/api';
+import { content } from '@/lib/content';
 import { PieceDetail } from '@/lib/types';
 import { ProductImage } from '@/components/ProductImage';
 import { Price } from '@/components/Price';
@@ -32,6 +33,15 @@ export default async function PiecePage({ params }: { params: Promise<{ slug: st
   const { slug } = await params;
   const piece = await load(slug);
   if (!piece) notFound();
+
+  const [includesNote, soldBody, notForSaleBody] = await Promise.all([
+    content(
+      'piece.detail.includesNote',
+      'Incluye una nota escrita por el artista y el contrato de compraventa firmado.',
+    ),
+    content('piece.detail.soldBody', 'Esta pieza ya encontró dueño.'),
+    content('piece.detail.notForSaleBody', 'No está a la venta.'),
+  ]);
 
   return (
     <article className={styles.piece}>
@@ -64,9 +74,7 @@ export default async function PiecePage({ params }: { params: Promise<{ slug: st
           </section>
         )}
 
-        <p className={`${styles.paragraph} muted`}>
-          Incluye una nota escrita por el artista y el contrato de compraventa firmado.
-        </p>
+        <p className={`${styles.paragraph} muted`}>{includesNote}</p>
 
         {piece.available ? (
           <div className={styles.action}>
@@ -82,7 +90,7 @@ export default async function PiecePage({ params }: { params: Promise<{ slug: st
           </div>
         ) : (
           <p className="label muted">
-            {piece.stock === 0 && piece.soldAt ? 'Esta pieza ya encontró dueño.' : 'No está a la venta.'}
+            {piece.stock === 0 && piece.soldAt ? soldBody : notForSaleBody}
           </p>
         )}
       </div>

@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useCallback, useEffect, useState } from 'react';
 import { HlsVideo } from '@/components/HlsVideo';
 import { ProductImage } from '@/components/ProductImage';
+import { useContent } from '@/components/ContentProvider';
 import { formatDate, timeLeft } from '@/lib/format';
 import { openPlayback } from '@/lib/playback-actions';
 import styles from './EphemeralPlayer.module.scss';
@@ -80,11 +81,18 @@ export function EphemeralPlayer({
 
   const closed = closesAt !== null && closesAt <= Date.now();
 
+  const closedTitle = useContent('watch.closed.title', 'Tu ventana se cerró.');
+  const introTitle = useContent('watch.intro.title', 'Antes de reproducir');
+  const introWarning = useContent(
+    'watch.intro.warning',
+    'Cuando la ventana se cierre, este video no vuelve a abrirse. Ocurre una sola vez.',
+  );
+
   if (closed) {
     return (
       <section className={styles.notice}>
         <h1 className="label muted">{title}</h1>
-        <p className="title">Tu ventana se cerró.</p>
+        <p className="title">{closedTitle}</p>
         <p>
           Lo viste el {formatDate(new Date(openedAt!).toISOString())}. Este video no vuelve a
           abrirse: era una sola vez.
@@ -98,12 +106,12 @@ export function EphemeralPlayer({
     return (
       <section className={styles.notice}>
         <h1 className="label muted">{title}</h1>
-        <p className="title">Antes de reproducir</p>
+        <p className="title">{introTitle}</p>
         <p>
           Al darle play se abre tu ventana de {windowHours} horas. Dentro de ese tiempo puedes
           salir y volver las veces que quieras, desde el teléfono o el computador.
         </p>
-        <p>Cuando la ventana se cierre, este video no vuelve a abrirse. Ocurre una sola vez.</p>
+        <p>{introWarning}</p>
         <button type="button" onClick={() => void play()}>Entiendo, reproducir</button>
       </section>
     );
