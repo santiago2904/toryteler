@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { apiGet } from '@/lib/api';
+import { content } from '@/lib/content';
 import { DropDetail, PieceSummary } from '@/lib/types';
 import { ProductImage } from '@/components/ProductImage';
 import { Price } from '@/components/Price';
@@ -16,7 +17,11 @@ export default async function Catalog() {
   ]);
 
   if (pieces.length === 0 && drops.length === 0) {
-    return <p className={styles.empty}>Aún no hay nada publicado.</p>;
+    return (
+      <p className={styles.empty}>
+        {await content('home.empty.body', 'Aún no hay nada publicado.')}
+      </p>
+    );
   }
 
   return (

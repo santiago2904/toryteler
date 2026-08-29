@@ -1,14 +1,25 @@
 import type { Metadata } from 'next';
 import { ProductImage } from '@/components/ProductImage';
+import { content } from '@/lib/content';
 import { ARTIST } from '@/lib/artist';
 import styles from './page.module.scss';
 
-export const metadata: Metadata = {
-  title: 'Toryteler — quién es',
-  description: 'Quién es el artista detrás de las piezas.',
-};
+export async function generateMetadata(): Promise<Metadata> {
+  return {
+    title: await content('artist.meta.title', 'Toryteler — quién es'),
+    description: await content('artist.meta.description', 'Quién es el artista detrás de las piezas.'),
+  };
+}
 
-export default function ArtistPage() {
+export default async function ArtistPage() {
+  const [role, paragraph1, paragraph2, paragraph3, socialsTitle] = await Promise.all([
+    content('artist.role', ARTIST.role),
+    content('artist.bio.paragraph1', ARTIST.bio[0]),
+    content('artist.bio.paragraph2', ARTIST.bio[1]),
+    content('artist.bio.paragraph3', ARTIST.bio[2]),
+    content('artist.socials.title', 'Dónde encontrarlo'),
+  ]);
+
   return (
     <article className={styles.artist}>
       <div className={styles.portrait}>
@@ -22,14 +33,14 @@ export default function ArtistPage() {
 
       <div className={styles.text}>
         <h1 className="title">{ARTIST.name}</h1>
-        <p className="label muted">{ARTIST.role}</p>
+        <p className="label muted">{role}</p>
 
-        {ARTIST.bio.map((paragraph) => (
-          <p key={paragraph.slice(0, 24)} className={styles.paragraph}>{paragraph}</p>
-        ))}
+        <p className={styles.paragraph}>{paragraph1}</p>
+        <p className={styles.paragraph}>{paragraph2}</p>
+        <p className={styles.paragraph}>{paragraph3}</p>
 
         <section className={styles.block}>
-          <h2 className="label muted">Dónde encontrarlo</h2>
+          <h2 className="label muted">{socialsTitle}</h2>
           <ul className={styles.socials}>
             {ARTIST.socials.map((social) => (
               <li key={social.name}>
