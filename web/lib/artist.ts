@@ -6,7 +6,7 @@
  * lazy: placeholder copy until the artist writes their own.
  */
 export const ARTIST = {
-  name: 'Toryteler',
+  name: 'Tory Teler',
   role: 'Músico y archivista de lo suyo',
   portrait: 'v1786679538/rihanna-anti-cover-2016-billboard-1240.jpg',
   bio: [

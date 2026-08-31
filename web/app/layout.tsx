@@ -63,7 +63,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
             </nav>
 
             <div className={`${styles.right} label`}>
-              <Link href="/artista">Toryteler</Link>
+              <Link href="/artista">Tory Teler</Link>
               <Link href="/cuenta">Cuenta</Link>
               <ThemeToggle />
               <CartLink />
